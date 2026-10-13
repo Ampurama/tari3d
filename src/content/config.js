@@ -226,9 +226,9 @@ export const nextMeeting = {
  */
 export const hiddenHearts = {
   hints: [
-    'One hides where the blossom tree casts its shadow…',
-    'One is resting among the flowers at the far edge of the island.',
-    'One is sitting on a little rock floating in the sky.',
+    'One hides behind the trunk of the great Love Tree…',
+    'One is resting among the ferns of the Heartwood Forest.',
+    'One is sitting on a little rock floating beside Starfall Cliff.',
     'One is waiting on an island under the same sky.',
     'One is shining near our constellation.',
   ],
@@ -322,84 +322,225 @@ export const sweetNotes = [
 ]
 
 export const hints = {
-  explore: 'Drag to look around · tap the glowing things ✦',
+  explore: 'Walk with WASD or the joystick · drag to look around · E or ✦ to interact',
   secretLocked: 'This path is still sleeping… read the letter first ♡',
   secretUnlocked: 'Something just woke up at the end of the glowing path ✦',
 }
 
 /* ═══════════════════════════════════════════════════════════════
- *  STORY MODE — "EVERY UNIVERSE LEADS TO YOU"
- *  Five chapters. Each one unlocks after the previous is finished.
+ *  STORY — "EVERY LITTLE THING LEADS TO YOU"
+ *  Three chapters. Each one unlocks after the previous is finished.
  *  What counts as "finished" is measured from what she actually does
  *  (see src/lib/story.js) — progress is never faked.
  *  In dialog lines, {me} and {you} become the nicknames above.
  * ═══════════════════════════════════════════════════════════════ */
 
 export const story = {
-  title: 'Our Little Universe',
-  tagline: 'Every universe leads to you',
+  title: 'Every Little Thing Leads to You',
+  tagline: 'Every little thing leads to you',
   narrator: 'The Universe',
   prologue: [
-    { speaker: 'narrator', text: 'Somewhere between Jakarta and Makassar, a little universe was born.' },
-    { speaker: 'narrator', text: 'It is made of moments, words and dreams — and every single one of them leads to one person.' },
-    { speaker: 'me', text: 'Hi {you}. I built this place for you. There are five chapters hidden in it.' },
-    { speaker: 'me', text: 'Finish them all and the heart above the island will wake up. Something is waiting for you there. ♡' },
+    { speaker: 'narrator', text: 'Welcome to a little universe that was made with love — for one person.' },
+    { speaker: 'me', text: 'Hi {you}. Walk around, look closely, touch whatever glows. Nothing here is in a hurry.' },
   ],
   chapters: [
     {
-      id: 'beginning',
-      title: 'The First Page',
-      subtitle: 'Where our story began',
+      id: 'little-things',
+      title: 'The Little Things',
+      subtitle: 'Small memories that mean everything',
       intro: [
-        { speaker: 'narrator', text: 'Chapter One. Every story has a first page.' },
-        { speaker: 'me', text: 'Look around the floating frames, then walk the Memory Lane all the way to the last lantern.' },
+        { speaker: 'narrator', text: 'Chapter One — The Little Things.' },
+        { speaker: 'me', text: 'Five little things are hidden around the island: a photograph, a letter, a flower, a music box and a fallen star.' },
+        { speaker: 'narrator', text: 'Sometimes, it isn’t the biggest moments that stay with us. It’s the little things we never knew we would miss.' },
       ],
-      outro: [{ speaker: 'me', text: 'Every one of those days still feels like yesterday to me.' }],
+      outro: [{ speaker: 'narrator', text: 'Every little thing leaves a mark. And somehow, they all lead somewhere.' }],
+      hint: 'Follow the light up to Starfall Cliff — the telescope there looks across the sky.',
     },
     {
-      id: 'time',
-      title: 'Back in Time',
-      subtitle: 'The machine that remembers',
+      id: 'miles',
+      title: 'Miles Between Us',
+      subtitle: 'Distance does not have to mean disconnection',
       intro: [
-        { speaker: 'narrator', text: 'Chapter Two. Somewhere on the island, an old machine keeps every date we shared.' },
-        { speaker: 'me', text: 'Find the Time Machine and travel to every day it remembers.' },
+        { speaker: 'narrator', text: 'Chapter Two — Miles Between Us.' },
+        { speaker: 'narrator', text: 'Two islands, a whole sky apart. The bridge between them is unfinished.' },
+        { speaker: 'me', text: 'Five things hold a bridge like this together. Find them, and wake each one up.' },
       ],
-      outro: [{ speaker: 'me', text: 'If I could, I would go back to every one of those days. With you, again.' }],
-    },
-    {
-      id: 'thread',
-      title: 'The Red Thread',
-      subtitle: 'Two cities, one string of fate',
-      intro: [
-        { speaker: 'narrator', text: 'Chapter Three. They say an invisible red thread connects those who are meant to meet.' },
-        { speaker: 'me', text: 'Go to our two islands. Tie the thread on both sides — then open the messages waiting there.' },
-      ],
-      outro: [{ speaker: 'me', text: 'It can stretch. It can tangle. But it never breaks.' }],
-    },
-    {
-      id: 'words',
-      title: 'Words I Kept for You',
-      subtitle: 'Letters, moods and stars',
-      intro: [
-        { speaker: 'narrator', text: 'Chapter Four. Some things are easier to write than to say.' },
-        { speaker: 'me', text: 'Read my letter, open a few envelopes from the Love Capsule, and light up every star of our constellation.' },
-      ],
-      outro: [{ speaker: 'me', text: 'And I still haven’t run out of things to tell you.' }],
+      outro: [{ speaker: 'narrator', text: 'Maybe love isn’t about never being far apart. Maybe it’s about continuing to find our way back to each other.' }],
+      hint: 'Return to the island and visit the glowing garden around the Love Tree.',
     },
     {
       id: 'future',
-      title: 'Every Universe Leads to You',
-      subtitle: 'The worlds we haven’t visited yet',
+      title: 'A Future We Grow',
+      subtitle: 'Love is something we keep building',
       intro: [
-        { speaker: 'narrator', text: 'Chapter Five. A portal has opened at the edge of the island.' },
-        { speaker: 'me', text: 'Step through it and visit every world we dream about.' },
+        { speaker: 'narrator', text: 'Chapter Three — A Future We Grow.' },
+        { speaker: 'me', text: 'Five glowing seeds are hidden around the island. Each one needs a home in the soil around the Love Tree.' },
+        { speaker: 'narrator', text: 'Not everything beautiful happens overnight.' },
       ],
-      outro: [
-        { speaker: 'me', text: 'In every one of those universes, I end up with you.' },
-        { speaker: 'narrator', text: 'The heart above the island is full. It’s time.' },
-      ],
+      outro: [{ speaker: 'narrator', text: 'Maybe the future isn’t something we find. Maybe it’s something we build, one little thing at a time.' }],
+      hint: '',
     },
   ],
+}
+
+/**
+ * AVATARS — the little souls she can play as. Names, outfits and colours are all editable.
+ * They are stylised characters, not portraits of anyone real.
+ * outfit: 'pants' | 'dress'   hairStyle: 'short' | 'long'   accessory: 'scarf' | 'bow' | null
+ */
+export const avatars = [
+  {
+    id: 'girl',
+    label: 'Girl',
+    name: 'Little Moon',
+    look: { skin: '#f6d2bf', hair: '#5a3a4a', top: '#ffb6d5', bottom: '#c9a8ff', shoes: '#fff3ea', accent: '#ff8fc4', outfit: 'dress', hairStyle: 'long', accessory: 'bow' },
+  },
+  {
+    id: 'boy',
+    label: 'Boy',
+    name: 'Little Star',
+    look: { skin: '#f0c9b0', hair: '#3b2d3f', top: '#a7c4ff', bottom: '#5f4b98', shoes: '#fff3ea', accent: '#ffd98a', outfit: 'pants', hairStyle: 'short', accessory: 'scarf' },
+  },
+]
+
+export const avatarSelect = {
+  heading: 'Every little adventure starts with a choice.',
+  subheading: 'Choose the little soul who will carry your story into our universe.',
+  button: 'Enter Our Little Universe ♡',
+  confirmed: 'Your little adventure begins now. And somehow, every little thing will lead you back to us.',
+  rotateHint: 'Drag to turn around',
+}
+
+/**
+ * CHAPTER 1 — THE LITTLE THINGS. Five objects around the island, each with its own interaction.
+ * `photo` must be one of your real photos (or null for a soft placeholder).
+ */
+export const littleThings = [
+  {
+    id: 'photo',
+    title: 'A Photograph',
+    zone: 'Memory Garden',
+    message: 'One of my favorite photos of us — proof that ordinary days with you turn into something I want to keep.',
+    photo: 'photos/2agustus.jpeg',
+  },
+  {
+    id: 'letter',
+    title: 'A Letter in a Bottle',
+    zone: 'Reflection Lake',
+    message: 'Some of my favorite words are the small ones — the ones I get to share with you on ordinary days.',
+  },
+  {
+    id: 'flower',
+    title: 'A Sleeping Flower',
+    zone: 'Heartwood Forest',
+    message: 'Some things only bloom when someone is gentle with them. Thank you for being gentle with me.',
+  },
+  {
+    id: 'musicbox',
+    title: 'A Music Box',
+    zone: 'Starfall Cliff',
+    message: 'If our little moments had a sound, I think it would be this — soft, simple, and worth replaying.',
+  },
+  {
+    id: 'star',
+    title: 'A Fallen Star',
+    zone: 'The Starting Meadow',
+    message: 'Even the smallest light changes what you can see. You did that for me.',
+  },
+]
+
+/**
+ * CHAPTER 2 — MILES BETWEEN US. Five elements that rebuild the bridge between two islands.
+ * The interactions are fixed; titles, instructions and messages are yours to edit.
+ */
+export const connections = [
+  {
+    id: 'trust',
+    title: 'Trust',
+    how: 'Press and hold the lantern until its light stays on.',
+    message: 'Trust is a light you keep on, even when you can’t see the other side.',
+  },
+  {
+    id: 'communication',
+    title: 'Communication',
+    how: 'Send a light from your island, then answer it from the other one.',
+    message: 'Distance can make things difficult, but it doesn’t erase what matters.',
+  },
+  {
+    id: 'patience',
+    title: 'Patience',
+    how: 'Wait for the drifting light to reach the gap — then tap.',
+    message: 'Some days, love means waiting a little longer for the right moment.',
+  },
+  {
+    id: 'understanding',
+    title: 'Understanding',
+    how: 'Watch the stars, then light them in the same order.',
+    message: 'Some days, love means understanding. Other days, it means trying again.',
+  },
+  {
+    id: 'effort',
+    title: 'Effort',
+    how: 'Turn the wheel until the last part of the bridge appears.',
+    message: 'Even when we’re far apart, we can still choose to show up for each other.',
+  },
+]
+
+/** CHAPTER 3 — A FUTURE WE GROW. Five seeds, each grown in its own way around the Love Tree. */
+export const seeds = [
+  { id: 'honesty', title: 'Honesty', care: 'Clear the soil by hand — hold to plant it.', message: 'Honesty — so that we always know where we stand.' },
+  { id: 'kindness', title: 'Kindness', care: 'Bring it water from Reflection Lake.', message: 'Kindness — especially on the days that are hard.' },
+  { id: 'adventures', title: 'Shared Adventures', care: 'Light the two guiding stones beside it.', message: 'Shared adventures — big trips and tiny walks alike.' },
+  { id: 'growth', title: 'Growth Together', care: 'Stay with it a while — hold until it grows.', message: 'Some things are worth taking care of, even when the future is uncertain.' },
+  { id: 'future', title: 'A Future Built Together', care: 'Connect it to the light of the other four.', message: 'I hope we keep learning, growing, and becoming better together.' },
+]
+
+/** Optional notes hidden around the island. They never block the story. */
+export const hiddenNotes = [
+  { id: 'forest-hollow', where: 'Heartwood Forest', text: 'If you found this, you were curious enough to look. I love that about you.' },
+  { id: 'lake-stone', where: 'Reflection Lake', text: 'Still water reflects the sky. I hope I can be that calm place for you sometimes.' },
+  { id: 'cliff-edge', where: 'Starfall Cliff', text: 'From up here everything looks small — except how much you mean to me.' },
+  { id: 'cove-light', where: 'Secret Cove', text: 'You found the secret cove. Some of the best things are a little hidden.' },
+]
+
+/** The view from Starfall Cliff (plays once, the first time she reaches it). */
+export const viewpoint = {
+  title: 'Starfall Cliff',
+  text: 'Look how far you’ve come.',
+}
+
+/** FINAL CINEMATIC — "You were the meaning all along". Timings are handled by the game. */
+export const finalCinematic = {
+  scenes: [
+    ['Remember all those little things you found?', 'None of them seemed extraordinary on their own.'],
+    ['But every little effort, every conversation, every moment of understanding…', 'Was another way of saying that this matters.'],
+    ['And every little thing we choose to nurture…', 'Can become something beautiful.'],
+  ],
+  title: 'YOU WERE THE MEANING ALL ALONG.',
+  skip: 'Skip',
+}
+
+/**
+ * THE LOVE LETTER — shown after the final cinematic.
+ * `personalNote`: an extra paragraph only you can write (leave '' to hide it).
+ * `photo` / `voice`: a path in /public, or null to hide.
+ */
+export const loveLetter = {
+  greeting: 'Untuk Tari,',
+  opening: 'To the person who makes even the smallest things feel meaningful…',
+  body: [
+    'I made this little universe because I wanted to give you something you could walk through — not just read.',
+    'Every memory, every light and every flower here is a small way of saying the same thing: you matter to me, in the little things and in the big ones.',
+  ],
+  personalNote: '',
+  ending: [
+    'If there’s one thing I hope you remember after this little adventure, it’s that none of these worlds, stars, or flowers were really the point.',
+    'The point was always you.',
+    'And if I could build a thousand little universes, I think I’d still find my way back to you.',
+  ],
+  signature: '— Rayhan',
+  photo: 'photos/26september(1).jpeg',
+  voice: null,
 }
 
 /**
@@ -505,27 +646,6 @@ export const futureWorlds = {
   ],
 }
 
-/** HEART REACTOR — the core above the island that fills up as chapters are completed. */
-export const heartReactor = {
-  title: 'Heart Reactor',
-  idle: 'Every chapter you finish gives the heart a little more light.',
-  ready: 'The heart is full. Are you ready?',
-  igniteButton: 'Awaken the heart ♡',
-}
-
-/**
- * FINAL MESSAGE — the secret room behind the ending.
- * `letter` stays in Bahasa Indonesia. `video` / `voice`: a path in /public, or null to hide.
- */
-export const finalMessage = {
-  title: 'The Secret Room',
-  letter:
-    'Tari,\n\nKalau kamu sampai di sini, berarti kamu sudah menjelajahi seluruh universe kecil ini — semua kenangan, semua surat, semua mimpi kita.\n\nAku bikin tempat ini karena aku pengen kamu tahu satu hal: di semesta mana pun, aku akan tetap menemukan jalan ke kamu.\n\nTerima kasih sudah jadi bagian paling indah dari ceritaku. Ini baru awal, dan aku nggak sabar menulis halaman-halaman berikutnya sama kamu.\n\nI love you, always. ♡',
-  signature: '— Rayhan',
-  video: null,
-  voice: null,
-}
-
 /* ═══════════════════════════════════════════════════════════════
  *  SECRET ENDING — "THE ONE THING I COULD NEVER CODE ♡"
  *  Hidden in the Secret Room after the game is finished: a small star
@@ -544,9 +664,16 @@ export const secretEnding = {
     button: 'Open my heart ♡',
   },
 
+  /** shown one line at a time, while everything goes quiet */
   transition: {
-    line1: "Out of all the things I could create in this little universe, there's one thing I can never fully put into code...",
-    line2: 'How much you mean to me.',
+    lines: [
+      'I can build a world out of code.',
+      'I can make stars appear, flowers bloom, and little universes come to life.',
+      'But there is one thing I could never truly put into code.',
+      'What it feels like to have you in my life.',
+      'So I made this little world instead.',
+      'Not because it could ever explain everything I feel, but because I wanted to make something that could remind you how much you mean to me.',
+    ],
   },
 
   /** The letter. A blank line starts a new paragraph. */

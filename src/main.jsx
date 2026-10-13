@@ -11,6 +11,7 @@ import './styles.css'
 import './features.css'
 import './story.css'
 import './secret.css'
+import './game.css'
 import { MotionConfig } from 'framer-motion'
 import App from './App'
 

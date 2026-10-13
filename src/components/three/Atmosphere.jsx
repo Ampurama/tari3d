@@ -20,12 +20,12 @@ export function Lights() {
         shadow-bias={-0.0004}
         shadow-radius={4}
         shadow-normalBias={0.03}
-        shadow-camera-left={-9}
-        shadow-camera-right={9}
-        shadow-camera-top={9}
-        shadow-camera-bottom={-9}
+        shadow-camera-left={-14}
+        shadow-camera-right={14}
+        shadow-camera-top={14}
+        shadow-camera-bottom={-14}
         shadow-camera-near={1}
-        shadow-camera-far={40}
+        shadow-camera-far={60}
       />
       <directionalLight position={[8, 3, 10]} intensity={0.4} color="#ffb6d9" />
       <directionalLight position={[-6, -4, 6]} intensity={0.35} color="#9f8bff" />

@@ -70,36 +70,43 @@ next to it adds soft wind and wind-chimes.
 
 Progress (hearts found, stars lit, envelopes opened, letter read) is saved in the browser.
 
-### Story Mode — “Every Universe Leads to You”
+### The game — “Every Little Thing Leads to You”
 
-Five chapters, unlocked one after another. Progress is measured from what she actually does
-(see `src/lib/story.js`), so nothing is ever marked complete just by opening a panel.
+After the intro she **chooses a character** (`avatars` in `config.js`: names, outfit, colours, hair —
+stylised little souls, not portraits) and walks around a large island with zones: the Starting Meadow,
+the Memory Garden, the Heartwood Forest, Reflection Lake (with a bridge and a waterfall), Starfall Cliff,
+a Secret Cove behind a rock arch, and the **Central Love Tree**, which grows with her progress.
 
-| Chapter | What completes it |
+| Chapter | What she does (measured from real actions — never faked) |
 |---|---|
-| 1 · The First Page | open 3 memories in the floating frames + visit every Memory Lane lantern |
-| 2 · Back in Time | travel to every date in the **Time Machine** |
-| 3 · The Red Thread | tie the thread on both islands + open both island messages |
-| 4 · Words I Kept for You | read the letter + open 3 Love Capsule envelopes + light every star |
-| 5 · Every Universe Leads to You | visit every world in the **Future Simulator** portal |
+| 1 · The Little Things | find 5 objects: a photograph (garden), a letter in a bottle (lake), a sleeping flower (forest), a music box (cliff), a fallen star (meadow) |
+| 2 · Miles Between Us | through the telescope on Starfall Cliff: restore Trust, Communication, Patience, Understanding and Effort to build the bridge between two islands |
+| 3 · A Future We Grow | find 5 glowing seeds and grow each in its own plot by the Love Tree (hold to plant, fetch lake water, light two stones, stay with it, connect the four lights) |
 
-Each finished chapter lights one ring of the **Heart Reactor** above the island. At 5/5, the reactor
-starts the final cutscene (camera spiral, particles, shockwave, music climax), which ends in the
-**Secret Room** with your final letter, optional video/voice note, a *Replay the ending* button and
-the original “One last question” finale.
+Then the **final cinematic** (“You were the meaning all along”), the **love letter** (`loveLetter`:
+greeting, body, `personalNote`, photo, optional `voice`), and — touching the little star by the Love
+Tree afterwards — the optional **secret ending** (`secretEnding`). Both can be replayed from the Story
+book; “Start the story over…” there is the only way to reset (it asks first).
 
-Edit in `config.js`:
+Controls: **WASD / arrow keys** (Shift to run), drag to look, scroll/pinch to zoom, **E** to interact,
+or click/tap something to walk to it. On phones: joystick + the ✦ button.
 
-| What | Key |
+| Edit in `config.js` | Key |
 |---|---|
-| Chapter titles, intro/outro dialog (`{me}` / `{you}` become nicknames) | `story` |
-| Dates, titles, narration, photos per date | `timeMachine.entries` |
-| Island messages + optional voice notes (`audio: 'audio/…'`) | `redThread.messages` |
-| Dream worlds (home, travel, simple moments, wedding) | `futureWorlds.worlds` |
-| Reactor texts | `heartReactor` |
-| Final letter, signature, optional `video` / `voice` | `finalMessage` |
+| Characters | `avatars`, `avatarSelect` |
+| Chapter titles and dialog (`{me}` / `{you}` become nicknames) | `story` |
+| The five little things (titles, messages, the photo) | `littleThings` |
+| The five connections (instructions, messages) | `connections` |
+| The island messages + optional voice notes | `redThread.messages` |
+| The five seeds | `seeds` |
+| Hidden notes, Starfall Cliff text | `hiddenNotes`, `viewpoint` |
+| Cinematic captions and title | `finalCinematic` |
+| The love letter | `loveLetter` |
+| Secret ending (message, letter, voice, photo) | `secretEnding` |
 
-A voice-note play button only appears when a file is configured, so there are no buttons that don’t do anything.
+Older features are still there as optional extras (Places menu, or found while exploring): the photo
+frames, Memory Lane, Love Capsule (on the garden bench), Time Machine, Future Simulator portal,
+constellation, hidden hearts, the letter on the meadow table and the heart arch in the cove.
 
 ### Days counter
 `couple.since: 'YYYY-MM-DD'` shows “day N of …” in the corner. Set it to `null` to hide it.
@@ -110,17 +117,11 @@ A voice-note play button only appears when a file is configured, so there are no
 
 1. **Loading**: a heart fills up while textures and fonts load.
 2. **Intro**: stars fade in, a glowing heart appears, the words, then “Enter Our World ♡”.
-3. **The island**: drag to look around, pinch or scroll to zoom. Glowing sparkles mark things you can tap:
-   - **floating frames** → the memory gallery (swipe or use the arrows; Esc closes)
-   - **the envelope on the little table** → the flap opens, the letter rises, and the text types itself out (tap to show it all)
-   - **the telescope** → *Same sky*: two islands joined by a ribbon of light
-   - **floating hearts** → a small sweet note
-   - **the heart arch at the end of the glowing path** → wakes up only after the letter has been opened
-4. **Finale**: the screen fades to dark, thousands of tiny hearts gather into one, then the question.
-   Both buttons are a yes, and each gets its own reply, confetti and burst of hearts.
+3. **Character selection** → the Starting Meadow.
+4. **Three chapters** (see above), with dialog, discoveries and a story book (📖) showing real progress.
+5. **Final cinematic → love letter → (optional) secret ending.**
 
-The dock at the bottom gives direct access to every place. Progress (whether the letter was read) is
-remembered in the browser.
+Progress, the chosen character and sound settings are remembered in the browser.
 
 ---
 
@@ -147,7 +148,7 @@ with base directory `web3d`, build command `npm run build` and publish directory
   re-frames every scene for portrait screens.
 - **Reduced motion**: with the OS setting “reduce motion” on, camera moves are short, nothing spins,
   text appears instantly and confetti is minimal.
-- **No WebGL?** A complete 2D version (same content, same order) is shown automatically.
+- **No WebGL?** A complete 2D version is shown automatically — the three chapters can be played with buttons and the ending and secret ending still work.
 - No API keys, trackers or external requests. Fonts are bundled, and all 3D assets are generated in code.
 
 ## Project structure
@@ -156,9 +157,9 @@ with base directory `web3d`, build command `npm run build` and publish directory
 src/
   content/        ← your words, photos list, music settings, letter.txt
   components/
-    three/        ← 3D scene: island, tree, letter table, frames, distance, finale…
-    ui/           ← overlays: loading, intro, HUD, gallery, letter, finale, 2D fallback
+    three/        ← 3D: terrain, vegetation, Love Tree, avatar + controller, chapters, camera…
+    ui/           ← overlays: avatar select, HUD & touch controls, story, chapters, ending, 2D fallback
   audio/engine.js ← generated music + ambient sound (Web Audio)
-  lib/            ← layout & camera poses, geometry helpers, textures, device tiers
+  lib/            ← terrain, layout & camera poses, player/input, interactions, story, cinematic
   store.js        ← app state (zustand)
 ```

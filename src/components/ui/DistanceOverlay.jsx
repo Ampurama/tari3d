@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { couple, distance } from '../../content/config'
+import { connections, couple, distance } from '../../content/config'
 import { useStore } from '../../store'
 import { CountdownBody } from './Countdown'
-import RedThreadUI from './RedThreadUI'
+import ConnectionsUI from './ConnectionsUI'
 
 /** 2D version of the two islands, used when 3D isn't available. */
 function FlatIllustration() {
@@ -46,6 +46,8 @@ export default function DistanceOverlay({ flat = false }) {
   const view = useStore((s) => s.view)
   const reducedMotion = useStore((s) => s.reducedMotion)
   const [step, setStep] = useState(0)
+  // the closing lines and the countdown appear once the bridge is whole
+  const whole = useStore((s) => s.connectionsDone.length >= connections.length)
   const open = view === 'distance'
 
   useEffect(() => {
@@ -73,11 +75,13 @@ export default function DistanceOverlay({ flat = false }) {
           </motion.span>
           <motion.h2 {...show(2)}>{distance.line1}</motion.h2>
           {flat && <FlatIllustration />}
-          <RedThreadUI flat={flat} />
-          <motion.p {...show(3)}>{distance.line2}</motion.p>
-          <motion.div className="distance-countdown" {...show(3)}>
-            <CountdownBody compact />
-          </motion.div>
+          <ConnectionsUI flat={flat} />
+          {whole && <motion.p {...show(3)}>{distance.line2}</motion.p>}
+          {whole && (
+            <motion.div className="distance-countdown" {...show(3)}>
+              <CountdownBody compact />
+            </motion.div>
+          )}
         </motion.section>
       )}
     </AnimatePresence>

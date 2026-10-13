@@ -2,7 +2,6 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { grassGeometry, heightAt, ISLAND_RADIUS, rockGeometry, seeded } from '../../lib/island'
-import { paths, spots } from '../../lib/layout'
 import { count } from '../../lib/device'
 import { useStore } from '../../store'
 import { Glow } from './Bits'
@@ -99,59 +98,6 @@ export function Flowers({ radius = ISLAND_RADIUS, amount = count(420, 200), seed
   )
 }
 
-/** Glowing stepping stones following the paths across the meadow. */
-export function GlowPaths() {
-  const ref = useRef()
-  const letterRead = useStore((s) => s.letterRead)
-  const reducedMotion = useStore((s) => s.reducedMotion)
-  const stones = useMemo(() => {
-    const list = []
-    paths.forEach((pts, pathIndex) => {
-      const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)))
-      const n = Math.round(curve.getLength() / 0.48)
-      for (let i = 0; i <= n; i++) {
-        const p = curve.getPointAt(i / n)
-        list.push({ x: p.x, z: p.z, y: heightAt(p.x, p.z) + 0.015, path: pathIndex, t: i / n, s: 0.085 + ((i * 7) % 5) * 0.01 })
-      }
-    })
-    return list
-  }, [])
-
-  useLayoutEffect(() => {
-    const m = new THREE.Matrix4()
-    stones.forEach((s, i) => {
-      m.compose(
-        new THREE.Vector3(s.x, s.y, s.z),
-        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, i * 1.7, 0)),
-        new THREE.Vector3(s.s * 1.25, 0.03, s.s),
-      )
-      ref.current.setMatrixAt(i, m)
-    })
-    ref.current.instanceMatrix.needsUpdate = true
-  }, [stones])
-
-  // a slow wave of light travelling along the stones; stronger once the secret is unlocked
-  const color = useMemo(() => new THREE.Color(), [])
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime
-    stones.forEach((s, i) => {
-      const wave = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(s.t * 9 - t * 1.6 + s.path)
-      const base = s.path === 0 && letterRead ? 1.35 : 1
-      color.setRGB(1.25 * base, (0.86 + 0.2 * wave) * base, (0.62 + 0.3 * wave) * base)
-      color.multiplyScalar(0.6 + 0.45 * wave)
-      ref.current.setColorAt(i, color)
-    })
-    ref.current.instanceColor.needsUpdate = true
-  })
-
-  return (
-    <instancedMesh ref={ref} args={[null, null, stones.length]} receiveShadow>
-      <cylinderGeometry args={[1, 1, 1, 14]} />
-      <meshBasicMaterial toneMapped={false} />
-    </instancedMesh>
-  )
-}
-
 /** Small rocks orbiting the island lazily. */
 export function FloatingRocks({ amount = 7 }) {
   const ref = useRef()
@@ -160,8 +106,8 @@ export function FloatingRocks({ amount = 7 }) {
     const rand = seeded(77)
     return Array.from({ length: amount }, (_, i) => ({
       a: (i / amount) * Math.PI * 2,
-      r: 7.6 + rand() * 2.5,
-      y: -1.5 + rand() * 3,
+      r: 14 + rand() * 4,
+      y: -1.5 + rand() * 4,
       s: 0.18 + rand() * 0.35,
     }))
   }, [amount])
@@ -185,18 +131,3 @@ export function FloatingRocks({ amount = 7 }) {
     </group>
   )
 }
-
-// keep flowers off the paths and props
-export const mainIslandAvoid = [
-  [spots.tree.x, spots.tree.z, 0.75],
-  [spots.bench.x, spots.bench.z, 0.95],
-  [spots.table.x, spots.table.z, 0.85],
-  [spots.telescope.x, spots.telescope.z, 0.75],
-  [spots.arch.x, spots.arch.z, 1.0],
-  [spots.timeMachine.x, spots.timeMachine.z, 0.7],
-  [spots.portal.x, spots.portal.z, 0.8],
-  ...paths.flatMap((pts) => {
-    const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)))
-    return curve.getSpacedPoints(Math.ceil(curve.getLength() / 0.35)).map((p) => [p.x, p.z, 0.36])
-  }),
-]

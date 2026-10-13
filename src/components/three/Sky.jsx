@@ -114,12 +114,13 @@ function Clouds() {
   const clouds = useMemo(() => {
     const rand = seeded(21)
     const tints = ['#c9a8f0', '#e7a9cc', '#a99ae6', '#d9c8f5']
-    return Array.from({ length: count(16, 9) }, (_, i) => {
-      const a = (i / 16) * Math.PI * 2 + rand() * 0.4
-      const r = 10 + rand() * 9
-      const s = 9 + rand() * 9
+    // a sea of clouds around (and below) the island
+    return Array.from({ length: count(24, 13) }, (_, i) => {
+      const a = (i / 24) * Math.PI * 2 + rand() * 0.4
+      const r = 16 + rand() * 18
+      const s = 12 + rand() * 12
       return {
-        position: [Math.cos(a) * r, -2.5 - rand() * 5, Math.sin(a) * r],
+        position: [Math.cos(a) * r, -4 - rand() * 6, Math.sin(a) * r],
         scale: [s * 1.6, s * 0.7, 1],
         tint: tints[i % tints.length],
         opacity: 0.09 + rand() * 0.1,

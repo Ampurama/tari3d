@@ -1,72 +1,14 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useCursor } from '@react-three/drei'
 import * as THREE from 'three'
 import { areas } from '../../lib/layout'
 import { count } from '../../lib/device'
 import { useStore } from '../../store'
-import { audio } from '../../audio/engine'
 import { Glow, HeartMesh } from './Bits'
 import { DriftParticles, Fireflies } from './Particles'
 
 const PINK_LIGHT = new THREE.Color('#ffd6ea')
 const WARM_LIGHT = new THREE.Color('#ffc58a')
-
-/**
- * The little star that was never lit. It wakes up once the final letter has appeared,
- * and only then can it be touched — that opens the secret ending.
- */
-function SecretStar() {
-  const core = useRef()
-  const halo = useRef()
-  const [hovered, setHovered] = useState(false)
-  const awake = useStore((s) => s.starAwake)
-  const stage = useStore((s) => s.secretStage)
-  const findSecret = useStore((s) => s.findSecret)
-  const reducedMotion = useStore((s) => s.reducedMotion)
-  const live = awake && !stage
-  useCursor(hovered && live)
-
-  useFrame(({ clock }, delta) => {
-    const t = clock.elapsedTime
-    const pulse = reducedMotion ? 1 : 0.8 + 0.3 * Math.sin(t * 2.2)
-    const target = !awake ? 0.12 : stage ? 0.5 : 1
-    halo.current.material.opacity = THREE.MathUtils.damp(halo.current.material.opacity, target * 0.9 * pulse, 2, delta)
-    const s = THREE.MathUtils.damp(halo.current.scale.x, (awake ? 1.1 : 0.5) * (hovered && live ? 1.4 : 1) * pulse, 3, delta)
-    halo.current.scale.set(s, s, 1)
-    core.current.scale.setScalar(THREE.MathUtils.damp(core.current.scale.x, awake ? 1 : 0.55, 2, delta))
-    core.current.material.color.setScalar(awake ? 2.6 : 0.5)
-  })
-
-  return (
-    <group
-      position={[2.15, 4.55, -1.4]}
-      onClick={(e) => {
-        if (!live) return
-        e.stopPropagation()
-        if (e.delta > 8) return
-        if (findSecret()) audio.sparkle()
-      }}
-      onPointerOver={(e) => {
-        if (!live) return
-        e.stopPropagation()
-        setHovered(true)
-      }}
-      onPointerOut={() => setHovered(false)}
-    >
-      <mesh ref={core} scale={0.55}>
-        <octahedronGeometry args={[0.09, 0]} />
-        <meshBasicMaterial color={[0.5, 0.5, 0.5]} toneMapped={false} />
-      </mesh>
-      <Glow ref={halo} color="#fff1c9" size={0.5} opacity={0.1} />
-      {/* generous tap target for fingers */}
-      <mesh>
-        <sphereGeometry args={[0.45, 10, 8]} />
-        <meshBasicMaterial colorWrite={false} depthWrite={false} />
-      </mesh>
-    </group>
-  )
-}
 
 /*
  * The Secret Room — a quiet glass platform far above everything, ringed by candles,
@@ -140,7 +82,6 @@ export default function FinalRoom() {
       <Glow position={[0, 3.2, -1.8]} color="#ff8fc4" size={9} opacity={0.4} />
       <Glow position={[0, 3.2, -2.2]} color="#b892ff" size={16} opacity={0.2} />
       <Glow ref={warmGlow} position={[0, 2.6, -2.6]} color="#ffc58a" size={20} opacity={0} />
-      <SecretStar />
       <pointLight ref={keyLight} position={[0, 3.5, 1.5]} color="#ffd6ea" intensity={18} distance={14} />
       <pointLight position={[0, 1, 0]} color="#ffcf87" intensity={6} distance={10} />
       <ambientLight intensity={0.2} />

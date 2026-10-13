@@ -34,9 +34,43 @@ const ARP_PATTERNS = [
   [0, 2, 1, 3, 2, 4, 3, 1],
 ]
 
-const BPM = 68
-const EIGHTH = 60 / BPM / 2
 const LOOP_STEPS = 64 // 8 bars
+
+/*
+ * Moods: the same little music box, arranged differently for each part of the journey.
+ * The scheduler switches mood on the next chord, so changes are always smooth.
+ */
+const ch = (root, pad, arp) => ({ root, pad, arp })
+const MOODS = {
+  // avatar selection: slow, airy, no melody yet
+  select: { bpm: 58, melody: false, arp: 0.5, chords: [ch('F2', ['F3', 'A3', 'C4', 'E4'], ['F4', 'A4', 'C5', 'E5', 'G5']), ch('D2', ['D3', 'F3', 'A3', 'C4'], ['D4', 'F4', 'A4', 'C5', 'E5']), ch('A#1', ['A#2', 'D3', 'F3', 'A3'], ['A#3', 'D4', 'F4', 'A4', 'C5']), ch('C2', ['C3', 'E3', 'G3', 'D4'], ['C4', 'E4', 'G4', 'D5', 'E5'])] },
+  // Chapter 1 — the original theme
+  little: { bpm: 68, melody: true, arp: 1, chords: CHORDS },
+  // Chapter 2 — atmospheric, more space; it warms up as the bridge is restored
+  miles: { bpm: 60, melody: false, arp: 0.35, chords: [ch('A1', ['A2', 'C3', 'E3', 'G3'], ['A3', 'C4', 'E4', 'G4', 'B4']), ch('F1', ['F2', 'A2', 'C3', 'E3'], ['F3', 'A3', 'C4', 'E4', 'G4']), ch('C2', ['C3', 'E3', 'G3', 'B3'], ['C4', 'E4', 'G4', 'B4', 'D5']), ch('G1', ['G2', 'B2', 'D3', 'F#3'], ['G3', 'B3', 'D4', 'F#4', 'A4'])] },
+  // Chapter 3 — warm and hopeful
+  future: { bpm: 74, melody: false, arp: 1, chords: [ch('G2', ['G3', 'B3', 'D4', 'F#4'], ['G4', 'B4', 'D5', 'F#5', 'A5']), ch('D2', ['D3', 'F#3', 'A3', 'C#4'], ['D4', 'F#4', 'A4', 'C#5', 'E5']), ch('E2', ['E3', 'G3', 'B3', 'D4'], ['E4', 'G4', 'B4', 'D5', 'F#5']), ch('C2', ['C3', 'E3', 'G3', 'B3'], ['C4', 'E4', 'G4', 'B4', 'D5'])] },
+  // the final cinematic and the letter
+  finale: { bpm: 62, melody: true, arp: 0.7, chords: CHORDS },
+  // the secret ending
+  quiet: { bpm: 54, melody: false, arp: 0.25, chords: CHORDS },
+}
+
+const AUDIO_PREFS = 'our-little-universe:audio'
+const loadPrefs = () => {
+  try {
+    return JSON.parse(localStorage.getItem(AUDIO_PREFS)) || {}
+  } catch {
+    return {}
+  }
+}
+const savePrefs = (p) => {
+  try {
+    localStorage.setItem(AUDIO_PREFS, JSON.stringify({ ...loadPrefs(), ...p }))
+  } catch {
+    /* ignore */
+  }
+}
 
 class AudioEngine {
   ctx = null
@@ -46,6 +80,15 @@ class AudioEngine {
   ambientBus = null
   musicOn = false
   ambientOn = false
+  prefs = loadPrefs()
+  /** sound effects for interactions (on by default) */
+  sfxOn = this.prefs.sfxOn !== false
+  /** master volume 0..1 */
+  volume = typeof this.prefs.volume === 'number' ? this.prefs.volume : 0.85
+  mood = 'little'
+  pendingMood = null
+  /** 0..1 — Chapter 2 warms up as connections are restored */
+  warmth = 0
   step = 0
   nextTime = 0
   loop = 0
@@ -60,7 +103,40 @@ class AudioEngine {
   }
 
   emit() {
-    this.listeners.forEach((fn) => fn({ musicOn: this.musicOn, ambientOn: this.ambientOn }))
+    const state = { musicOn: this.musicOn, ambientOn: this.ambientOn, sfxOn: this.sfxOn, volume: this.volume }
+    this.listeners.forEach((fn) => fn(state))
+  }
+
+  /** Did she turn the music off herself last time? Then it stays off until she turns it on. */
+  get musicWanted() {
+    return this.prefs.musicOn !== false
+  }
+
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v))
+    savePrefs({ volume: this.volume })
+    if (this.master) this.fade(this.master.gain, this.volume, 0.2)
+    this.emit()
+  }
+
+  setSfx(on) {
+    this.sfxOn = on
+    savePrefs({ sfxOn: on })
+    this.emit()
+  }
+
+  /** Switch the musical mood; takes effect on the next chord so it never jumps. */
+  setMood(mood) {
+    if (!MOODS[mood] || (this.mood === mood && !this.pendingMood)) return
+    this.pendingMood = mood
+  }
+
+  setWarmth(w) {
+    this.warmth = Math.max(0, Math.min(1, w))
+  }
+
+  eighth() {
+    return 60 / MOODS[this.mood].bpm / 2
   }
 
   ensure() {
@@ -78,7 +154,7 @@ class AudioEngine {
     comp.connect(ctx.destination)
 
     this.master = ctx.createGain()
-    this.master.gain.value = 1
+    this.master.gain.value = this.volume
     this.master.connect(comp)
 
     this.reverb = ctx.createConvolver()
@@ -133,7 +209,11 @@ class AudioEngine {
 
   setMusic(on, { user = false } = {}) {
     if (!this.ensure()) return
-    if (user) this.userMuted = !on
+    if (user) {
+      this.userMuted = !on
+      this.prefs.musicOn = on
+      savePrefs({ musicOn: on })
+    }
     if (!on) clearTimeout(this.climaxTimer)
     this.musicOn = on
     const volume = musicConfig.volume ?? 0.55
@@ -182,30 +262,37 @@ class AudioEngine {
       return
     }
     while (this.nextTime < ctx.currentTime + 0.25) {
+      // a new mood starts on a chord change
+      if (this.pendingMood && this.step % 16 === 0) {
+        this.mood = this.pendingMood
+        this.pendingMood = null
+      }
       this.playStep(this.step, this.nextTime)
-      this.nextTime += EIGHTH
+      this.nextTime += this.eighth()
       this.step = (this.step + 1) % LOOP_STEPS
       if (this.step === 0) this.loop++
     }
   }
 
   playStep(step, time) {
-    const chord = CHORDS[Math.floor(step / 16)]
+    const mood = MOODS[this.mood]
+    const E = this.eighth()
+    const chord = mood.chords[Math.floor(step / 16) % mood.chords.length]
     const inChord = step % 16
     if (inChord === 0) {
-      chord.pad.forEach((n) => this.pad(freq(n), time, EIGHTH * 16))
-      this.bass(freq(chord.root), time, EIGHTH * 16)
+      chord.pad.forEach((n) => this.pad(freq(n), time, E * 16))
+      this.bass(freq(chord.root), time, E * 16)
     }
-    // Arpeggio — sparser when the melody plays so they don't crowd each other.
-    const withMelody = this.loop % 2 === 0
+    // Arpeggio — sparser when the melody plays; Chapter 2's arpeggio fills in as it warms up
+    const withMelody = mood.melody && this.loop % 2 === 0
+    const density = this.mood === 'miles' ? 0.3 + this.warmth * 0.7 : mood.arp
     const pattern = ARP_PATTERNS[(Math.floor(step / 8) + this.loop) % ARP_PATTERNS.length]
     const idx = pattern[step % 8]
-    if (!withMelody || step % 2 === 0) {
-      this.bell(freq(chord.arp[idx]) / (withMelody ? 2 : 1), time, withMelody ? 0.035 : 0.05, 1.6)
-    }
+    const play = withMelody ? step % 2 === 0 : density >= 1 || (step * 7 + this.loop * 3) % 10 < density * 10
+    if (play) this.bell(freq(chord.arp[idx]) / (withMelody ? 2 : 1), time, withMelody ? 0.035 : 0.05, 1.6)
     if (withMelody) {
       const note = MELODY.find((m) => m[0] === step)
-      if (note) this.bell(freq(note[1]), time, 0.085, Math.max(1.8, note[2] * EIGHTH * 1.4))
+      if (note) this.bell(freq(note[1]), time, 0.085, Math.max(1.8, note[2] * E * 1.4))
     }
   }
 
@@ -465,6 +552,96 @@ class AudioEngine {
         if (t >= 1) clearInterval(this.softTimer)
       }, 100)
     }
+  }
+
+  /** Short interaction sounds. They follow the "sound effects" setting, not the music toggle. */
+  sfx(kind, n = 0) {
+    if (!this.sfxOn || !this.ensure()) return
+    const ctx = this.ctx
+    const t = ctx.currentTime + 0.01
+    const out = this.master
+    const notes = (list, gap, gain, len) => list.forEach((nm, i) => this.bellTo(out, freq(nm), t + i * gap, gain, len))
+    switch (kind) {
+      case 'reveal':
+        notes(['E5', 'G5', 'B5'], 0.09, 0.05, 1.8)
+        break
+      case 'bloom':
+        notes(['C5', 'E5', 'G5', 'A5', 'C6'], 0.07, 0.045, 2.2)
+        break
+      case 'rise':
+        notes(['G4', 'C5', 'E5', 'G5', 'C6', 'E6'], 0.08, 0.045, 2.4)
+        break
+      case 'pickup':
+        notes(['A5', 'E6'], 0.08, 0.05, 1.2)
+        break
+      case 'plant': {
+        const o = ctx.createOscillator()
+        const g = ctx.createGain()
+        o.frequency.setValueAtTime(160, t)
+        o.frequency.exponentialRampToValueAtTime(70, t + 0.25)
+        g.gain.setValueAtTime(0.12, t)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35)
+        o.connect(g).connect(out)
+        o.start(t)
+        o.stop(t + 0.4)
+        notes(['D5', 'A5'], 0.12, 0.035, 1.4)
+        break
+      }
+      case 'water':
+        notes(['B5', 'F#6', 'B6'], 0.05, 0.03, 0.9)
+        break
+      case 'light':
+        notes(['E6'], 0, 0.05, 2)
+        break
+      case 'tick':
+        notes(['C6'], 0, 0.02, 0.25)
+        break
+      case 'note':
+        notes([['C5', 'D5', 'E5', 'G5', 'A5'][n % 5]], 0, 0.06, 1.6)
+        break
+      case 'complete':
+        ;['C4', 'G4', 'E5', 'C6'].forEach((nm) => this.bellTo(out, freq(nm), t, 0.04, 3.2))
+        notes(['G5', 'C6', 'E6'], 0.12, 0.03, 2.4)
+        break
+      default:
+        break
+    }
+  }
+
+  /** The music box from Chapter 1 — a short tune that plays even when the background music is off. */
+  musicBox() {
+    if (!this.ensure()) return
+    const ctx = this.ctx
+    const tune = ['E5', 'G5', 'A5', 'G5', 'E5', 'D5', 'E5', 'G5', 'C6', 'B5', 'A5', 'G5', 'E5', 'G5', 'A5']
+    const t0 = ctx.currentTime + 0.05
+    if (this.musicOn) this.duck(true)
+    tune.forEach((nm, i) => this.bellTo(this.master, freq(nm), t0 + i * 0.32 + (i % 4 === 3 ? 0.08 : 0), 0.07, 1.8))
+    clearTimeout(this.boxTimer)
+    this.boxTimer = setTimeout(() => this.duck(false), tune.length * 320 + 900)
+  }
+
+  /** A bell routed to any destination (used by sound effects). */
+  bellTo(dest, f, time, gain, length) {
+    const ctx = this.ctx
+    const out = ctx.createGain()
+    out.gain.setValueAtTime(0, time)
+    out.gain.linearRampToValueAtTime(gain, time + 0.006)
+    out.gain.exponentialRampToValueAtTime(0.0001, time + length)
+    out.connect(dest)
+    out.connect(this.reverb)
+    ;[
+      [1, 1],
+      [2, 0.25],
+      [2.76, 0.06],
+    ].forEach(([ratio, g]) => {
+      const osc = ctx.createOscillator()
+      osc.frequency.value = f * ratio
+      const og = ctx.createGain()
+      og.gain.value = g
+      osc.connect(og).connect(out)
+      osc.start(time)
+      osc.stop(time + length + 0.05)
+    })
   }
 
   /** Little sparkle when something magical is opened (only if sound is already on). */

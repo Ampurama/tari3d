@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { timeMachine } from '../../content/config'
-import { useChapterUnlocked, useStore } from '../../store'
+import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { Glow, Interactive } from './Bits'
 
@@ -19,7 +19,7 @@ export default function TimeMachine(props) {
   const core = useRef()
   const halo = useRef()
   const spin = useRef(0.25)
-  const unlocked = useChapterUnlocked(1)
+  const unlocked = true // an optional discovery now — always awake
   const view = useStore((s) => s.view)
   const travelling = useStore((s) => s.timeTravelling)
   const goTo = useStore((s) => s.goTo)

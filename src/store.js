@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { constellation, futureWorlds, hints, loveCapsule, memoryLane, story, timeMachine } from './content/config'
-import { CHAPTER_COUNT, CHAPTER_PLACES, chapterStatus, completedCount } from './lib/story'
+import { avatars, connections, constellation, futureWorlds, hints, littleThings, loveCapsule, memoryLane, seeds, story, timeMachine } from './content/config'
+import { CHAPTER_COUNT, chapterStatus, completedCount } from './lib/story'
+import { player, resetPlayer } from './lib/player'
 
 export const HIDDEN_HEART_COUNT = 5
 
@@ -24,6 +25,8 @@ function save(patch) {
 
 const saved = loadSaved()
 const arr = (v) => (Array.isArray(v) ? v : [])
+const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {})
+const addOnce = (list, id) => (list.includes(id) ? list : [...list, id])
 let toastId = 0
 let travelToken = 0
 
@@ -32,70 +35,97 @@ const motionQuery =
     ? window.matchMedia('(prefers-reduced-motion: reduce)')
     : null
 
+/** Story progress keys — the only things a deliberate "reset progress" clears. */
+const STORY_KEYS = {
+  littleFound: [],
+  connectionsDone: [],
+  seedState: {},
+  carrying: null,
+  hasWater: false,
+  stonesLit: [],
+  futureLinks: [],
+  prologueSeen: false,
+  introsSeen: [],
+  celebrated: [],
+  mainEndingSeen: false,
+  secretFound: false,
+  secretSeen: false,
+  viewpointSeen: false,
+}
+
 export const useStore = create((set, get) => ({
   /** 'loading' → 'intro' → 'world' */
   phase: 'loading',
   /**
-   * 'intro' | 'explore' | 'memories' | 'lane' | 'letter' | 'capsule' | 'distance' | 'constellation' | 'finale'
-   * | 'timemachine' | 'future' | 'reactor' | 'cutscene' | 'finalRoom' | 'epilogue'
+   * 'intro' | 'avatar' | 'explore' | 'memories' | 'lane' | 'letter' | 'capsule' | 'distance' | 'constellation'
+   * | 'finale' | 'timemachine' | 'future' | 'cinematic' | 'ending' | 'finalRoom' | 'epilogue'
    */
   view: 'intro',
   selectedMemory: null,
-  /** current lantern on the Memory Lane */
   laneIndex: 0,
-  /** id of the open Love Capsule letter, or null */
   capsuleLetter: null,
-  capsuleOpened: Array.isArray(saved.capsuleOpened) ? saved.capsuleOpened : [],
-  /** ids (0..4) of hidden hearts already found */
-  foundHearts: Array.isArray(saved.foundHearts) ? saved.foundHearts : [],
-  /** indices of constellation stars already lit */
-  starsFound: Array.isArray(saved.starsFound) ? saved.starsFound : [],
-  /** the star whose reason is showing */
+  capsuleOpened: arr(saved.capsuleOpened),
+  foundHearts: arr(saved.foundHearts),
+  starsFound: arr(saved.starsFound),
   activeStar: null,
-  /* ── story mode progress (all persisted; every value comes from something she actually did) ── */
   viewedMemories: arr(saved.viewedMemories),
   laneVisited: arr(saved.laneVisited),
   timeVisited: arr(saved.timeVisited),
-  /** which Time Machine entry is open (null = the dial) */
   timeIndex: null,
-  /** true while the time-travel animation plays */
   timeTravelling: false,
-  threadTied: { me: Boolean(saved.threadTied?.me), you: Boolean(saved.threadTied?.you) },
-  threadConnected: Boolean(saved.threadConnected),
-  threadRead: arr(saved.threadRead),
-  /** 'me' | 'you' | null — the island message that's open */
+  /** 'me' | 'you' | null — the island message that's open (Chapter 2) */
   threadMessage: null,
+  threadRead: arr(saved.threadRead),
   futureVisited: arr(saved.futureVisited),
   futureIndex: 0,
+
+  /* ── avatar ── */
+  avatarId: avatars.some((a) => a.id === saved.avatarId) ? saved.avatarId : null,
+
+  /* ── story progress: every value comes from something she actually did ── */
+  littleFound: arr(saved.littleFound),
+  connectionsDone: arr(saved.connectionsDone),
+  /** seed id → 'carried' | 'planted' | 'grown' */
+  seedState: obj(saved.seedState),
+  /** the seed she's holding right now (one at a time) */
+  carrying: typeof saved.carrying === 'string' ? saved.carrying : null,
+  /** water fetched from the lake for the Kindness seed */
+  hasWater: Boolean(saved.hasWater),
+  /** guiding stones lit for the Shared Adventures seed */
+  stonesLit: arr(saved.stonesLit),
+  /** grown seeds already linked to the Future seed */
+  futureLinks: arr(saved.futureLinks),
+  notesFound: arr(saved.notesFound),
+  viewpointSeen: Boolean(saved.viewpointSeen),
   prologueSeen: Boolean(saved.prologueSeen),
   introsSeen: arr(saved.introsSeen),
   celebrated: arr(saved.celebrated),
-  endingSeen: Boolean(saved.endingSeen),
-  /* ── secret ending ("The one thing I could never code") ── */
+  mainEndingSeen: Boolean(saved.mainEndingSeen),
+
+  /* ── secret ending ── */
   /** null | 'found' | 'transition' | 'letter' | 'voice' | 'photo' — stages inside the Secret Room */
   secretStage: null,
-  /** the little star in the Secret Room is lit and can be touched */
-  starAwake: false,
   secretFound: Boolean(saved.secretFound),
   secretSeen: Boolean(saved.secretSeen),
+
+  /** the interactable the avatar is standing next to: { id, label } | null */
+  prompt: null,
+  /** a short card shown when something is discovered: { title, text, kind } | null */
+  discovery: null,
   /** visual-novel style dialog: { lines, index, key } */
   dialog: null,
-  /** small floating panels over any view: 'countdown' | 'hearts' | 'story' | 'places' | null */
+  /** floating panels: 'countdown' | 'hearts' | 'story' | 'places' | 'settings' | null */
   panel: null,
-  /** bumps to make the camera rise toward the sky before the finale */
   riseCue: 0,
   letterRead: Boolean(saved.letterRead),
   unlockPending: false,
-  visited: { memories: false, lane: false, letter: false, capsule: false, distance: false, constellation: false, timemachine: false, future: false, reactor: false },
+  visited: { memories: false, lane: false, letter: false, capsule: false, distance: false, constellation: false, timemachine: false, future: false },
   toast: null,
   reducedMotion: Boolean(motionQuery?.matches),
   pointer: { x: 0, y: 0 },
   /** bumps whenever the camera should (re)fly to the current view */
   camNonce: 0,
-
-  /** a soft black curtain used for slow fades between far-apart places */
   curtain: false,
-  /** set once the 3D canvas has rendered its first frames */
   sceneReady: false,
 
   setPhase: (phase) => set({ phase }),
@@ -114,26 +144,48 @@ export const useStore = create((set, get) => ({
     )
   },
 
+  /* ───────── avatar selection ───────── */
+
+  /** From the intro (or the HUD): open the character selection. Progress is untouched. */
+  openAvatarSelect: () => {
+    const fromWorld = get().phase === 'world'
+    const go = () => set((s) => ({ view: 'avatar', panel: null, dialog: null, prompt: null, camNonce: s.camNonce + 1 }))
+    if (fromWorld) get().throughCurtain(go, 1000)
+    else go()
+  },
+
+  chooseAvatar: (id) => {
+    if (!avatars.some((a) => a.id === id)) return
+    save({ avatarId: id })
+    set({ avatarId: id })
+  },
+
+  /** Confirm the character and step into the world (Starting Meadow on a first visit). */
+  enterWorld: () => {
+    if (!get().avatarId) get().chooseAvatar(avatars[0]?.id)
+    const first = get().phase !== 'world'
+    get().throughCurtain(() => {
+      if (first) resetPlayer()
+      set((s) => ({ phase: 'world', view: 'explore', camNonce: s.camNonce + 1 }))
+      setTimeout(() => {
+        if (!get().prologueSeen) get().startDialog([...story.prologue, ...story.chapters[0].intro], 'prologue')
+        else get().showToast(hints.explore, 6000)
+      }, 1600)
+    }, 1400)
+  },
+
+  /* ───────── navigation ───────── */
+
   startFinale: () => {
     if (!get().letterRead) {
       get().showToast(hints.secretLocked)
       return
     }
-    // the camera starts drifting up into the sky while the screen slowly dims
     set((s) => ({ riseCue: s.riseCue + 1, panel: null }))
     get().throughCurtain(() => get().goTo('finale'), 2200)
   },
 
   leaveFinale: () => get().throughCurtain(() => get().back(), 1300),
-
-  enterWorld: () => {
-    set({ phase: 'world', view: 'explore' })
-    setTimeout(() => {
-      // first visit: the prologue tells her what this universe is; afterwards just a gentle hint
-      if (!get().prologueSeen) get().startDialog(story.prologue, 'prologue')
-      else get().showToast(hints.explore, 6000)
-    }, 2800)
-  },
 
   goTo: (view) => {
     const { letterRead, visited } = get()
@@ -148,6 +200,7 @@ export const useStore = create((set, get) => ({
       capsuleLetter: null,
       activeStar: null,
       panel: null,
+      prompt: null,
       timeIndex: view === 'timemachine' ? get().timeIndex : null,
       timeTravelling: view === 'timemachine' ? get().timeTravelling : false,
       threadMessage: null,
@@ -169,32 +222,23 @@ export const useStore = create((set, get) => ({
       camNonce: s.camNonce + 1,
     })),
 
-  /** Fly to a lantern on the Memory Lane. */
   openLane: (index = get().laneIndex) => {
     const n = memoryLane.milestones.length
     if (!n) return
     const i = ((index % n) + n) % n
-    const laneVisited = get().laneVisited.includes(i) ? get().laneVisited : [...get().laneVisited, i]
+    const laneVisited = addOnce(get().laneVisited, i)
     save({ laneVisited })
-    set((s) => ({
-      view: 'lane',
-      laneIndex: i,
-      laneVisited,
-      panel: null,
-      camNonce: s.camNonce + 1,
-      visited: { ...s.visited, lane: true },
-    }))
+    set((s) => ({ view: 'lane', laneIndex: i, laneVisited, panel: null, prompt: null, camNonce: s.camNonce + 1, visited: { ...s.visited, lane: true } }))
   },
 
   openCapsuleLetter: (id) => {
     if (id === null) return set({ capsuleLetter: null })
     if (!loveCapsule.letters.some((l) => l.id === id)) return
-    const opened = get().capsuleOpened.includes(id) ? get().capsuleOpened : [...get().capsuleOpened, id]
+    const opened = addOnce(get().capsuleOpened, id)
     save({ capsuleOpened: opened })
     set({ capsuleLetter: id, capsuleOpened: opened })
   },
 
-  /** A hidden heart was tapped. Returns true if it was new. */
   findHeart: (id) => {
     const found = get().foundHearts
     if (found.includes(id) || id < 0 || id >= HIDDEN_HEART_COUNT) return false
@@ -210,12 +254,10 @@ export const useStore = create((set, get) => ({
     return true
   },
 
-  /** A constellation star was tapped. */
   lightStar: (index) => {
     if (index < 0 || index >= constellation.reasons.length) return
-    const found = get().starsFound
-    const next = found.includes(index) ? found : [...found, index]
-    if (next !== found) save({ starsFound: next })
+    const next = addOnce(get().starsFound, index)
+    if (next !== get().starsFound) save({ starsFound: next })
     set({ starsFound: next, activeStar: index })
   },
 
@@ -223,12 +265,26 @@ export const useStore = create((set, get) => ({
 
   setPanel: (panel) => set((s) => ({ panel: s.panel === panel ? null : panel })),
 
-  /* ───────── story & dialog ───────── */
+  setPrompt: (prompt) => {
+    const cur = get().prompt
+    if (cur?.id === prompt?.id && cur?.label === prompt?.label) return
+    set({ prompt })
+  },
 
-  /** Show a sequence of dialog lines. `key` lets us remember that it was seen. */
+  /** A small card announcing a discovery. Closes itself. */
+  showDiscovery: (discovery, ms = 6500) => {
+    const id = ++toastId
+    set({ discovery: { ...discovery, id } })
+    setTimeout(() => {
+      if (get().discovery?.id === id) set({ discovery: null })
+    }, ms)
+  },
+  closeDiscovery: () => set({ discovery: null }),
+
+  /* ───────── dialog ───────── */
+
   startDialog: (lines, key = null) => {
     if (!lines?.length) return
-    // replacing a dialog still records what was seen (prologue, intros)
     if (get().dialog) get().closeDialog()
     set({ dialog: { lines, index: 0, key } })
   },
@@ -244,28 +300,17 @@ export const useStore = create((set, get) => ({
     const d = get().dialog
     if (!d) return
     const patch = { dialog: null }
-    if (d.key === 'prologue') patch.prologueSeen = true
-    if (d.key?.startsWith('intro:')) {
-      const i = Number(d.key.slice(6))
-      if (!get().introsSeen.includes(i)) patch.introsSeen = [...get().introsSeen, i]
+    if (d.key === 'prologue') {
+      patch.prologueSeen = true
+      patch.introsSeen = addOnce(get().introsSeen, 0)
     }
+    if (d.key?.startsWith('intro:')) patch.introsSeen = addOnce(get().introsSeen, Number(d.key.slice(6)))
     save({ prologueSeen: patch.prologueSeen ?? get().prologueSeen, introsSeen: patch.introsSeen ?? get().introsSeen })
     set(patch)
-  },
-
-  /** Jump to a chapter's place and play its intro. Locked chapters only explain why. */
-  startChapter: (index, chapterUnlocked) => {
-    if (!chapterUnlocked) {
-      get().showToast('Finish the previous chapter to unlock this one ♡')
-      return
+    // after Chapter 3's last words, the final cinematic begins
+    if (d.key === `outro:${CHAPTER_COUNT - 1}` && completedCount(get()) >= CHAPTER_COUNT && !get().mainEndingSeen) {
+      setTimeout(() => get().startCinematic(), 900)
     }
-    const place = CHAPTER_PLACES[index] || 'explore'
-    set({ panel: null })
-    if (place === 'explore') get().back()
-    else if (place === 'future') get().openFuture()
-    else get().goTo(place)
-    const chapter = story.chapters[index]
-    if (chapter?.intro) setTimeout(() => get().startDialog(chapter.intro, `intro:${index}`), 900)
   },
 
   markCelebrated: (index) => {
@@ -275,21 +320,224 @@ export const useStore = create((set, get) => ({
     set({ celebrated })
   },
 
-  /* ───────── time machine ───────── */
+  /* ───────── Chapter 1 — The Little Things ───────── */
 
-  /** Travel to one date: plays the warp, then shows that day. Counts as visited. */
+  /** Record one of the five little things. Returns true if it was new. */
+  findLittle: (id) => {
+    const item = littleThings.find((l) => l.id === id)
+    if (!item || get().littleFound.includes(id)) return false
+    const littleFound = [...get().littleFound, id]
+    save({ littleFound })
+    set({ littleFound })
+    player.cheer = 1.4
+    get().showDiscovery({ kind: 'little', title: item.title, text: item.message, photo: item.photo || null, count: `${littleFound.filter((x) => littleThings.some((l) => l.id === x)).length} / ${littleThings.length}` })
+    return true
+  },
+
+  /* ───────── Chapter 2 — Miles Between Us ───────── */
+
+  /** Travel from the cliff to the two islands. */
+  travelToMiles: () => {
+    if (!chapterStatus(get())[1]?.unlocked) {
+      get().showToast('The telescope shows two islands far away… finish Chapter One first ♡')
+      return
+    }
+    get().throughCurtain(() => get().goTo('distance'), 1500)
+    if (!get().introsSeen.includes(1)) setTimeout(() => get().startDialog(story.chapters[1].intro, 'intro:1'), 3200)
+  },
+
+  completeConnection: (id) => {
+    const item = connections.find((c) => c.id === id)
+    if (!item || get().connectionsDone.includes(id) || !chapterStatus(get())[1]?.unlocked) return false
+    const connectionsDone = [...get().connectionsDone, id]
+    save({ connectionsDone })
+    set({ connectionsDone })
+    get().showDiscovery({ kind: 'connection', title: item.title, text: item.message, count: `${connectionsDone.length} / ${connections.length}` }, 5500)
+    return true
+  },
+
+  openThreadMessage: (side) => {
+    if (side !== 'me' && side !== 'you') return
+    const threadRead = addOnce(get().threadRead, side)
+    save({ threadRead })
+    set({ threadMessage: side, threadRead })
+  },
+  closeThreadMessage: () => set({ threadMessage: null }),
+
+  /* ───────── Chapter 3 — A Future We Grow ───────── */
+
+  pickSeed: (id) => {
+    const s = get()
+    if (!chapterStatus(s)[2]?.unlocked) return false
+    if (!seeds.some((sd) => sd.id === id) || s.seedState[id]) return false
+    if (s.carrying) {
+      get().showToast('You’re already carrying a seed — plant it first ♡', 3200)
+      return false
+    }
+    const seedState = { ...s.seedState, [id]: 'carried' }
+    save({ seedState, carrying: id })
+    set({ seedState, carrying: id })
+    player.cheer = 0.8
+    get().showToast(`You picked up the seed of ${seeds.find((sd) => sd.id === id).title}. Find its place beside the Love Tree ✦`, 5200)
+    return true
+  },
+
+  /** Plant the carried seed into its plot (each seed has its own plot). */
+  plantSeed: (id) => {
+    const s = get()
+    if (s.carrying !== id || s.seedState[id] !== 'carried') return false
+    const seedState = { ...s.seedState, [id]: 'planted' }
+    save({ seedState, carrying: null })
+    set({ seedState, carrying: null })
+    const sd = seeds.find((x) => x.id === id)
+    get().showToast(`Planted ${sd.title}. ${sd.care}`, 5600)
+    return true
+  },
+
+  /** The seed's own care step is done → it grows. */
+  growSeed: (id) => {
+    const s = get()
+    if (s.seedState[id] !== 'planted') return false
+    if (id === 'future') {
+      const others = seeds.filter((sd) => sd.id !== 'future')
+      if (!others.every((sd) => s.seedState[sd.id] === 'grown')) return false
+    }
+    const seedState = { ...s.seedState, [id]: 'grown' }
+    const patch = { seedState }
+    if (id === 'kindness') patch.hasWater = false
+    save(patch)
+    set(patch)
+    player.cheer = 1.2
+    const sd = seeds.find((x) => x.id === id)
+    const grown = seeds.filter((x) => seedState[x.id] === 'grown').length
+    get().showDiscovery({ kind: 'seed', title: sd.title, text: sd.message, count: `${grown} / ${seeds.length}` }, 5500)
+    return true
+  },
+
+  fetchWater: () => {
+    if (get().hasWater) return
+    save({ hasWater: true })
+    set({ hasWater: true })
+    get().showToast('You scooped up a little lake water ✦', 3000)
+  },
+
+  lightStone: (n) => {
+    const stonesLit = addOnce(get().stonesLit, n)
+    save({ stonesLit })
+    set({ stonesLit })
+  },
+
+  linkFuture: (id) => {
+    const futureLinks = addOnce(get().futureLinks, id)
+    save({ futureLinks })
+    set({ futureLinks })
+  },
+
+  /* ───────── optional discoveries ───────── */
+
+  findNote: (note) => {
+    if (get().notesFound.includes(note.id)) {
+      get().showDiscovery({ kind: 'note', title: note.where, text: note.text }, 6000)
+      return false
+    }
+    const notesFound = [...get().notesFound, note.id]
+    save({ notesFound })
+    set({ notesFound })
+    get().showDiscovery({ kind: 'note', title: note.where, text: note.text }, 7000)
+    return true
+  },
+
+  markViewpoint: () => {
+    if (get().viewpointSeen) return
+    save({ viewpointSeen: true })
+    set({ viewpointSeen: true })
+  },
+
+  /* ───────── final cinematic, letter & secret ───────── */
+
+  startCinematic: () => {
+    if (completedCount(get()) < CHAPTER_COUNT || get().view === 'cinematic') return false
+    get().throughCurtain(() => set((s) => ({ view: 'cinematic', panel: null, dialog: null, prompt: null, discovery: null, camNonce: s.camNonce + 1 })), 1400)
+    return true
+  },
+
+  /** After the cinematic (or when skipped): the love letter. */
+  finishCinematic: () => {
+    if (get().view !== 'cinematic') return
+    save({ mainEndingSeen: true })
+    get().throughCurtain(() => set((s) => ({ view: 'ending', mainEndingSeen: true, camNonce: s.camNonce + 1 })), 1000)
+  },
+
+  openLetterAgain: () => {
+    if (!get().mainEndingSeen) return
+    set((s) => ({ view: 'ending', panel: null, prompt: null, camNonce: s.camNonce + 1 }))
+  },
+
+  /** The secret is only reachable after the main ending. */
+  secretAvailable: () => {
+    const s = get()
+    return s.mainEndingSeen && completedCount(s) >= CHAPTER_COUNT
+  },
+
+  /** She touched the little star by the Love Tree: go somewhere quiet, then begin. */
+  openSecret: () => {
+    const s = get()
+    if (!s.secretAvailable() || s.curtain || s.view === 'finalRoom') return false
+    save({ secretFound: true })
+    get().throughCurtain(
+      () => set((st) => ({ view: 'finalRoom', secretFound: true, secretStage: 'found', panel: null, dialog: null, prompt: null, camNonce: st.camNonce + 1 })),
+      1800,
+    )
+    return true
+  },
+
+  setSecretStage: (stage) => {
+    if (get().view !== 'finalRoom' || !get().secretAvailable()) return
+    if (!['found', 'transition', 'letter', 'voice', 'photo'].includes(stage)) return
+    set((s) => ({ secretStage: stage, camNonce: s.camNonce + 1 }))
+  },
+
+  openEpilogue: () => {
+    if (get().view !== 'finalRoom' || !get().secretStage) return
+    save({ secretSeen: true })
+    get().throughCurtain(() => set((s) => ({ view: 'epilogue', secretStage: null, secretSeen: true, camNonce: s.camNonce + 1 })), 1800)
+  },
+
+  stayInUniverse: () => get().throughCurtain(() => get().back(), 1400),
+
+  replaySecret: () => {
+    const s = get()
+    if (!s.secretAvailable() || !(s.secretFound || s.secretSeen)) return
+    get().throughCurtain(
+      () => set((st) => ({ view: 'finalRoom', secretStage: 'found', panel: null, dialog: null, prompt: null, camNonce: st.camNonce + 1 })),
+      1200,
+    )
+  },
+
+  /** Deliberate reset of the story (avatar, optional finds and settings are kept). */
+  resetStory: () => {
+    save(STORY_KEYS)
+    set({ ...STORY_KEYS, panel: null, dialog: null, discovery: null })
+    get().throughCurtain(() => {
+      resetPlayer()
+      get().back()
+      setTimeout(() => get().startDialog([...story.prologue, ...story.chapters[0].intro], 'prologue'), 1200)
+    }, 1000)
+  },
+
+  /* ───────── older optional places ───────── */
+
   travelTo: (index) => {
     if (index < 0 || index >= timeMachine.entries.length || get().timeTravelling) return
     const token = ++travelToken
     const quick = get().reducedMotion
     set({ timeTravelling: true, timeIndex: null })
     setTimeout(() => {
-      // she left (or started another trip) during the warp: nothing was shown, so nothing counts
       if (token !== travelToken || get().view !== 'timemachine' || !get().timeTravelling) {
         if (token === travelToken) set({ timeTravelling: false })
         return
       }
-      const timeVisited = get().timeVisited.includes(index) ? get().timeVisited : [...get().timeVisited, index]
+      const timeVisited = addOnce(get().timeVisited, index)
       save({ timeVisited })
       set({ timeTravelling: false, timeIndex: index, timeVisited })
     }, quick ? 200 : 2000)
@@ -297,140 +545,20 @@ export const useStore = create((set, get) => ({
 
   closeTimeEntry: () => set({ timeIndex: null }),
 
-  /* ───────── red thread ───────── */
-
-  tieThread: (side) => {
-    if (side !== 'me' && side !== 'you') return
-    const s = get()
-    if (s.threadConnected) {
-      // once connected, tapping an island opens its message
-      const threadRead = s.threadRead.includes(side) ? s.threadRead : [...s.threadRead, side]
-      save({ threadRead })
-      set({ threadMessage: side, threadRead })
-      return
-    }
-    const threadTied = { ...s.threadTied, [side]: true }
-    const connected = threadTied.me && threadTied.you
-    save({ threadTied, threadConnected: connected })
-    set({ threadTied, threadConnected: connected })
-    if (connected) get().showToast('The red thread is tied. Tap an island to open its message ♡', 5200)
-    else get().showToast('One side tied — now the other island.', 3200)
-  },
-
-  closeThreadMessage: () => set({ threadMessage: null }),
-
-  /* ───────── future simulator ───────── */
-
   openFuture: (index = get().futureIndex) => {
     const n = futureWorlds.worlds.length
     if (!n) return
     const i = ((index % n) + n) % n
-    const futureVisited = get().futureVisited.includes(i) ? get().futureVisited : [...get().futureVisited, i]
+    const futureVisited = addOnce(get().futureVisited, i)
     save({ futureVisited })
-    set((s) => ({
-      view: 'future',
-      futureIndex: i,
-      futureVisited,
-      panel: null,
-      camNonce: s.camNonce + 1,
-      visited: { ...s.visited, future: true },
-    }))
-  },
-
-  /* ───────── heart reactor & ending ───────── */
-
-  /** Starts the final cutscene — only possible once every chapter is complete. */
-  igniteReactor: () => {
-    if (get().view === 'cutscene') return false // a double tap must not restart the ending
-    if (completedCount(get()) < CHAPTER_COUNT) {
-      get().showToast('The heart still needs more light. Finish every chapter first ♡')
-      return false
-    }
-    set((s) => ({ view: 'cutscene', panel: null, dialog: null, camNonce: s.camNonce + 1 }))
-    return true
-  },
-
-  /** After the cutscene (or when skipped): fade into the secret room. */
-  finishCutscene: () => {
-    if (get().view !== 'cutscene') return
-    save({ endingSeen: true })
-    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', endingSeen: true, secretStage: null, starAwake: false, camNonce: s.camNonce + 1 })), 900)
-  },
-
-  /** The secret room is only reachable after all chapters are complete. */
-  openFinalRoom: () => {
-    if (completedCount(get()) < CHAPTER_COUNT) {
-      get().showToast('This room only opens when every chapter is complete ♡')
-      return
-    }
-    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', panel: null, secretStage: null, starAwake: false, camNonce: s.camNonce + 1 })), 1200)
-  },
-
-  replayEnding: () => get().throughCurtain(() => get().igniteReactor(), 1000),
-
-  leaveFinalRoom: () => get().throughCurtain(() => get().back(), 1200),
-
-  /* ───────── secret ending ───────── */
-
-  /** Only true when the game really is finished: every chapter done and the ending reached. */
-  secretAvailable: () => {
-    const s = get()
-    return s.endingSeen && completedCount(s) >= CHAPTER_COUNT
-  },
-
-  /** The star wakes up once the final letter has appeared in the Secret Room. */
-  wakeSecretStar: () => {
-    if (get().view === 'finalRoom' && get().secretAvailable() && !get().starAwake) set({ starAwake: true })
-  },
-
-  /** She touched the star (or its hint). Starts the secret ending inside the existing Secret Room. */
-  findSecret: () => {
-    const s = get()
-    if (s.view !== 'finalRoom' || s.secretStage || !s.secretAvailable() || s.curtain) return false
-    save({ secretFound: true })
-    set({ secretFound: true, secretStage: 'found', starAwake: true, panel: null, dialog: null })
-    return true
-  },
-
-  /** Move forward through the secret ending. */
-  setSecretStage: (stage) => {
-    if (get().view !== 'finalRoom' || !get().secretAvailable()) return
-    if (!['found', 'transition', 'letter', 'voice', 'photo'].includes(stage)) return
-    set((s) => ({ secretStage: stage, camNonce: s.camNonce + 1 }))
-  },
-
-  /** The final moment: back to the whole universe, brighter, seen from afar. */
-  openEpilogue: () => {
-    if (get().view !== 'finalRoom' || !get().secretStage) return
-    save({ secretSeen: true })
-    get().throughCurtain(() => set((s) => ({ view: 'epilogue', secretStage: null, secretSeen: true, camNonce: s.camNonce + 1 })), 1800)
-  },
-
-  /** "Stay in our universe" — back to the normal island; all progress stays exactly as it was. */
-  stayInUniverse: () => get().throughCurtain(() => get().back(), 1400),
-
-  /** Replay only the secret ending (no need to replay the game). */
-  replaySecret: () => {
-    const s = get()
-    if (!s.secretAvailable() || !(s.secretFound || s.secretSeen)) return
-    get().throughCurtain(
-      () => set((st) => ({ view: 'finalRoom', secretStage: 'found', starAwake: true, panel: null, dialog: null, camNonce: st.camNonce + 1 })),
-      1200,
-    )
+    set((s) => ({ view: 'future', futureIndex: i, futureVisited, panel: null, prompt: null, camNonce: s.camNonce + 1, visited: { ...s.visited, future: true } }))
   },
 
   selectMemory: (index) =>
     set((s) => {
-      const viewedMemories =
-        index === null || s.viewedMemories.includes(index) ? s.viewedMemories : [...s.viewedMemories, index]
+      const viewedMemories = index === null ? s.viewedMemories : addOnce(s.viewedMemories, index)
       if (viewedMemories !== s.viewedMemories) save({ viewedMemories })
-      return {
-      viewedMemories,
-      view: 'memories',
-      selectedMemory: index,
-      camNonce: s.camNonce + 1,
-      visited: { ...s.visited, memories: true },
-      }
+      return { viewedMemories, view: 'memories', selectedMemory: index, prompt: null, camNonce: s.camNonce + 1, visited: { ...s.visited, memories: true } }
     }),
 
   markLetterRead: () => {
@@ -452,7 +580,7 @@ export const useStore = create((set, get) => ({
 
 motionQuery?.addEventListener?.('change', (e) => useStore.setState({ reducedMotion: e.matches }))
 
-// Normalised pointer (-1..1) used for parallax. Touch drags and device tilt both feed it.
+// Normalised pointer (-1..1) used for parallax.
 if (typeof window !== 'undefined') {
   const setPointer = (x, y) => {
     const p = useStore.getState().pointer
@@ -464,19 +592,14 @@ if (typeof window !== 'undefined') {
     (e) => setPointer((e.clientX / window.innerWidth) * 2 - 1, -((e.clientY / window.innerHeight) * 2 - 1)),
     { passive: true },
   )
-  window.addEventListener(
-    'deviceorientation',
-    (e) => {
-      if (e.gamma == null || e.beta == null) return
-      setPointer(e.gamma / 30, -(e.beta - 45) / 30)
-    },
-    { passive: true },
-  )
 }
 
-/** Story helpers for components: is chapter `i` unlocked / done? (cheap booleans, so no re-render storms) */
+/** Story helpers for components (cheap booleans/numbers, so no re-render storms). */
 export const useChapterUnlocked = (i) => useStore((s) => Boolean(chapterStatus(s)[i]?.unlocked))
 export const useChaptersDone = () => useStore((s) => completedCount(s))
 
-/** Everything slows down during the secret ending (particles read this every frame). */
+/** Time runs slower in the quiet parts (particles read this every frame). */
 export const timeScale = (s) => (s.view === 'finalRoom' && s.secretStage ? 0.3 : s.view === 'epilogue' ? 0.55 : 1)
+
+/** Which avatar config is active. */
+export const currentAvatar = (s) => avatars.find((a) => a.id === s.avatarId) || avatars[0]

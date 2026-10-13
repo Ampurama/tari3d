@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { futureWorlds } from '../../content/config'
-import { useChapterUnlocked, useStore } from '../../store'
+import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { Glow, Interactive } from './Bits'
 
@@ -38,7 +38,7 @@ const swirlFragment = /* glsl */ `
 /** FUTURE SIMULATOR — a swirling portal at the edge of the island. Wakes up in Chapter Five. */
 export default function FuturePortal(props) {
   const ring = useRef()
-  const unlocked = useChapterUnlocked(4)
+  const unlocked = true // an optional discovery now — always open
   const openFuture = useStore((s) => s.openFuture)
   const showToast = useStore((s) => s.showToast)
   const reducedMotion = useStore((s) => s.reducedMotion)

@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { heartGeometry } from '../../lib/heart'
 import { glowTexture } from '../../lib/textures'
 import { useStore } from '../../store'
+import { player } from '../../lib/player'
 
 /** Glossy, softly glowing heart. */
 export function HeartMesh({ color = '#ff8fbf', emissive = '#ff5fa2', glow = 0.6, ...props }) {
@@ -45,11 +46,10 @@ export function Glow({ color = '#ffc2dd', size = 1, opacity = 0.6, ...props }) {
 }
 
 const tmp = new THREE.Vector3()
-const tmpCam = new THREE.Vector3()
 
 /**
  * Makes children clickable + adds a gentle sparkle and a label so people discover them.
- * Labels hide when the object is around the back of the island.
+ * On the island, the sparkle and label only appear when the avatar is nearby.
  */
 export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], children, active = true, hint = true, sparkleColor = '#ffe3a3', hideBehind = true, ...props }) {
   const group = useRef()
@@ -64,27 +64,24 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
   useFrame((state) => {
     if (!group.current) return
     const t = state.clock.elapsedTime
+    // on the island, hints only appear when the avatar is close — no markers floating everywhere
+    group.current.getWorldPosition(tmp)
+    const near = !hideBehind || Math.hypot(tmp.x - player.position.x, tmp.z - player.position.z) < 6.5
     if (sparkle.current) {
       const pulse = reducedMotion ? 1 : 0.85 + 0.25 * Math.sin(t * 2.4 + sparkleOffset[0])
       const s = (hovered ? 1.35 : 1) * 0.9 * pulse
       sparkle.current.scale.set(s, s, 1)
+      sparkle.current.visible = near
     }
     if (labelRef.current) {
-      let visible = showHints
-      if (visible && hideBehind) {
-        group.current.getWorldPosition(tmp)
-        tmpCam.copy(state.camera.position)
-        tmp.y = 0
-        tmpCam.y = 0
-        visible = tmp.lengthSq() < 4 || tmp.normalize().dot(tmpCam.normalize()) > -0.92
-      }
+      const visible = showHints && near
       labelRef.current.style.opacity = visible ? 1 : 0
       labelRef.current.style.pointerEvents = visible ? 'auto' : 'none'
     }
   })
 
   // inactive objects (and everything during the ending cutscene) let taps pass through to what's behind
-  const live = active && view !== 'cutscene' && view !== 'epilogue'
+  const live = active && view !== 'cutscene' && view !== 'epilogue' && view !== 'cinematic'
   const select = (e) => {
     if (!live) return
     e.stopPropagation()

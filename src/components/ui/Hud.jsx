@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BookHeart, Heart, House, LayoutGrid, Lock, Music, Sparkles, VolumeX, Wind } from 'lucide-react'
+import { ArrowLeft, BookHeart, House, LayoutGrid, Music, Settings, UserRound, VolumeX, Wind, X } from 'lucide-react'
 import { couple, hints } from '../../content/config'
-import { daysSince } from '../../lib/device'
-import { useChaptersDone, useStore } from '../../store'
-import { CHAPTER_COUNT } from '../../lib/story'
+import { daysSince, isTouch } from '../../lib/device'
+import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
-import { ChapterPill, DialogBox, PlacesSheet, StoryDirector, StoryPanel } from './Story'
+import { DialogBox, ObjectivePill, PlacesSheet, StoryDirector, StoryPanel } from './Story'
+import { DiscoveryCard, InteractButton, Joystick } from './TouchControls'
+
+function useAudioState() {
+  const [state, setState] = useState({ musicOn: audio.musicOn, ambientOn: audio.ambientOn, sfxOn: audio.sfxOn, volume: audio.volume })
+  useEffect(() => audio.subscribe(setState), [])
+  return state
+}
 
 export function AudioControls() {
-  const [state, setState] = useState({ musicOn: audio.musicOn, ambientOn: audio.ambientOn })
-  useEffect(() => audio.subscribe(setState), [])
+  const state = useAudioState()
+  const setPanel = useStore((s) => s.setPanel)
   return (
     <div className="audio-controls">
       <button
@@ -32,28 +38,96 @@ export function AudioControls() {
           </span>
         )}
       </button>
-      <button
-        type="button"
-        className={`icon-btn${state.ambientOn ? ' is-on' : ''}`}
-        onClick={() => audio.setAmbient(!state.ambientOn)}
-        aria-pressed={state.ambientOn}
-        aria-label={state.ambientOn ? 'Turn ambient wind off' : 'Turn ambient wind and chimes on'}
-        title="Ambient wind & chimes"
-      >
-        <Wind size={18} />
+      <button type="button" className="icon-btn" onClick={() => setPanel('settings')} aria-label="Sound and settings" title="Sound & settings">
+        <Settings size={18} />
       </button>
     </div>
+  )
+}
+
+/** Sound settings + "change character". */
+function SettingsPanel() {
+  const panel = useStore((s) => s.panel)
+  const setPanel = useStore((s) => s.setPanel)
+  const phase = useStore((s) => s.phase)
+  const openAvatarSelect = useStore((s) => s.openAvatarSelect)
+  const state = useAudioState()
+  return (
+    <AnimatePresence>
+      {panel === 'settings' && (
+        <motion.div className="panel-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPanel(null)}>
+          <motion.div
+            className="panel settings-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Settings"
+            initial={{ y: 30, scale: 0.96, opacity: 0 }}
+            animate={{ y: 0, scale: 1, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" className="icon-btn panel-close" onClick={() => setPanel(null)} aria-label="Close">
+              <X size={18} />
+            </button>
+            <h2>Sound</h2>
+            <div className="setting-row">
+              <span>
+                <Music size={16} /> Music
+              </span>
+              <button type="button" className={`toggle${state.musicOn ? ' is-on' : ''}`} role="switch" aria-checked={state.musicOn} aria-label="Music" onClick={() => audio.setMusic(!state.musicOn, { user: true })}>
+                <i />
+              </button>
+            </div>
+            <div className="setting-row">
+              <span>
+                <Wind size={16} /> Wind &amp; chimes
+              </span>
+              <button type="button" className={`toggle${state.ambientOn ? ' is-on' : ''}`} role="switch" aria-checked={state.ambientOn} aria-label="Wind and chimes" onClick={() => audio.setAmbient(!state.ambientOn)}>
+                <i />
+              </button>
+            </div>
+            <div className="setting-row">
+              <span>✦ Little sound effects</span>
+              <button type="button" className={`toggle${state.sfxOn ? ' is-on' : ''}`} role="switch" aria-checked={state.sfxOn} aria-label="Sound effects" onClick={() => audio.setSfx(!state.sfxOn)}>
+                <i />
+              </button>
+            </div>
+            <label className="setting-row volume">
+              <span>Volume</span>
+              <input type="range" min="0" max="1" step="0.05" value={state.volume} onChange={(e) => audio.setVolume(Number(e.target.value))} aria-label="Volume" />
+            </label>
+            {phase === 'world' && (
+              <button
+                type="button"
+                className="btn-ghost settings-avatar"
+                onClick={() => {
+                  setPanel(null)
+                  openAvatarSelect()
+                }}
+              >
+                <UserRound size={16} /> Change character (your progress stays)
+              </button>
+            )}
+            <p className="settings-help">
+              {isTouch
+                ? 'Move with the joystick, drag the screen to look around, tap things to walk to them.'
+                : 'Move with WASD / arrow keys (Shift to run), drag to look around, E to interact — or just click where you want to go.'}
+            </p>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
 const VIEW_TITLES = {
   memories: 'Our memories',
   letter: 'A letter for you',
-  distance: 'Red Thread',
+  distance: 'Miles Between Us',
   lane: 'Memory Lane',
   timemachine: 'Time Machine',
   future: 'Future Simulator',
-  reactor: 'Heart Reactor',
   capsule: 'Love Capsule',
   constellation: 'Our Constellation',
 }
@@ -68,8 +142,8 @@ function Brand() {
           day {days.toLocaleString()} of {couple.me.name} &amp; {couple.you.name}
         </span>
       )}
+      <ObjectivePill />
       <div className="brand-pills">
-        <ChapterPill />
         <CountdownPill />
       </div>
     </div>
@@ -77,49 +151,37 @@ function Brand() {
 }
 
 function Dock() {
-  const goTo = useStore((s) => s.goTo)
-  const startFinale = useStore((s) => s.startFinale)
-  const letterRead = useStore((s) => s.letterRead)
-  const visited = useStore((s) => s.visited)
   const setPanel = useStore((s) => s.setPanel)
-  const done = useChaptersDone()
+  const openAvatarSelect = useStore((s) => s.openAvatarSelect)
+  const recenter = () => useStore.setState((s) => ({ camNonce: s.camNonce + 1 }))
   const items = [
-    { key: 'explore', label: 'Island', icon: House, action: () => goTo('explore') },
-    { key: 'story', label: 'Story', icon: BookHeart, action: () => setPanel('story'), badge: `${done}/${CHAPTER_COUNT}` },
+    { key: 'explore', label: 'Island', icon: House, action: recenter, aria: 'Bring the camera back behind your character' },
+    { key: 'story', label: 'Story', icon: BookHeart, action: () => setPanel('story') },
     { key: 'places', label: 'Places', icon: LayoutGrid, action: () => setPanel('places') },
-    { key: 'reactor', label: 'Reactor', icon: Heart, action: () => goTo('reactor'), glow: done >= CHAPTER_COUNT },
-    {
-      key: 'finale',
-      label: letterRead ? 'Secret' : 'Locked',
-      icon: letterRead ? Sparkles : Lock,
-      action: startFinale,
-      locked: !letterRead,
-    },
+    { key: 'avatar', label: 'Character', icon: UserRound, action: openAvatarSelect },
   ]
   return (
     <motion.nav
       className="dock"
-      aria-label="Places in our universe"
+      aria-label="Menu"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 30 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      {items.map(({ key, label, icon: Icon, action, locked, badge, glow }) => (
+      {items.map(({ key, label, icon: Icon, action, aria }) => (
         <button
           key={key}
           type="button"
-          className={`dock-item${locked ? ' is-locked' : ''}${(key === 'finale' && !locked) || glow ? ' is-secret' : ''}`}
+          className="dock-item"
           onClick={() => {
             audio.sparkle()
             action()
           }}
-          aria-label={locked ? `${label}: ${hints.secretLocked}` : label}
+          aria-label={aria || label}
         >
           <Icon size={19} strokeWidth={1.7} />
           <span>{label}</span>
-          {badge && <b className="dock-badge">{badge}</b>}
-          {visited[key] && <i className="dock-dot" aria-hidden="true" />}
         </button>
       ))}
     </motion.nav>
@@ -132,14 +194,7 @@ export function Toast() {
     <div className="toast-wrap" aria-live="polite">
       <AnimatePresence mode="wait">
         {toast && (
-          <motion.div
-            key={toast.id}
-            className="toast"
-            initial={{ opacity: 0, y: 12, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ duration: 0.45 }}
-          >
+          <motion.div key={toast.id} className="toast" initial={{ opacity: 0, y: 12, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.98 }} transition={{ duration: 0.45 }}>
             {toast.text}
           </motion.div>
         )}
@@ -148,7 +203,7 @@ export function Toast() {
   )
 }
 
-/** Everything 2D that floats over the world: brand, back button, dock, sound, toasts. */
+/** Everything 2D that floats over the world. */
 export default function Hud() {
   const phase = useStore((s) => s.phase)
   const view = useStore((s) => s.view)
@@ -156,10 +211,10 @@ export default function Hud() {
   const unlockPending = useStore((s) => s.unlockPending)
   const consumeUnlock = useStore((s) => s.consumeUnlock)
   const showToast = useStore((s) => s.showToast)
-  const inWorld = phase === 'world'
   const secretStage = useStore((s) => s.secretStage)
+  const inWorld = phase === 'world'
 
-  // tell her when the secret path wakes up — once she's back on the island
+  // the old heart arch wakes up once the letter on the table has been read
   useEffect(() => {
     if (view === 'explore' && unlockPending) {
       const t = setTimeout(() => {
@@ -170,20 +225,21 @@ export default function Hud() {
     }
   }, [view, unlockPending, showToast, consumeUnlock])
 
-  // Escape always brings you home
+  // Escape: close the top-most thing, or go back to the island
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return
       const st = useStore.getState()
-      const { view: v, selectedMemory, panel, capsuleLetter, activeStar, setPanel, closeStar } = st
-      if (panel) return setPanel(null)
+      if (st.panel) return st.setPanel(null)
+      if (st.discovery) return st.closeDiscovery()
       if (st.dialog) return st.closeDialog()
-      if (['explore', 'intro', 'finale', 'cutscene', 'finalRoom', 'epilogue'].includes(v)) return
+      const v = st.view
+      if (['explore', 'intro', 'avatar', 'finale', 'cinematic', 'ending', 'finalRoom', 'epilogue'].includes(v)) return
+      if (v === 'memories' && st.selectedMemory !== null) return
+      if (v === 'capsule' && st.capsuleLetter) return
+      if (v === 'constellation' && st.activeStar !== null) return st.closeStar()
       if (v === 'timemachine' && st.timeIndex !== null) return st.closeTimeEntry()
-      if (v === 'distance' && st.threadMessage) return // the message card closes itself
-      if (v === 'memories' && selectedMemory !== null) return // the lightbox handles its own Escape
-      if (v === 'capsule' && capsuleLetter) return // the capsule closes its letter first
-      if (v === 'constellation' && activeStar !== null) return closeStar()
+      if (v === 'distance' && st.threadMessage) return
       back()
     }
     window.addEventListener('keydown', onKey)
@@ -191,10 +247,10 @@ export default function Hud() {
   }, [back])
 
   if (phase === 'loading') return null
-  // only the cutscene hides the whole HUD; during the secret ending just the music controls stay (so sound is always in her hands)
-  const cinematic = view === 'cutscene'
-  const secretActive = view === 'epilogue' || (view === 'finalRoom' && Boolean(secretStage))
-  const focused = inWorld && view !== 'explore' && view !== 'finale' && view !== 'finalRoom' && view !== 'epilogue' && !cinematic
+  const cinematic = view === 'cinematic'
+  const quiet = cinematic || view === 'epilogue' || view === 'ending' || (view === 'finalRoom' && Boolean(secretStage)) || view === 'avatar'
+  const focused = inWorld && !['explore', 'finale', 'finalRoom', 'epilogue', 'cinematic', 'ending', 'avatar'].includes(view)
+  const exploring = inWorld && view === 'explore'
 
   return (
     <>
@@ -202,22 +258,14 @@ export default function Hud() {
       <header className={`hud-top${cinematic ? ' is-hidden' : ''}`}>
         <AnimatePresence mode="wait">
           {focused ? (
-            <motion.button
-              key="back"
-              type="button"
-              className="back-btn"
-              onClick={back}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-            >
+            <motion.button key="back" type="button" className="back-btn" onClick={back} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
               <ArrowLeft size={17} />
               <span>
                 Back to our island
                 {VIEW_TITLES[view] && <em> · {VIEW_TITLES[view]}</em>}
               </span>
             </motion.button>
-          ) : inWorld && view === 'explore' ? (
+          ) : exploring ? (
             <motion.div key="brand" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Brand />
             </motion.div>
@@ -226,17 +274,21 @@ export default function Hud() {
           )}
         </AnimatePresence>
         <div className="hud-right">
-          {inWorld && view !== 'finale' && view !== 'finalRoom' && view !== 'epilogue' && !cinematic && <HeartsPill />}
+          {inWorld && !quiet && view !== 'finale' && view !== 'finalRoom' && <HeartsPill />}
           <AudioControls />
         </div>
       </header>
-      <AnimatePresence>{inWorld && view === 'explore' && <Dock key="dock" />}</AnimatePresence>
+      <AnimatePresence>{exploring && <Dock key="dock" />}</AnimatePresence>
+      {exploring && isTouch && <Joystick />}
+      {exploring && <InteractButton />}
+      <DiscoveryCard />
       <Toast />
       <CountdownPanel />
       <HeartsPanel />
       <StoryPanel />
       <PlacesSheet />
-      {inWorld && !cinematic && !secretActive && <DialogBox />}
+      <SettingsPanel />
+      {inWorld && !quiet && <DialogBox />}
     </>
   )
 }

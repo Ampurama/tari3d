@@ -1,7 +1,8 @@
-import { Component, useEffect } from 'react'
+import { Component, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Archive, BookHeart, Footprints, Heart, Hourglass, Images, Lock, Mail, Orbit, Sparkles, Star, Telescope } from 'lucide-react'
-import { hints } from '../../content/config'
+import { Archive, BookHeart, Footprints, Hourglass, Images, Lock, Mail, Orbit, Sparkles, Sprout, Star, Telescope } from 'lucide-react'
+import { constellation, hints, loveCapsule, memoryLane, story } from '../../content/config'
+import { CHAPTER_COUNT, chapterStatus } from '../../lib/story'
 import { useStore } from '../../store'
 import IntroOverlay from './IntroOverlay'
 import Hud from './Hud'
@@ -16,11 +17,10 @@ import ConstellationOverlay from './ConstellationOverlay'
 import { FlatHiddenHearts } from './HeartsPanel'
 import TimeMachineOverlay from './TimeMachineOverlay'
 import FutureOverlay from './FutureOverlay'
-import { CutsceneOverlay, FinalRoomOverlay, ReactorOverlay } from './Ending'
+import { CinematicOverlay, EndingLetter } from './Ending'
 import SecretEnding from './SecretEnding'
-import { useChapterUnlocked, useChaptersDone } from '../../store'
-import { CHAPTER_COUNT } from '../../lib/story'
-import { loveCapsule, memoryLane, constellation } from '../../content/config'
+import AvatarSelect from './AvatarSelect'
+import { FlatChapterSheets } from './FlatStory'
 
 export class ErrorBoundary extends Component {
   state = { failed: false }
@@ -35,6 +35,7 @@ export class ErrorBoundary extends Component {
   }
 }
 
+/** The 2D hub: the three chapters first, then the little extras. */
 function FlatWorld() {
   const view = useStore((s) => s.view)
   const goTo = useStore((s) => s.goTo)
@@ -42,64 +43,88 @@ function FlatWorld() {
   const letterRead = useStore((s) => s.letterRead)
   const openLane = useStore((s) => s.openLane)
   const openFuture = useStore((s) => s.openFuture)
-  const setPanel = useStore((s) => s.setPanel)
-  const timeUnlocked = useChapterUnlocked(1)
-  const futureUnlocked = useChapterUnlocked(4)
-  const done = useChaptersDone()
-  const cards = [
-    { key: 'story', icon: BookHeart, title: 'Story', text: `${done}/${CHAPTER_COUNT} chapters complete` },
-    { key: 'memories', icon: Images, title: 'Our memories', text: 'Little moments I keep close.' },
-    { key: 'lane', icon: Footprints, title: memoryLane.title, text: memoryLane.subtitle },
-    { key: 'letter', icon: Mail, title: 'A letter for you', text: 'Words I wanted you to have.' },
-    { key: 'capsule', icon: Archive, title: loveCapsule.title, text: loveCapsule.subtitle },
-    { key: 'distance', icon: Telescope, title: 'Same sky', text: 'Two places, one heart.' },
-    { key: 'constellation', icon: Star, title: constellation.title, text: constellation.subtitle },
-    { key: 'timemachine', icon: timeUnlocked ? Hourglass : Lock, title: 'Time Machine', text: timeUnlocked ? 'Travel back to our dates.' : 'Wakes up in Chapter Two.', locked: !timeUnlocked },
-    { key: 'future', icon: futureUnlocked ? Orbit : Lock, title: 'Future Simulator', text: futureUnlocked ? 'Worlds we will visit.' : 'Opens in Chapter Five.', locked: !futureUnlocked },
-    { key: 'reactor', icon: Heart, title: 'Heart Reactor', text: `${done}/${CHAPTER_COUNT} energy` },
-    {
-      key: 'finale',
-      icon: letterRead ? Sparkles : Lock,
-      title: letterRead ? 'One last thing…' : 'Still sleeping',
-      text: letterRead ? 'Come closer.' : hints.secretLocked,
-    },
+  const ended = useStore((s) => s.mainEndingSeen)
+  const sig = useStore((s) => chapterStatus(s).map((c) => `${c.done}${c.unlocked}${c.tasks[0].have}`).join('|'))
+  const [sheet, setSheet] = useState(null)
+  const chapters = chapterStatus(useStore.getState())
+  void sig
+  const all = chapters.every((c) => c.done)
+
+  const chapterCards = chapters.map((c) => ({
+    key: `ch${c.index}`,
+    icon: c.done ? Sparkles : !c.unlocked ? Lock : [Star, Telescope, Sprout][c.index],
+    title: `Chapter ${c.index + 1} · ${c.title}`,
+    text: !c.unlocked ? 'Finish the chapter before ✦' : `${c.tasks[0].have}/${c.tasks[0].need} · ${c.subtitle}`,
+    locked: !c.unlocked,
+    go: () => (c.index === 0 ? setSheet('little') : c.index === 1 ? useStore.getState().travelToMiles() : setSheet('seeds')),
+  }))
+  const extras = [
+    { key: 'memories', icon: Images, title: 'Our memories', text: 'Little moments I keep close.', go: () => goTo('memories') },
+    { key: 'lane', icon: Footprints, title: memoryLane.title, text: memoryLane.subtitle, go: () => openLane() },
+    { key: 'letter', icon: Mail, title: 'A letter for you', text: 'Words I wanted you to have.', go: () => goTo('letter') },
+    { key: 'capsule', icon: Archive, title: loveCapsule.title, text: loveCapsule.subtitle, go: () => goTo('capsule') },
+    { key: 'constellation', icon: Star, title: constellation.title, text: constellation.subtitle, go: () => goTo('constellation') },
+    { key: 'timemachine', icon: Hourglass, title: 'Time Machine', text: 'Travel back to our dates.', go: () => goTo('timemachine') },
+    { key: 'future', icon: Orbit, title: 'Future Simulator', text: 'Worlds we will visit.', go: () => openFuture(0) },
+    { key: 'finale', icon: letterRead ? Sparkles : Lock, title: letterRead ? 'One last thing…' : 'Still sleeping', text: letterRead ? 'Come closer.' : hints.secretLocked, go: startFinale, locked: !letterRead },
   ]
+
+  const Card = ({ c }) => (
+    <button
+      type="button"
+      className={`flat-card${c.locked ? ' is-locked' : ''}`}
+      onClick={() => (c.locked ? useStore.getState().showToast('Still asleep — keep following the story ♡') : c.go())}
+    >
+      <c.icon size={22} strokeWidth={1.6} />
+      <strong>{c.title}</strong>
+      <span>{c.text}</span>
+    </button>
+  )
+
   return (
-    <AnimatePresence>
-      {view === 'explore' && (
-        <motion.div className="flat-world" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-          <h1>Our Little Universe</h1>
-          <p className="flat-note">A world made just for us ♡</p>
-          <div className="flat-cards">
-            {cards.map(({ key, icon: Icon, title, text, locked }) => (
-              <button
-                key={key}
-                type="button"
-                className={`flat-card${(key === 'finale' && !letterRead) || locked ? ' is-locked' : ''}`}
-                onClick={() => {
-                  if (locked) return useStore.getState().showToast('Still asleep — keep following the story ♡')
-                  if (key === 'finale') return startFinale()
-                  if (key === 'lane') return openLane()
-                  if (key === 'future') return openFuture(0)
-                  if (key === 'story') return setPanel('story')
-                  goTo(key)
-                }}
-              >
-                <Icon size={22} strokeWidth={1.6} />
-                <strong>{title}</strong>
-                <span>{text}</span>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      <AnimatePresence>
+        {view === 'explore' && (
+          <motion.div className="flat-world" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <h1>{story.title}</h1>
+            <p className="flat-note">A little universe made just for you ♡</p>
+            <div className="flat-cards chapters">
+              {chapterCards.map((c) => (
+                <Card key={c.key} c={c} />
+              ))}
+            </div>
+            {all && (
+              <div className="flat-ending-actions">
+                <button type="button" className="btn-glow" onClick={() => useStore.getState().startCinematic()}>
+                  <BookHeart size={16} /> {ended ? 'Replay the ending' : 'Watch the ending'}
+                </button>
+                {ended && (
+                  <button type="button" className="btn-ghost secret-hint" onClick={() => useStore.getState().openSecret()}>
+                    ✦ A little star you haven’t noticed before…
+                  </button>
+                )}
+              </div>
+            )}
+            <h2 className="flat-subtitle">Little extras</h2>
+            <div className="flat-cards">
+              {extras.map((c) => (
+                <Card key={c.key} c={c} />
+              ))}
+            </div>
+            <p className="flat-note small">
+              {chapters.filter((c) => c.done).length}/{CHAPTER_COUNT} chapters complete
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <FlatChapterSheets open={view === 'explore' ? sheet : null} onClose={() => setSheet(null)} />
+    </>
   )
 }
 
 /**
  * Full 2D version of the experience for browsers/devices without WebGL.
- * Same content, same order, just drawn with CSS instead of 3D.
+ * Same content, same order, same progress — drawn with CSS instead of 3D.
  */
 export default function Fallback() {
   const phase = useStore((s) => s.phase)
@@ -112,7 +137,7 @@ export default function Fallback() {
     }
   }, [phase, setPhase])
   return (
-    <div className="fallback">
+    <div className={`fallback${view === 'epilogue' ? ' is-bright' : ''}`}>
       <div className="css-stars" aria-hidden="true" />
       {phase !== 'loading' && view === 'intro' && (
         <div className="flat-heart intro-heart" aria-hidden="true">
@@ -121,15 +146,15 @@ export default function Fallback() {
       )}
       <FlatWorld />
       <IntroOverlay />
+      <AvatarSelect flat />
       <MemoriesOverlay flat />
       <LaneOverlay flat />
       <CapsuleOverlay flat />
       <ConstellationOverlay flat />
       <TimeMachineOverlay />
       <FutureOverlay flat />
-      <ReactorOverlay flat />
-      <CutsceneOverlay flat />
-      <FinalRoomOverlay flat />
+      <CinematicOverlay flat />
+      <EndingLetter />
       <SecretEnding flat />
       <LetterOverlay flat />
       <DistanceOverlay flat />

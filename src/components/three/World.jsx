@@ -1,10 +1,9 @@
-import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
 import { benchRotation, spots } from '../../lib/layout'
 import { count } from '../../lib/device'
-import { useStore } from '../../store'
+import { useInteractable } from '../../lib/interactions'
+import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
-import { FloatingRocks, Flowers, GlowPaths, IslandBody, mainIslandAvoid } from './Island'
+import { FloatingRocks } from './Island'
 import { Bench, BlossomTree, SecretArch, Telescope } from './Props'
 import { Interactive } from './Bits'
 import { DriftParticles, Fireflies } from './Particles'
@@ -15,73 +14,101 @@ import LoveCapsule from './LoveCapsule'
 import HiddenHearts from './HiddenHearts'
 import TimeMachine from './TimeMachine'
 import FuturePortal from './FuturePortal'
-import HeartReactor from './HeartReactor'
+import { DistantIslands, IslandGround, Lake, LuminousPaths, Waterfall } from './Terrain'
+import Vegetation from './Vegetation'
+import LoveTree from './LoveTree'
+import LittleThings from './LittleThings'
+import SeedGarden from './SeedGarden'
+import Discoveries from './Discoveries'
 
 const faceCenter = (p) => Math.atan2(-p.x, -p.z)
 
-/** The main floating island and everything on it. */
+/** Lets an older feature also be used with the E key / interact button when the avatar is close. */
+function Station({ id, position, label, radius = 1.8, onUse }) {
+  useInteractable(id, { position, radius, label, onInteract: onUse })
+  return null
+}
+
+/** The main floating island — the expanded world — and everything on it. */
 export default function World() {
-  const root = useRef()
   const goTo = useStore((s) => s.goTo)
   const startFinale = useStore((s) => s.startFinale)
+  const openFuture = useStore((s) => s.openFuture)
+  const travelToMiles = useStore((s) => s.travelToMiles)
   const letterRead = useStore((s) => s.letterRead)
   const view = useStore((s) => s.view)
-  const reducedMotion = useStore((s) => s.reducedMotion)
-
-  // the whole island breathes up and down very slightly
-  useFrame(({ clock }) => {
-    root.current.position.y = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.35) * 0.08
-  })
+  const milesOpen = useChapterUnlocked(1)
 
   const open = (v) => () => {
     audio.sparkle()
     goTo(v)
   }
+  const toMiles = () => {
+    audio.sparkle()
+    travelToMiles()
+  }
+  const toFinale = () => {
+    audio.sparkle()
+    startFinale()
+  }
 
   return (
-    <group ref={root} visible={view !== 'finale' && view !== 'finalRoom'}>
-      <IslandBody />
-      <Flowers avoid={mainIslandAvoid} />
-      <GlowPaths />
+    <group visible={view !== 'finale' && view !== 'finalRoom'}>
+      <IslandGround />
+      <Lake />
+      <Waterfall />
+      <LuminousPaths />
+      <Vegetation />
+      <DistantIslands />
       <FloatingRocks />
+      <LoveTree />
 
-      <BlossomTree position={spots.tree} />
+      {/* the story */}
+      <LittleThings />
+      <SeedGarden />
+      <Discoveries />
+
+      {/* older places, now living in the island's zones */}
+      <BlossomTree position={spots.gardenTree} />
       <Bench position={spots.bench} rotation={[0, benchRotation, 0]} />
+      <LoveCapsule position={spots.capsule} rotation={[0, benchRotation + 0.4, 0]} scale={0.8} />
+      <Station id="capsule" position={spots.bench} label="Open the Love Capsule" onUse={open('capsule')} />
 
       <Interactive label="A letter for you" onSelect={open('letter')} position={spots.table} sparkleOffset={[0.05, 1.05, 0.05]}>
         <LetterTable rotation={[0, faceCenter(spots.table) + Math.PI, 0]} />
       </Interactive>
+      <Station id="letter-table" position={spots.table} label="Open the letter on the table" onUse={open('letter')} />
 
-      <Interactive label="Same sky" onSelect={open('distance')} position={spots.telescope} sparkleOffset={[0.25, 1.45, 0]} sparkleColor="#d9c6ff">
-        <Telescope rotation={[0, -0.4, 0]} />
+      <Interactive label={milesOpen ? 'Look across the sky' : 'A telescope'} onSelect={toMiles} position={spots.telescope} sparkleOffset={[0.25, 1.45, 0]} sparkleColor="#d9c6ff">
+        <Telescope rotation={[0, -2.2, 0]} />
       </Interactive>
+      <Station id="telescope" position={spots.telescope} label={milesOpen ? 'Look across the sky (Chapter 2)' : 'Look through the telescope'} onUse={toMiles} />
 
-      <Interactive
-        label={letterRead ? 'One last thing…' : 'Locked ♡'}
-        onSelect={() => {
-          audio.sparkle()
-          startFinale()
-        }}
-        position={spots.arch}
-        sparkleOffset={[0, 2.35, 0]}
-        sparkleColor={letterRead ? '#ff9fd0' : '#8f86b8'}
-      >
+      <Interactive label={letterRead ? 'One last thing…' : 'Locked ♡'} onSelect={toFinale} position={spots.arch} sparkleOffset={[0, 2.35, 0]} sparkleColor={letterRead ? '#ff9fd0' : '#8f86b8'}>
         <SecretArch rotation={[0, faceCenter(spots.arch), 0]} />
       </Interactive>
+      <Station id="arch" position={spots.arch} label={letterRead ? 'Step through the heart arch' : 'A sleeping heart arch'} onUse={toFinale} />
 
-      {/* the Love Capsule jar rests on the bench seat */}
-      <LoveCapsule position={spots.capsule} rotation={[0, benchRotation + 0.4, 0]} scale={0.8} />
       <TimeMachine position={spots.timeMachine} rotation={[0, 0.35, 0]} />
+      <Station id="time-machine" position={spots.timeMachine} label="Use the Time Machine" onUse={open('timemachine')} />
       <FuturePortal position={spots.portal} rotation={[0, faceCenter(spots.portal), 0]} />
-      <HeartReactor />
+      <Station
+        id="portal"
+        position={spots.portal}
+        label="Step into the Future Simulator"
+        onUse={() => {
+          audio.sparkle()
+          openFuture(0)
+        }}
+      />
 
       <MemoryFrames />
       <FloatingHearts />
       <HiddenHearts group="island" />
       <HiddenHearts group="sky" />
 
-      <Fireflies count={count(70, 34)} area={[13, 4, 13]} center={[0, 0.5, 0]} seed={8} />
-      <DriftParticles position={[0, 3.5, 0]} count={count(70, 34)} area={[18, 9, 18]} size={0.16} speed={0.16} seed={12} intensity={1.3} />
+      <Fireflies count={count(60, 28)} area={[20, 4, 20]} center={[0, 0.5, 0]} seed={8} />
+      <DriftParticles position={[0, 4, 0]} count={count(80, 36)} area={[26, 10, 26]} size={0.16} speed={0.16} seed={12} intensity={1.3} />
     </group>
   )
 }

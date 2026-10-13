@@ -60,23 +60,32 @@ function Found() {
 function Transition() {
   const setStage = useStore((s) => s.setSecretStage)
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const second = useAfter(5600, 'transition')
+  const lines = secretEnding.transition.lines || []
+  const [shown, setShown] = useState(reducedMotion ? lines.length : 0)
+  // one line at a time, with room to breathe; then the letter
   useEffect(() => {
-    const t = setTimeout(() => useStore.getState().setSecretStage('letter'), reducedMotion ? 2500 : 11500)
+    if (shown >= lines.length) {
+      const t = setTimeout(() => useStore.getState().setSecretStage('letter'), reducedMotion ? 2000 : 5200)
+      return () => clearTimeout(t)
+    }
+    const t = setTimeout(() => setShown((n) => n + 1), shown === 0 ? 1400 : 3600)
     return () => clearTimeout(t)
-  }, [reducedMotion])
+  }, [shown, lines.length, reducedMotion])
   return (
     <motion.div className="secret-center veil" key="transition" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 1.2 } }}>
-      <motion.p className="secret-quote" {...fade(1.2, 2.2)}>
-        {secretEnding.transition.line1}
-      </motion.p>
-      <AnimatePresence>
-        {second && (
-          <motion.p className="secret-quote big" initial={{ opacity: 0, scale: 0.96, filter: 'blur(10px)' }} animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} transition={{ duration: 2.4, ease }}>
-            {secretEnding.transition.line2}
+      <div className="secret-lines">
+        {lines.slice(0, shown).map((line, i) => (
+          <motion.p
+            key={i}
+            className={`secret-quote${i === lines.length - 1 ? ' big' : ''}`}
+            initial={{ opacity: 0, y: 8, filter: 'blur(8px)' }}
+            animate={{ opacity: i < shown - 2 ? 0.45 : 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 2, ease }}
+          >
+            {line}
           </motion.p>
-        )}
-      </AnimatePresence>
+        ))}
+      </div>
       <button type="button" className="btn-ghost secret-skip" onClick={() => setStage('letter')}>
         {secretEnding.skip}
       </button>
@@ -144,7 +153,7 @@ function Letter() {
 const fmt = (s) => (Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '0:00')
 
 /** Minimal heart-shaped player for his own recording. Never autoplays. */
-function HeartPlayer({ src, subtitles, onEnded }) {
+export function HeartPlayer({ src, subtitles = [], onEnded }) {
   const el = useRef()
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)

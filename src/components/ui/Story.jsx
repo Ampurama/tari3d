@@ -13,8 +13,8 @@ import {
   Telescope,
   X,
 } from 'lucide-react'
-import { couple, heartReactor, secretEnding, story } from '../../content/config'
-import { CHAPTER_COUNT, chapterStatus, completedCount, fillNames } from '../../lib/story'
+import { couple, secretEnding, story } from '../../content/config'
+import { CHAPTER_COUNT, chapterStatus, completedCount, currentChapter, fillNames } from '../../lib/story'
 import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
 
@@ -116,93 +116,123 @@ export function DialogBox() {
   )
 }
 
-/** Watches real progress: celebrates finished chapters, introduces the next one, hands over to the reactor. */
+/**
+ * Watches real progress: celebrates finished chapters (once), introduces Chapter 3 when she's back
+ * on the island, and keeps the music in tune with where she is.
+ */
 export function StoryDirector() {
   const phase = useStore((s) => s.phase)
   const doneCount = useStore((s) => completedCount(s))
   const celebrated = useStore((s) => s.celebrated)
   const dialog = useStore((s) => s.dialog)
-  const prologueSeen = useStore((s) => s.prologueSeen)
   const introsSeen = useStore((s) => s.introsSeen)
   const view = useStore((s) => s.view)
+  const connections = useStore((s) => s.connectionsDone.length)
   const reading = useStore(
-    (s) => s.selectedMemory !== null || Boolean(s.capsuleLetter) || Boolean(s.threadMessage) || s.activeStar !== null || s.timeIndex !== null || s.panel !== null,
+    (s) =>
+      s.selectedMemory !== null ||
+      Boolean(s.capsuleLetter) ||
+      Boolean(s.threadMessage) ||
+      s.activeStar !== null ||
+      s.timeIndex !== null ||
+      s.panel !== null ||
+      Boolean(s.discovery) ||
+      s.curtain,
   )
 
-  // right after the prologue, chapter one introduces itself
+  // a chapter just got completed → celebrate it once (never interrupting something she's reading)
   useEffect(() => {
-    if (phase !== 'world' || !prologueSeen || dialog || introsSeen.includes(0)) return
-    const t = setTimeout(() => {
-      const s = useStore.getState()
-      if (!s.dialog) s.startDialog(story.chapters[0].intro, 'intro:0')
-    }, 600)
-    return () => clearTimeout(t)
-  }, [phase, prologueSeen, dialog, introsSeen])
-
-  // a chapter just got completed → celebrate it once
-  useEffect(() => {
-    // never interrupt: wait until no dialog, card, letter or panel is open
-    if (phase !== 'world' || dialog || reading || ['cutscene', 'finalRoom', 'finale', 'letter', 'epilogue'].includes(view)) return
-    const s = useStore.getState()
-    const status = chapterStatus(s)
+    if (phase !== 'world' || dialog || reading || ['cinematic', 'ending', 'finalRoom', 'finale', 'letter', 'epilogue', 'avatar'].includes(view)) return
+    const status = chapterStatus(useStore.getState())
     const fresh = status.find((c) => c.done && !celebrated.includes(c.index))
     if (!fresh) return
     const t = setTimeout(() => {
       const st = useStore.getState()
       st.markCelebrated(fresh.index)
-      audio.sparkle()
+      audio.sfx('complete')
       const next = status[fresh.index + 1]
-      st.showToast(
-        next
-          ? `Chapter ${fresh.index + 1} complete ✦ The Heart Reactor glows brighter. Chapter ${fresh.index + 2} unlocked!`
-          : 'Every chapter is complete ✦ The Heart Reactor is full.',
-        6500,
-      )
+      if (next) st.showToast(`Chapter ${fresh.index + 1} complete ✦ Chapter ${fresh.index + 2} — ${next.title} — is open.`, 6500)
       const lines = [...(fresh.outro || [])]
-      if (!next) lines.push({ speaker: 'narrator', text: 'Open the Heart Reactor whenever you’re ready ♡' })
+      if (fresh.hint) lines.push({ speaker: 'narrator', text: fresh.hint })
       st.startDialog(lines, `outro:${fresh.index}`)
-    }, 1400)
+    }, 1600)
     return () => clearTimeout(t)
   }, [phase, doneCount, celebrated, dialog, view, reading])
+
+  // Chapter 3 introduces itself the first time she's back on the island with it unlocked
+  useEffect(() => {
+    if (phase !== 'world' || view !== 'explore' || dialog || reading) return
+    const status = chapterStatus(useStore.getState())
+    if (!status[2]?.unlocked || status[2].done || introsSeen.includes(2) || !celebrated.includes(1)) return
+    const t = setTimeout(() => useStore.getState().startDialog(story.chapters[2].intro, 'intro:2'), 2400)
+    return () => clearTimeout(t)
+  }, [phase, view, dialog, reading, introsSeen, celebrated, doneCount])
+
+  // music follows the journey
+  useEffect(() => {
+    if (view === 'avatar' || view === 'intro') audio.setMood('select')
+    else if (view === 'cinematic' || view === 'ending') audio.setMood('finale')
+    else if (view === 'finalRoom' || view === 'epilogue') audio.setMood('quiet')
+    else if (view === 'distance') audio.setMood('miles')
+    else audio.setMood(doneCount >= 2 ? 'future' : 'little')
+  }, [view, doneCount])
+  useEffect(() => audio.setWarmth(connections / 5), [connections])
 
   return null
 }
 
-/** HUD pill: current chapter + progress; opens the story book. */
-export function ChapterPill() {
-  const status = useStore((s) => chapterStatus(s).map((c) => `${c.done ? 1 : 0}${c.unlocked ? 1 : 0}${c.ratio.toFixed(2)}`).join('|'))
+/** HUD: what to do now — chapter, objective and real progress. Opens the story book. */
+export function ObjectivePill() {
+  const sig = useStore((s) => {
+    const c = currentChapter(s)
+    return c ? `${c.index}|${c.tasks.map((t) => `${t.have}/${t.need}`).join(',')}` : 'done'
+  })
+  const ended = useStore((s) => s.mainEndingSeen)
   const setPanel = useStore((s) => s.setPanel)
-  const chapters = useMemo(() => chapterStatus(useStore.getState()), [status]) // eslint-disable-line react-hooks/exhaustive-deps
-  const current = chapters.find((c) => !c.done)
-  const done = chapters.filter((c) => c.done).length
-  const label = current ? `Ch. ${current.index + 1} · ${current.title}` : 'All chapters complete ♡'
-  const ratio = current ? current.ratio : 1
+  const c = useMemo(() => currentChapter(useStore.getState()), [sig]) // eslint-disable-line react-hooks/exhaustive-deps
+  const task = c?.tasks.find((t) => !t.done) || c?.tasks[0]
+  const ratio = c ? c.ratio : 1
   return (
-    <button type="button" className="hud-pill chapter-pill" onClick={() => setPanel('story')} aria-label={`Story: ${label}. ${done} of ${CHAPTER_COUNT} chapters complete.`}>
+    <button type="button" className="objective" onClick={() => setPanel('story')} aria-label="Open the story book">
       <svg viewBox="0 0 20 20" className="pill-ring" aria-hidden="true">
         <circle cx="10" cy="10" r="8" />
         <circle cx="10" cy="10" r="8" style={{ strokeDasharray: `${ratio * 50.3} 50.3` }} />
       </svg>
-      <span>{label}</span>
+      <span className="objective-text">
+        <strong>{c ? `Chapter ${c.index + 1} · ${c.title}` : ended ? 'Every chapter complete ♡' : 'The ending is waiting ♡'}</strong>
+        {task && (
+          <small>
+            {task.label} {task.need > 1 && `(${task.have}/${task.need})`}
+          </small>
+        )}
+      </span>
     </button>
   )
 }
 
-/** The story book: every chapter, its objectives and real progress. */
+/** The story book: the three chapters, real progress, replays and a deliberate reset. */
 export function StoryPanel() {
   const panel = useStore((s) => s.panel)
   const setPanel = useStore((s) => s.setPanel)
-  const startChapter = useStore((s) => s.startChapter)
-  const goTo = useStore((s) => s.goTo)
-  const openFinalRoom = useStore((s) => s.openFinalRoom)
-  const endingSeen = useStore((s) => s.endingSeen)
+  const ended = useStore((s) => s.mainEndingSeen)
   const secretKnown = useStore((s) => s.secretFound || s.secretSeen)
-  const replaySecret = useStore((s) => s.replaySecret)
-  // re-render whenever any measured progress changes
   const signature = useStore((s) => JSON.stringify(chapterStatus(s).map((c) => [c.done, c.unlocked, c.tasks.map((t) => t.have)])))
   const chapters = useMemo(() => chapterStatus(useStore.getState()), [signature]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [confirmReset, setConfirmReset] = useState(false)
   const done = chapters.filter((c) => c.done).length
   const all = done >= CHAPTER_COUNT
+  useEffect(() => {
+    if (panel !== 'story') setConfirmReset(false)
+  }, [panel])
+
+  const go = (c) => {
+    const st = useStore.getState()
+    setPanel(null)
+    if (!c.unlocked) return st.showToast('Finish the previous chapter to unlock this one ♡')
+    if (c.index === 1) return st.travelToMiles()
+    if (st.view !== 'explore') st.back()
+    st.startDialog(c.intro, `intro:${c.index}`)
+  }
 
   return (
     <AnimatePresence>
@@ -224,13 +254,13 @@ export function StoryPanel() {
             </button>
             <span className="eyebrow">{story.tagline}</span>
             <h2>{story.title}</h2>
-            <div className="reactor-meter" aria-label={`Heart Reactor energy: ${done} of ${CHAPTER_COUNT}`}>
+            <div className="reactor-meter" aria-label={`${done} of ${CHAPTER_COUNT} chapters complete`}>
               {chapters.map((c) => (
                 <span key={c.index} className={c.done ? 'is-on' : ''} />
               ))}
             </div>
             <p className="story-meter-label">
-              {heartReactor.title} · {done}/{CHAPTER_COUNT}
+              {done}/{CHAPTER_COUNT} chapters · the Love Tree grows with every step
             </p>
 
             <ol className="chapter-list">
@@ -258,13 +288,8 @@ export function StoryPanel() {
                       ))}
                     </ul>
                   )}
-                  <button
-                    type="button"
-                    className={c.unlocked && !c.done ? 'btn-glow small' : 'btn-ghost'}
-                    disabled={!c.unlocked}
-                    onClick={() => startChapter(c.index, c.unlocked)}
-                  >
-                    {!c.unlocked ? 'Locked — finish the chapter before' : c.done ? 'Revisit' : c.tasks.some((t) => t.have > 0) ? 'Continue' : 'Start chapter'}
+                  <button type="button" className={c.unlocked && !c.done ? 'btn-glow small' : 'btn-ghost'} disabled={!c.unlocked} onClick={() => go(c)}>
+                    {!c.unlocked ? 'Locked — finish the chapter before' : c.done ? (c.index === 1 ? 'Visit the islands again' : 'Hear the beginning again') : c.index === 1 ? 'Go to the two islands' : 'Remind me what to do'}
                   </button>
                 </li>
               ))}
@@ -274,26 +299,60 @@ export function StoryPanel() {
               <div className="story-ending-actions">
                 <button
                   type="button"
-                  className="btn-glow"
+                  className="btn-glow small"
                   onClick={() => {
                     setPanel(null)
-                    goTo('reactor')
+                    useStore.getState().startCinematic()
                   }}
                 >
-                  Go to the Heart Reactor
+                  {ended ? 'Replay the final cinematic' : 'Watch the ending'}
                 </button>
-                {endingSeen && (
-                  <button type="button" className="btn-ghost" onClick={openFinalRoom}>
-                    Enter the Secret Room
+                {ended && (
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => {
+                      setPanel(null)
+                      useStore.getState().openLetterAgain()
+                    }}
+                  >
+                    Read the letter again
                   </button>
                 )}
                 {secretKnown && (
-                  <button type="button" className="btn-ghost" onClick={replaySecret}>
+                  <button type="button" className="btn-ghost" onClick={() => useStore.getState().replaySecret()}>
                     {secretEnding.replay}
                   </button>
                 )}
               </div>
             )}
+
+            <div className="story-reset">
+              {!confirmReset ? (
+                <button type="button" className="link-btn" onClick={() => setConfirmReset(true)}>
+                  Start the story over…
+                </button>
+              ) : (
+                <div className="reset-confirm" role="alert">
+                  <p>This clears the three chapters and the endings (your character and optional finds stay). Are you sure?</p>
+                  <div>
+                    <button type="button" className="btn-ghost" onClick={() => setConfirmReset(false)}>
+                      Keep my progress
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost danger"
+                      onClick={() => {
+                        setConfirmReset(false)
+                        useStore.getState().resetStory()
+                      }}
+                    >
+                      Yes, start over
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
         </motion.div>
       )}
@@ -301,26 +360,25 @@ export function StoryPanel() {
   )
 }
 
-/** Every place in the universe, one tap away. New devices show when they're still asleep. */
+/** Every optional place, one tap away (the story places are found by exploring). */
 export function PlacesSheet() {
   const panel = useStore((s) => s.panel)
   const setPanel = useStore((s) => s.setPanel)
   const goTo = useStore((s) => s.goTo)
   const openLane = useStore((s) => s.openLane)
   const openFuture = useStore((s) => s.openFuture)
+  const travelToMiles = useStore((s) => s.travelToMiles)
   const visited = useStore((s) => s.visited)
-  const timeUnlocked = useChapterUnlocked(1)
-  const futureUnlocked = useChapterUnlocked(4)
-  const showToast = useStore((s) => s.showToast)
+  const milesOpen = useChapterUnlocked(1)
   const places = [
     { key: 'memories', label: 'Memories', icon: Images, go: () => goTo('memories') },
     { key: 'lane', label: 'Memory Lane', icon: Footprints, go: () => openLane() },
-    { key: 'timemachine', label: 'Time Machine', icon: Hourglass, go: () => goTo('timemachine'), locked: !timeUnlocked, why: 'Wakes up in Chapter Two' },
     { key: 'letter', label: 'Letter', icon: Mail, go: () => goTo('letter') },
     { key: 'capsule', label: 'Love Capsule', icon: Archive, go: () => goTo('capsule') },
-    { key: 'distance', label: 'Red Thread', icon: Telescope, go: () => goTo('distance') },
+    { key: 'timemachine', label: 'Time Machine', icon: Hourglass, go: () => goTo('timemachine') },
     { key: 'constellation', label: 'Our Stars', icon: Star, go: () => goTo('constellation') },
-    { key: 'future', label: 'Future', icon: Orbit, go: () => openFuture(0), locked: !futureUnlocked, why: 'Opens in Chapter Five' },
+    { key: 'future', label: 'Future', icon: Orbit, go: () => openFuture(0) },
+    { key: 'distance', label: 'Two Islands', icon: Telescope, go: () => travelToMiles(), locked: !milesOpen, why: 'Opens after Chapter One' },
   ]
   return (
     <AnimatePresence>
@@ -341,6 +399,7 @@ export function PlacesSheet() {
               <X size={18} />
             </button>
             <h2>Places</h2>
+            <p className="places-note">Little extras around our universe — they never block the story.</p>
             <div className="places-grid">
               {places.map(({ key, label, icon: Icon, go, locked, why }) => (
                 <button
@@ -349,7 +408,7 @@ export function PlacesSheet() {
                   className={`place-btn${locked ? ' is-locked' : ''}`}
                   onClick={() => {
                     if (locked) {
-                      showToast(`${label} is still asleep — ${why} ♡`)
+                      useStore.getState().showToast(`${label} — ${why} ♡`)
                       return
                     }
                     audio.sparkle()
@@ -370,4 +429,3 @@ export function PlacesSheet() {
     </AnimatePresence>
   )
 }
-

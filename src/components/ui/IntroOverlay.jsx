@@ -14,7 +14,7 @@ export default function IntroOverlay({ onEnter }) {
   const phase = useStore((s) => s.phase)
   const view = useStore((s) => s.view)
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const enterWorld = useStore((s) => s.enterWorld)
+  const openAvatarSelect = useStore((s) => s.openAvatarSelect)
   const [step, setStep] = useState(0)
   const [flash, setFlash] = useState(false)
   const visible = phase === 'intro' && view === 'intro'
@@ -27,11 +27,13 @@ export default function IntroOverlay({ onEnter }) {
   }, [phase, reducedMotion])
 
   const enter = () => {
-    if (music.startOnEnter) audio.setMusic(true)
+    // this tap is the first user gesture: the music may start now (unless she turned it off last time)
+    audio.setMood('select')
+    if (music.startOnEnter && audio.musicWanted) audio.setMusic(true)
     setFlash(true)
     setTimeout(() => setFlash(false), 1600)
     if (onEnter) onEnter()
-    else enterWorld()
+    else openAvatarSelect()
   }
 
   return (
