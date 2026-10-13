@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, House, Images, Lock, Mail, Music, Sparkles, Telescope, VolumeX, Wind } from 'lucide-react'
+import { Archive, ArrowLeft, Footprints, House, Images, Lock, Mail, Music, Sparkles, Star, Telescope, VolumeX, Wind } from 'lucide-react'
 import { couple, hints } from '../../content/config'
 import { daysSince } from '../../lib/device'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
+import { CountdownPanel, CountdownPill } from './Countdown'
+import { HeartsPanel, HeartsPill } from './HeartsPanel'
 
 export function AudioControls() {
   const [state, setState] = useState({ musicOn: audio.musicOn, ambientOn: audio.ambientOn })
@@ -46,6 +48,9 @@ const VIEW_TITLES = {
   memories: 'Our memories',
   letter: 'A letter for you',
   distance: 'Same sky',
+  lane: 'Memory Lane',
+  capsule: 'Love Capsule',
+  constellation: 'Our Constellation',
 }
 
 function Brand() {
@@ -58,6 +63,7 @@ function Brand() {
           day {days.toLocaleString()} of {couple.me.name} &amp; {couple.you.name}
         </span>
       )}
+      <CountdownPill />
     </div>
   )
 }
@@ -67,11 +73,15 @@ function Dock() {
   const startFinale = useStore((s) => s.startFinale)
   const letterRead = useStore((s) => s.letterRead)
   const visited = useStore((s) => s.visited)
+  const openLane = useStore((s) => s.openLane)
   const items = [
     { key: 'explore', label: 'Island', icon: House, action: () => goTo('explore') },
     { key: 'memories', label: 'Memories', icon: Images, action: () => goTo('memories') },
+    { key: 'lane', label: 'Lane', icon: Footprints, action: () => openLane() },
     { key: 'letter', label: 'Letter', icon: Mail, action: () => goTo('letter') },
+    { key: 'capsule', label: 'Capsule', icon: Archive, action: () => goTo('capsule') },
     { key: 'distance', label: 'Same sky', icon: Telescope, action: () => goTo('distance') },
+    { key: 'constellation', label: 'Stars', icon: Star, action: () => goTo('constellation') },
     {
       key: 'finale',
       label: letterRead ? 'Secret' : 'Locked',
@@ -155,9 +165,13 @@ export default function Hud() {
   // Escape always brings you home
   useEffect(() => {
     const onKey = (e) => {
-      const { view: v, selectedMemory } = useStore.getState()
-      if (e.key !== 'Escape' || v === 'explore' || v === 'intro' || v === 'finale') return
+      if (e.key !== 'Escape') return
+      const { view: v, selectedMemory, panel, capsuleLetter, activeStar, setPanel, closeStar } = useStore.getState()
+      if (panel) return setPanel(null)
+      if (v === 'explore' || v === 'intro' || v === 'finale') return
       if (v === 'memories' && selectedMemory !== null) return // the lightbox handles its own Escape
+      if (v === 'capsule' && capsuleLetter) return // the capsule closes its letter first
+      if (v === 'constellation' && activeStar !== null) return closeStar()
       back()
     }
     window.addEventListener('keydown', onKey)
@@ -195,10 +209,15 @@ export default function Hud() {
             <span key="empty" />
           )}
         </AnimatePresence>
-        <AudioControls />
+        <div className="hud-right">
+          {inWorld && view !== 'finale' && <HeartsPill />}
+          <AudioControls />
+        </div>
       </header>
       <AnimatePresence>{inWorld && view === 'explore' && <Dock key="dock" />}</AnimatePresence>
       <Toast />
+      <CountdownPanel />
+      <HeartsPanel />
     </>
   )
 }

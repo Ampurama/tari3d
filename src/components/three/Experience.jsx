@@ -9,6 +9,9 @@ import World from './World'
 import IntroHeart from './IntroHeart'
 import DistanceWorld from './DistanceWorld'
 import FinaleHeart from './FinaleHeart'
+import MemoryLane from './MemoryLane'
+import Constellation from './Constellation'
+import DebugBridge from './DebugBridge'
 import { Effects, Lights } from './Atmosphere'
 
 export default function Experience() {
@@ -31,11 +34,14 @@ export default function Experience() {
       <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(1, d - 0.25))} />
       <AdaptiveDpr pixelated={false} />
       <CameraDirector />
+      <DebugBridge />
       <Lights />
       <Suspense fallback={null}>
         <Sky />
         <IntroHeart />
         <World />
+        <MemoryLane />
+        <Constellation />
         <DistanceWorld />
         <FinaleHeart />
         <Preload all />

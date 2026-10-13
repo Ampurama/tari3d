@@ -8,6 +8,9 @@ import MemoriesOverlay from './components/ui/MemoriesOverlay'
 import LetterOverlay from './components/ui/LetterOverlay'
 import DistanceOverlay from './components/ui/DistanceOverlay'
 import FinaleOverlay, { Curtain } from './components/ui/FinaleOverlay'
+import LaneOverlay from './components/ui/LaneOverlay'
+import CapsuleOverlay from './components/ui/CapsuleOverlay'
+import ConstellationOverlay from './components/ui/ConstellationOverlay'
 
 const Experience = lazy(() => import('./components/three/Experience'))
 
@@ -23,6 +26,9 @@ export default function App() {
         </Suspense>
         <IntroOverlay />
         <MemoriesOverlay />
+        <LaneOverlay />
+        <CapsuleOverlay />
+        <ConstellationOverlay />
         <LetterOverlay />
         <DistanceOverlay />
         <FinaleOverlay />

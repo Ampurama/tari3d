@@ -1,6 +1,6 @@
 import { Component, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Images, Lock, Mail, Sparkles, Telescope } from 'lucide-react'
+import { Archive, Footprints, Images, Lock, Mail, Sparkles, Star, Telescope } from 'lucide-react'
 import { hints } from '../../content/config'
 import { useStore } from '../../store'
 import IntroOverlay from './IntroOverlay'
@@ -10,6 +10,11 @@ import LetterOverlay from './LetterOverlay'
 import DistanceOverlay from './DistanceOverlay'
 import FinaleOverlay, { Curtain } from './FinaleOverlay'
 import LoadingScreen from './LoadingScreen'
+import LaneOverlay from './LaneOverlay'
+import CapsuleOverlay from './CapsuleOverlay'
+import ConstellationOverlay from './ConstellationOverlay'
+import { FlatHiddenHearts } from './HeartsPanel'
+import { loveCapsule, memoryLane, constellation } from '../../content/config'
 
 export class ErrorBoundary extends Component {
   state = { failed: false }
@@ -29,10 +34,14 @@ function FlatWorld() {
   const goTo = useStore((s) => s.goTo)
   const startFinale = useStore((s) => s.startFinale)
   const letterRead = useStore((s) => s.letterRead)
+  const openLane = useStore((s) => s.openLane)
   const cards = [
     { key: 'memories', icon: Images, title: 'Our memories', text: 'Little moments I keep close.' },
+    { key: 'lane', icon: Footprints, title: memoryLane.title, text: memoryLane.subtitle },
     { key: 'letter', icon: Mail, title: 'A letter for you', text: 'Words I wanted you to have.' },
+    { key: 'capsule', icon: Archive, title: loveCapsule.title, text: loveCapsule.subtitle },
     { key: 'distance', icon: Telescope, title: 'Same sky', text: 'Two places, one heart.' },
+    { key: 'constellation', icon: Star, title: constellation.title, text: constellation.subtitle },
     {
       key: 'finale',
       icon: letterRead ? Sparkles : Lock,
@@ -52,7 +61,7 @@ function FlatWorld() {
                 key={key}
                 type="button"
                 className={`flat-card${key === 'finale' && !letterRead ? ' is-locked' : ''}`}
-                onClick={() => (key === 'finale' ? startFinale() : goTo(key))}
+                onClick={() => (key === 'finale' ? startFinale() : key === 'lane' ? openLane() : goTo(key))}
               >
                 <Icon size={22} strokeWidth={1.6} />
                 <strong>{title}</strong>
@@ -91,9 +100,13 @@ export default function Fallback() {
       <FlatWorld />
       <IntroOverlay />
       <MemoriesOverlay flat />
+      <LaneOverlay flat />
+      <CapsuleOverlay flat />
+      <ConstellationOverlay flat />
       <LetterOverlay flat />
       <DistanceOverlay flat />
       <FinaleOverlay flat />
+      <FlatHiddenHearts />
       <Hud />
       <Curtain />
       <LoadingScreen trackAssets={false} />

@@ -1,0 +1,839 @@
+/* Styles for Memory Lane, Love Capsule, LDR Countdown, Hidden Hearts, Our Constellation and finale media. */
+
+/* ───────────── hud pills & panels ───────────── */
+
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--text);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition:
+    background 0.3s,
+    transform 0.3s var(--ease);
+}
+
+.hud-pill:hover {
+  background: rgba(255, 143, 196, 0.22);
+  transform: translateY(-1px);
+}
+
+.hud-pill svg {
+  color: var(--pink);
+  flex: none;
+}
+
+.hud-pill.is-complete {
+  border-color: rgba(243, 207, 138, 0.6);
+  box-shadow: 0 0 18px rgba(243, 207, 138, 0.35);
+}
+
+.hud-pill.is-complete svg {
+  color: var(--gold);
+}
+
+.brand .hud-pill {
+  justify-self: start;
+  margin-top: 8px;
+}
+
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 52;
+  display: grid;
+  place-items: center;
+  padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+  background: rgba(5, 5, 26, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.panel {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 26px 24px 22px;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 214, 234, 0.22);
+  background: linear-gradient(180deg, rgba(36, 26, 82, 0.92), rgba(20, 14, 52, 0.94));
+  box-shadow:
+    0 30px 80px -24px rgba(0, 0, 0, 0.8),
+    0 0 50px rgba(255, 143, 196, 0.18);
+  text-align: center;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.9rem;
+}
+
+.panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+}
+
+/* ───────────── countdown ───────────── */
+
+.countdown-body {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.countdown-units {
+  display: flex;
+  gap: 10px;
+}
+
+.countdown-unit {
+  display: grid;
+  justify-items: center;
+  min-width: 62px;
+  padding: 10px 6px 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.countdown-unit strong {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #ffe3f0;
+}
+
+.countdown-unit span {
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.countdown-message {
+  margin: 0;
+  max-width: 30ch;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  color: #ffe3f0;
+}
+
+.countdown-message.is-big {
+  font-size: 1.3rem;
+}
+
+.countdown-when {
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+.countdown-body.is-compact .countdown-unit {
+  min-width: 50px;
+  padding: 7px 4px 6px;
+}
+
+.countdown-body.is-compact .countdown-unit strong {
+  font-size: 1.45rem;
+}
+
+.countdown-body.is-compact .countdown-message.is-big {
+  font-size: 1.05rem;
+}
+
+.distance-countdown {
+  margin-top: 16px;
+  padding: 12px 18px;
+  border-radius: 20px;
+  background: rgba(20, 16, 50, 0.45);
+  border: 1px solid var(--stroke);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+/* ───────────── hidden hearts ───────────── */
+
+.heart-slots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 12px;
+}
+
+.heart-slot {
+  display: inline-block;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.16);
+}
+
+.heart-slot.is-found {
+  color: var(--rose);
+  text-shadow: 0 0 14px rgba(255, 143, 196, 0.9);
+}
+
+.hearts-bar {
+  height: 3px;
+  margin: 0 auto;
+  width: 70%;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.hearts-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--rose), var(--gold));
+  transform-origin: left;
+  transition: transform 0.8s var(--ease);
+}
+
+.hearts-count {
+  margin: 8px 0 14px;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hearts-intro {
+  margin: 0 0 12px;
+  color: #f2e6ff;
+  font-size: 0.92rem;
+}
+
+.hint-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.hint-list li {
+  display: flex;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.86rem;
+  color: #efe4ff;
+}
+
+.hint-list li span {
+  color: var(--pink);
+}
+
+.hint-list li.is-found {
+  color: var(--muted);
+}
+
+.hint-list li.is-found span {
+  color: var(--rose);
+}
+
+.hearts-reward-teaser {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  color: var(--gold);
+  font-size: 0.82rem;
+}
+
+.reward h3 {
+  margin: 4px 0 8px;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffe3f0;
+}
+
+.reward p {
+  margin: 0 0 12px;
+  color: #f2e6ff;
+  line-height: 1.55;
+}
+
+.reward-media {
+  display: block;
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  border-radius: 16px;
+  background: #120e33;
+}
+
+.flat-hidden-heart {
+  position: fixed;
+  z-index: 31;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 182, 213, 0.55);
+  font-size: 0.95rem;
+  text-shadow: 0 0 8px rgba(255, 143, 196, 0.6);
+  animation: beat 2.4s ease-in-out infinite;
+}
+
+/* ───────────── memory lane ───────────── */
+
+.lane-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 230, 200, 0.3);
+  background: rgba(20, 16, 50, 0.55);
+  color: #ffe9cf;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition:
+    background 0.3s,
+    transform 0.3s var(--ease);
+}
+
+.lane-tag.is-current {
+  background: rgba(255, 196, 140, 0.4);
+  transform: scale(1.1);
+}
+
+.lane-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  justify-items: center;
+  gap: 8px;
+  padding: calc(72px + var(--safe-top)) 16px calc(18px + var(--safe-bottom));
+  pointer-events: none;
+}
+
+.lane-ui > * {
+  pointer-events: auto;
+}
+
+.lane-progress {
+  display: flex;
+  gap: 6px;
+}
+
+.lane-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 233, 207, 0.5);
+  background: transparent;
+  transition:
+    background 0.3s,
+    transform 0.3s;
+}
+
+.lane-dot.is-past {
+  background: rgba(255, 217, 160, 0.45);
+}
+
+.lane-dot.is-current {
+  background: #ffd9a0;
+  transform: scale(1.35);
+  box-shadow: 0 0 10px #ffd9a0;
+}
+
+.lane-card {
+  align-self: end;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  width: min(640px, 100%);
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 230, 200, 0.25);
+  background: linear-gradient(160deg, rgba(40, 28, 86, 0.82), rgba(24, 16, 58, 0.88));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 30px 70px -24px rgba(0, 0, 0, 0.75),
+    0 0 40px rgba(255, 196, 140, 0.15);
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.lane-photo-wrap {
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.lane-photo {
+  aspect-ratio: 4 / 5;
+  max-height: 46vh;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #1d1844;
+}
+
+.lane-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lane-photo.is-empty {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 217, 160, 0.55), transparent 55%),
+    linear-gradient(160deg, #2a2350, #6d58b0 60%, #f3bdd6);
+  color: #fff6ea;
+  font-size: 2.6rem;
+  text-shadow: 0 0 24px rgba(255, 217, 160, 0.9);
+}
+
+.lane-text {
+  align-self: center;
+  padding: 6px 6px 6px 0;
+}
+
+.lane-text .memory-date {
+  color: #ffd9a0;
+}
+
+.lane-text h3 {
+  margin: 4px 0 8px;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 1.7rem;
+  line-height: 1.15;
+}
+
+.lane-text p {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: #f4e8ff;
+}
+
+.lane-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ───────────── love capsule ───────────── */
+
+.capsule-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding: calc(72px + var(--safe-top)) 16px calc(22px + var(--safe-bottom));
+  pointer-events: none;
+  overflow-y: auto;
+}
+
+.capsule-ui > * {
+  pointer-events: auto;
+}
+
+.capsule-choices {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: min(760px, 100%);
+}
+
+.capsule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.mood-envelope {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px 10px 14px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--mood) 50%, transparent);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--mood) 26%, transparent), rgba(20, 16, 50, 0.7)),
+    rgba(20, 16, 50, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text);
+  box-shadow: 0 12px 30px -16px color-mix(in srgb, var(--mood) 70%, transparent);
+}
+
+/* the envelope flap, drawn as two diagonal lines */
+.mood-envelope::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 46%;
+  background:
+    linear-gradient(to bottom right, transparent 49.5%, color-mix(in srgb, var(--mood) 40%, transparent) 50%, transparent 51%),
+    linear-gradient(to bottom left, transparent 49.5%, color-mix(in srgb, var(--mood) 40%, transparent) 50%, transparent 51%);
+  background-size: 50% 100%;
+  background-position: left, right;
+  background-repeat: no-repeat;
+  border-radius: 18px 18px 0 0;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.mood-emoji {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.mood-label {
+  font-size: 0.84rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.mood-opened {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--mood);
+  color: #2a1f55;
+}
+
+.capsule-reading {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-self: center;
+  width: min(560px, 100%);
+}
+
+.css-envelope {
+  position: relative;
+  width: 200px;
+  height: 130px;
+  margin-bottom: -40px;
+  perspective: 600px;
+}
+
+.css-envelope-back,
+.css-envelope-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--mood) 75%, #ffffff);
+}
+
+.css-envelope-front {
+  display: grid;
+  place-items: end center;
+  padding-bottom: 14px;
+  clip-path: polygon(0 32%, 50% 66%, 100% 32%, 100% 100%, 0 100%);
+  background: color-mix(in srgb, var(--mood) 88%, #ffffff);
+  font-size: 1.4rem;
+  z-index: 2;
+}
+
+.css-envelope-flap {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 70%;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: color-mix(in srgb, var(--mood) 60%, #ffffff);
+  transform-origin: top;
+  transition: transform 0.8s var(--ease);
+  z-index: 3;
+}
+
+.css-envelope.is-open .css-envelope-flap {
+  transform: rotateX(180deg);
+  z-index: 1;
+}
+
+.capsule-paper {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+  max-height: calc(100vh - 230px);
+  max-height: calc(100dvh - 230px);
+  overflow-y: auto;
+  padding: 24px clamp(18px, 4vw, 34px) 20px;
+  border-radius: 8px 8px 20px 20px;
+  color: #45325f;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(214, 160, 196, 0.2) 31px 32px),
+    linear-gradient(180deg, #fffaf3, #fdf1f5);
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.8);
+  text-align: left;
+  touch-action: pan-y;
+}
+
+.capsule-tag {
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mood) 35%, #ffffff);
+  font-size: 0.72rem;
+  color: #4b3670;
+}
+
+.capsule-paper h3 {
+  justify-self: start;
+  margin: 0;
+  font-family: var(--hand);
+  font-weight: 500;
+  font-size: 1.9rem;
+  color: #c45588;
+}
+
+.capsule-body p {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  line-height: 1.5;
+}
+
+/* ───────────── constellation ───────────── */
+
+.constellation-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(72px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+  pointer-events: none;
+}
+
+.constellation-ui > * {
+  pointer-events: auto;
+}
+
+.constellation-ui .section-heading {
+  pointer-events: none;
+}
+
+.constellation-bottom {
+  display: grid;
+  justify-items: center;
+  width: min(520px, 100%);
+}
+
+.reason-card {
+  position: relative;
+  width: 100%;
+  padding: 16px 44px 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 214, 234, 0.28);
+  background: rgba(24, 16, 58, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 0 40px rgba(255, 143, 196, 0.2);
+}
+
+.reason-card .memory-date {
+  color: var(--pink);
+}
+
+.reason-card p {
+  margin: 6px 0 0;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.reason-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+}
+
+.constellation-hint,
+.constellation-complete {
+  margin: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(20, 16, 50, 0.5);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  text-align: center;
+  color: #ffe3f0;
+}
+
+.constellation-complete {
+  border-radius: 20px;
+  max-width: 34ch;
+}
+
+.flat-stars {
+  width: min(360px, 80vw);
+  overflow: visible;
+}
+
+.flat-star circle:nth-of-type(2) {
+  fill: #d9ccff;
+  filter: drop-shadow(0 0 4px #d9ccff);
+}
+
+.flat-star.is-lit circle:nth-of-type(2) {
+  fill: #ffb3d6;
+  filter: drop-shadow(0 0 6px #ff8fc4);
+}
+
+.flat-star rect {
+  cursor: pointer;
+}
+
+.flat-star-line {
+  stroke: transparent;
+  stroke-width: 1.2;
+  transition: stroke 0.6s;
+}
+
+.flat-star-line.is-on {
+  stroke: rgba(255, 201, 227, 0.85);
+}
+
+/* ───────────── finale media ───────────── */
+
+.finale-media {
+  width: 100%;
+  margin: 4px 0 12px;
+}
+
+.finale-media video,
+.finale-media img {
+  display: block;
+  width: 100%;
+  max-height: 34vh;
+  object-fit: contain;
+  border-radius: 16px;
+  background: #0d0a26;
+}
+
+/* ───────────── responsive ───────────── */
+
+@media (max-width: 600px) {
+  .hud-pill {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 0.7rem;
+  }
+
+  .lane-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .lane-photo {
+    aspect-ratio: 16 / 10;
+    max-height: 28vh;
+  }
+
+  .lane-text {
+    padding: 0 6px 4px;
+  }
+
+  .lane-text h3 {
+    font-size: 1.35rem;
+  }
+
+  .lane-text p {
+    font-size: 1rem;
+  }
+
+  .lane-nav .btn-ghost {
+    font-size: 0.8rem;
+    padding: 0.6em 1em;
+  }
+
+  .capsule-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mood-envelope {
+    padding: 14px 8px 12px;
+  }
+
+  .css-envelope {
+    width: 150px;
+    height: 98px;
+    margin-bottom: -30px;
+  }
+
+  .countdown-unit {
+    min-width: 54px;
+  }
+
+  .countdown-unit strong {
+    font-size: 1.6rem;
+  }
+
+  .reason-card p {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .lane-card {
+    grid-template-columns: 0.7fr 1.3fr;
+  }
+
+  .lane-photo {
+    max-height: 40vh;
+  }
+}

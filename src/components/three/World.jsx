@@ -11,6 +11,8 @@ import { DriftParticles, Fireflies } from './Particles'
 import LetterTable from './LetterTable'
 import MemoryFrames from './MemoryFrames'
 import FloatingHearts from './FloatingHearts'
+import LoveCapsule from './LoveCapsule'
+import HiddenHearts from './HiddenHearts'
 
 const faceCenter = (p) => Math.atan2(-p.x, -p.z)
 
@@ -64,8 +66,12 @@ export default function World() {
         <SecretArch rotation={[0, faceCenter(spots.arch), 0]} />
       </Interactive>
 
+      <LoveCapsule position={spots.capsule} rotation={[0, 0.5, 0]} />
+
       <MemoryFrames />
       <FloatingHearts />
+      <HiddenHearts group="island" />
+      <HiddenHearts group="sky" />
 
       <Fireflies count={count(70, 34)} area={[13, 4, 13]} center={[0, 0.5, 0]} seed={8} />
       <DriftParticles position={[0, 3.5, 0]} count={count(70, 34)} area={[18, 9, 18]} size={0.16} speed={0.16} seed={12} intensity={1.3} />

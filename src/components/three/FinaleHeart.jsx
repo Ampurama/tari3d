@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { areas } from '../../lib/layout'
 import { heartVolumePoints } from '../../lib/heart'
-import { heartTexture } from '../../lib/textures'
+import { glowTexture, heartTexture } from '../../lib/textures'
 import { count } from '../../lib/device'
 import { useStore } from '../../store'
 import { updatePointScale } from './Particles'
@@ -55,6 +55,45 @@ const fragment = /* glsl */ `
   }
 `
 
+function buildCloud(n, map, size, colors) {
+  const targets = heartVolumePoints(n, 4)
+  const starts = new Float32Array(n * 3)
+  const seeds = new Float32Array(n)
+  const cols = new Float32Array(n * 3)
+  const palette = colors.map((c) => new THREE.Color(c))
+  for (let i = 0; i < n; i++) {
+    const u = Math.random() * 2 - 1
+    const a = Math.random() * Math.PI * 2
+    const r = 18 + Math.random() * 30
+    const k = Math.sqrt(1 - u * u)
+    starts.set([Math.cos(a) * k * r, u * r, Math.sin(a) * k * r - 8], i * 3)
+    seeds[i] = Math.random()
+    const c = palette[Math.floor(Math.random() * palette.length)].clone().multiplyScalar(1.5 + Math.random())
+    cols.set([c.r, c.g, c.b], i * 3)
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(targets, 3))
+  geometry.setAttribute('aStart', new THREE.BufferAttribute(starts, 3))
+  geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1))
+  geometry.setAttribute('aColor', new THREE.BufferAttribute(cols, 3))
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uScale: { value: 400 },
+      uProgress: { value: 0 },
+      uBurst: { value: 0 },
+      uSize: { value: size },
+      uMap: { value: map },
+    },
+    vertexShader: vertex,
+    fragmentShader: fragment,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  return { geometry, material }
+}
+
 /** Thousands of tiny hearts gathering from across the universe into one big heart. */
 export default function FinaleHeart() {
   const group = useRef()
@@ -65,49 +104,23 @@ export default function FinaleHeart() {
   const active = view === 'finale'
   const n = count(reducedMotion ? 2500 : 6000, reducedMotion ? 1200 : 2600)
 
-  const { geometry, material } = useMemo(() => {
-    const targets = heartVolumePoints(n, 4)
-    const starts = new Float32Array(n * 3)
-    const seeds = new Float32Array(n)
-    const colors = new Float32Array(n * 3)
-    const palette = ['#ff8fc4', '#ffb3d6', '#ffd6e8', '#c9a8ff', '#ffe2a8', '#ffffff'].map((c) => new THREE.Color(c))
-    for (let i = 0; i < n; i++) {
-      const u = Math.random() * 2 - 1
-      const a = Math.random() * Math.PI * 2
-      const r = 18 + Math.random() * 30
-      const k = Math.sqrt(1 - u * u)
-      starts.set([Math.cos(a) * k * r, u * r, Math.sin(a) * k * r - 8], i * 3)
-      seeds[i] = Math.random()
-      const c = palette[Math.floor(Math.random() * palette.length)].clone().multiplyScalar(1.5 + Math.random())
-      colors.set([c.r, c.g, c.b], i * 3)
-    }
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(targets, 3))
-    geometry.setAttribute('aStart', new THREE.BufferAttribute(starts, 3))
-    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1))
-    geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3))
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uScale: { value: 400 },
-        uProgress: { value: 0 },
-        uBurst: { value: 0 },
-        uSize: { value: 0.16 },
-        uMap: { value: heartTexture() },
-      },
-      vertexShader: vertex,
-      fragmentShader: fragment,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
-    return { geometry, material }
+  // ~60% little hearts, ~40% stars — together they gather into one big heart
+  const clouds = useMemo(() => {
+    const starCount = Math.round(n * 0.4)
+    return [
+      buildCloud(n - starCount, heartTexture(), 0.16, ['#ff8fc4', '#ffb3d6', '#ffd6e8', '#c9a8ff', '#ffe2a8']),
+      buildCloud(starCount, glowTexture(), 0.2, ['#ffffff', '#fff1d6', '#e6dcff', '#ffe2f0']),
+    ]
   }, [n])
 
-  useEffect(() => () => {
-    geometry.dispose()
-    material.dispose()
-  }, [geometry, material])
+  useEffect(
+    () => () =>
+      clouds.forEach(({ geometry, material }) => {
+        geometry.dispose()
+        material.dispose()
+      }),
+    [clouds],
+  )
 
   // the answer buttons trigger a joyful burst
   useEffect(() => {
@@ -117,14 +130,17 @@ export default function FinaleHeart() {
   }, [])
 
   useFrame((state, delta) => {
-    const u = material.uniforms
-    u.uTime.value += delta
-    // hold for a breath while the screen is still dark, then gather
-    if (active) u.uProgress.value = Math.min(1.5, u.uProgress.value + delta * (reducedMotion ? 1 : 0.24))
-    else u.uProgress.value = 0
+    const progress = clouds[0].material.uniforms.uProgress.value
+    const nextProgress = active ? Math.min(1.5, progress + delta * (reducedMotion ? 1 : 0.24)) : 0
     burst.current = THREE.MathUtils.damp(burst.current, 0, 1.6, delta)
-    u.uBurst.value = Math.sin(Math.min(burst.current, 1) * Math.PI) * 2.2
-    updatePointScale(material, state)
+    clouds.forEach(({ material }) => {
+      const u = material.uniforms
+      u.uTime.value += delta
+      u.uProgress.value = nextProgress
+      u.uBurst.value = Math.sin(Math.min(burst.current, 1) * Math.PI) * 2.2
+      updatePointScale(material, state)
+    })
+    const u = clouds[0].material.uniforms
     if (!reducedMotion) group.current.rotation.y = Math.sin(u.uTime.value * 0.35) * 0.35
     glow.current.material.opacity = Math.max(0, Math.min(1, u.uProgress.value - 0.6)) * 0.55
   })
@@ -132,7 +148,9 @@ export default function FinaleHeart() {
   return (
     <group position={areas.finale} visible={active}>
       <group ref={group}>
-        <points geometry={geometry} material={material} frustumCulled={false} />
+        {clouds.map(({ geometry, material }, i) => (
+          <points key={i} geometry={geometry} material={material} frustumCulled={false} />
+        ))}
       </group>
       <Glow ref={glow} color="#ff7fb8" size={16} opacity={0} />
     </group>

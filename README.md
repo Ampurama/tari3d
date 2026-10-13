@@ -56,6 +56,20 @@ Music never autoplays. It only starts when "Enter Our World ♡" is pressed (tur
 `startOnEnter: false`), and the 🎵 button in the top-right corner always toggles it. The 🌬 button
 next to it adds soft wind and wind-chimes.
 
+### More places to personalise (all in `config.js`)
+
+| Feature | Config key | Notes |
+|---|---|---|
+| Memory Lane | `memoryLane.milestones` | `date`, `title`, `story`, `photo` (or `null` for a glowing placeholder) |
+| Love Capsule | `loveCapsule.letters` | one “open when…” letter per mood (letters in Bahasa Indonesia) |
+| LDR countdown | `nextMeeting` | `date: 'YYYY-MM-DDTHH:mm'` or `null` (shows a miss-you message, never a made-up date) |
+| Nicknames | `couple.me.nickname`, `couple.you.nickname` | used in the countdown |
+| Hidden hearts | `hiddenHearts.hints`, `hiddenHearts.reward` | reward can include `media: { type: 'image' \| 'video', src }` |
+| Our Constellation | `constellation.reasons` | one star per reason, 6–16 works best |
+| Finale media | `finale.media` | optional photo/video shown after the answer |
+
+Progress (hearts found, stars lit, envelopes opened, letter read) is saved in the browser.
+
 ### Days counter
 `couple.since: 'YYYY-MM-DD'` shows “day N of …” in the corner. Set it to `null` to hide it.
 

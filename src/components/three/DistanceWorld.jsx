@@ -9,6 +9,7 @@ import { useStore } from '../../store'
 import { Flowers, IslandBody } from './Island'
 import { Glow, HeartMesh } from './Bits'
 import { DriftParticles, Fireflies } from './Particles'
+import HiddenHearts from './HiddenHearts'
 
 const SPREAD = 9
 const LIFT = 0.75
@@ -144,6 +145,7 @@ export default function DistanceWorld() {
     <group position={areas.distance}>
       <Person who={couple.me} side={-1} />
       <Person who={couple.you} side={1} />
+      <HiddenHearts group="distance" />
       <mesh material={core}>
         <tubeGeometry args={[curve, 120, 0.05, 10, false]} />
       </mesh>

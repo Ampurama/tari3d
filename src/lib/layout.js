@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { heightAt } from './island'
-import { memories } from '../content/config'
+import { constellation, memories, memoryLane } from '../content/config'
+import { heartPoint } from './heart'
 
 const v = (x, y, z) => new THREE.Vector3(x, y, z)
 const ground = (x, z, lift = 0) => v(x, heightAt(x, z) + lift, z)
@@ -12,6 +13,7 @@ export const spots = {
   table: ground(2.4, 1.2),
   telescope: ground(-3.0, 1.9),
   arch: ground(3.5, -3.55),
+  capsule: ground(-2.85, -0.3),
 }
 
 export const moonPosition = v(-48, 34, -86)
@@ -65,7 +67,48 @@ export const areas = {
   intro: v(0, 70, 60),
   distance: v(72, 14, -34),
   finale: v(0, 230, 0),
+  constellation: v(34, 40, -62),
 }
+
+/** Memory Lane: a gentle curve of floating lanterns drifting away from the island's left side. */
+export const laneCurve = new THREE.CatmullRomCurve3([
+  v(-6.9, 0.25, 2.6),
+  v(-9.6, 0.8, 5.4),
+  v(-13.0, 1.6, 7.2),
+  v(-16.8, 2.4, 7.0),
+  v(-20.2, 3.2, 4.8),
+  v(-22.6, 4.0, 1.4),
+  v(-23.8, 4.8, -2.6),
+])
+
+export const lanePoints = (() => {
+  const n = memoryLane.milestones.length
+  if (n === 0) return []
+  return Array.from({ length: n }, (_, i) => laneCurve.getPointAt(n === 1 ? 0 : i / (n - 1)))
+})()
+
+/** Constellation stars sit on a heart outline (local to areas.constellation). */
+export const starPositions = (() => {
+  const n = constellation.reasons.length
+  return Array.from({ length: n }, (_, i) => {
+    // start at the dip of the heart and walk around it
+    const [x, y] = heartPoint((i / n) * Math.PI * 2)
+    const wobble = ((i * 37) % 7) / 7 - 0.5
+    return v(x * 5.2, y * 5.2, wobble * 0.8)
+  })
+})()
+
+/**
+ * Hidden hearts. `group` says which part of the scene they belong to (so they move with it);
+ * positions are local to that group.
+ */
+export const hiddenHeartSpots = [
+  { group: 'island', position: ground(-0.72, -2.42, 0.13) }, // behind the blossom tree
+  { group: 'island', position: ground(-4.35, -3.55, 0.1) }, // among the far flowers
+  { group: 'sky', position: v(8.4, -0.25, -2.6) }, // on a tiny floating rock
+  { group: 'distance', position: v(10.35, 1.0, 0.95) }, // on her island under the same sky
+  { group: 'constellation', position: v(6.8, -4.6, 0.6) }, // just beside the heart of stars
+]
 
 /**
  * Camera poses. Each one has a target, a viewing direction and the width/height of what must fit.
@@ -87,6 +130,16 @@ export const poses = {
   ),
   distance: pose(areas.distance.clone().add(v(0, 0.8, 0)), v(0, 0.18, 1), 24, 11, 20),
   finale: pose(areas.finale.clone(), v(0, 0, 1), 10.5, 10, 16),
+  capsule: pose(spots.capsule.clone().add(v(0, 0.55, 0)), v(-0.55, 0.62, 1), 1.9, 1.5, 2.6),
+  constellation: pose(areas.constellation.clone(), v(0, -0.16, 1), 14, 12.5, 19),
+}
+
+/** Camera for one lantern on the Memory Lane: outside the lane, looking back toward the island. */
+export function lanePose(index) {
+  const p = lanePoints[index]
+  if (!p) return poses.explore
+  const dir = v(p.x, 0, p.z).normalize().add(v(0, 0.42, 0))
+  return pose(p.clone().add(v(0, 0.2, 0)), dir, 3.6, 3.6, 4.4)
 }
 
 export function framePose(index) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { couple, distance } from '../../content/config'
 import { useStore } from '../../store'
+import { CountdownBody } from './Countdown'
 
 /** 2D version of the two islands, used when 3D isn't available. */
 function FlatIllustration() {
@@ -72,6 +73,9 @@ export default function DistanceOverlay({ flat = false }) {
           <motion.h2 {...show(2)}>{distance.line1}</motion.h2>
           {flat && <FlatIllustration />}
           <motion.p {...show(3)}>{distance.line2}</motion.p>
+          <motion.div className="distance-countdown" {...show(3)}>
+            <CountdownBody compact />
+          </motion.div>
         </motion.section>
       )}
     </AnimatePresence>

@@ -8,6 +8,7 @@ import '@fontsource/quicksand/500.css'
 import '@fontsource/quicksand/600.css'
 import '@fontsource/caveat/500.css'
 import './styles.css'
+import './features.css'
 import App from './App'
 
 createRoot(document.getElementById('root')).render(

@@ -5,6 +5,22 @@ import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import Confetti from './Confetti'
 
+/** Optional photo/video from config, only mounted once she has answered (so nothing heavy loads early). */
+function FinaleMedia() {
+  const [failed, setFailed] = useState(false)
+  const media = finale.media
+  if (!media?.src || failed) return null
+  return (
+    <motion.div className="finale-media" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2, duration: 1 }}>
+      {media.type === 'video' ? (
+        <video src={media.src} autoPlay muted loop playsInline controls onError={() => setFailed(true)} />
+      ) : (
+        <img src={media.src} alt="" onError={() => setFailed(true)} />
+      )}
+    </motion.div>
+  )
+}
+
 const soft = (delay = 0) => ({
   initial: { opacity: 0, y: 14, filter: 'blur(8px)' },
   animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
@@ -90,6 +106,7 @@ export default function FinaleOverlay({ flat = false }) {
                     </motion.span>
                     <h2>{finale.answers[answer].title}</h2>
                     <p>{finale.answers[answer].reply}</p>
+                    <FinaleMedia />
                     <motion.p className="finale-closing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 1.4 }}>
                       {finale.closing}
                     </motion.p>

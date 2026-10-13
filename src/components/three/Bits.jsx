@@ -49,15 +49,15 @@ const tmpCam = new THREE.Vector3()
  * Makes children clickable + adds a gentle sparkle and a label so people discover them.
  * Labels hide when the object is around the back of the island.
  */
-export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], children, active = true, sparkleColor = '#ffe3a3', hideBehind = true, ...props }) {
+export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], children, active = true, hint = true, sparkleColor = '#ffe3a3', hideBehind = true, ...props }) {
   const group = useRef()
   const sparkle = useRef()
   const labelRef = useRef()
   const [hovered, setHovered] = useState(false)
   const view = useStore((s) => s.view)
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const showHints = active && view === 'explore'
-  useCursor(hovered && showHints)
+  const showHints = active && hint && view === 'explore'
+  useCursor(hovered && active)
 
   useFrame((state) => {
     if (!group.current) return

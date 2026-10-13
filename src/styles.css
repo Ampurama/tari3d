@@ -429,6 +429,9 @@ button:focus-visible {
   gap: 4px;
   padding: 6px;
   translate: -50% 0;
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+  scrollbar-width: none;
   border-radius: 22px;
   border: 1px solid var(--stroke);
   background: var(--glass);
@@ -1268,16 +1271,27 @@ button:focus-visible {
     left: 10px;
     right: 10px;
     translate: none;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0;
     padding: 5px;
+    /* 8 places don't fit on a phone: let the dock scroll sideways, with soft edges as a hint */
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  }
+
+  .dock::-webkit-scrollbar {
+    display: none;
   }
 
   .dock-item {
-    min-width: 0;
-    flex: 1;
-    padding: 8px 2px 6px;
+    flex: none;
+    min-width: 58px;
+    padding: 8px 4px 6px;
     font-size: 0.64rem;
+    scroll-snap-align: start;
   }
 
   .dock-dot {
