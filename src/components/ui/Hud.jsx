@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Archive, ArrowLeft, Footprints, House, Images, Lock, Mail, Music, Sparkles, Star, Telescope, VolumeX, Wind } from 'lucide-react'
+import { ArrowLeft, BookHeart, Heart, House, LayoutGrid, Lock, Music, Sparkles, VolumeX, Wind } from 'lucide-react'
 import { couple, hints } from '../../content/config'
 import { daysSince } from '../../lib/device'
-import { useStore } from '../../store'
+import { useChaptersDone, useStore } from '../../store'
+import { CHAPTER_COUNT } from '../../lib/story'
 import { audio } from '../../audio/engine'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
+import { ChapterPill, DialogBox, PlacesSheet, StoryDirector, StoryPanel } from './Story'
 
 export function AudioControls() {
   const [state, setState] = useState({ musicOn: audio.musicOn, ambientOn: audio.ambientOn })
@@ -47,8 +49,11 @@ export function AudioControls() {
 const VIEW_TITLES = {
   memories: 'Our memories',
   letter: 'A letter for you',
-  distance: 'Same sky',
+  distance: 'Red Thread',
   lane: 'Memory Lane',
+  timemachine: 'Time Machine',
+  future: 'Future Simulator',
+  reactor: 'Heart Reactor',
   capsule: 'Love Capsule',
   constellation: 'Our Constellation',
 }
@@ -63,7 +68,10 @@ function Brand() {
           day {days.toLocaleString()} of {couple.me.name} &amp; {couple.you.name}
         </span>
       )}
-      <CountdownPill />
+      <div className="brand-pills">
+        <ChapterPill />
+        <CountdownPill />
+      </div>
     </div>
   )
 }
@@ -73,15 +81,13 @@ function Dock() {
   const startFinale = useStore((s) => s.startFinale)
   const letterRead = useStore((s) => s.letterRead)
   const visited = useStore((s) => s.visited)
-  const openLane = useStore((s) => s.openLane)
+  const setPanel = useStore((s) => s.setPanel)
+  const done = useChaptersDone()
   const items = [
     { key: 'explore', label: 'Island', icon: House, action: () => goTo('explore') },
-    { key: 'memories', label: 'Memories', icon: Images, action: () => goTo('memories') },
-    { key: 'lane', label: 'Lane', icon: Footprints, action: () => openLane() },
-    { key: 'letter', label: 'Letter', icon: Mail, action: () => goTo('letter') },
-    { key: 'capsule', label: 'Capsule', icon: Archive, action: () => goTo('capsule') },
-    { key: 'distance', label: 'Same sky', icon: Telescope, action: () => goTo('distance') },
-    { key: 'constellation', label: 'Stars', icon: Star, action: () => goTo('constellation') },
+    { key: 'story', label: 'Story', icon: BookHeart, action: () => setPanel('story'), badge: `${done}/${CHAPTER_COUNT}` },
+    { key: 'places', label: 'Places', icon: LayoutGrid, action: () => setPanel('places') },
+    { key: 'reactor', label: 'Reactor', icon: Heart, action: () => goTo('reactor'), glow: done >= CHAPTER_COUNT },
     {
       key: 'finale',
       label: letterRead ? 'Secret' : 'Locked',
@@ -99,11 +105,11 @@ function Dock() {
       exit={{ opacity: 0, y: 30 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      {items.map(({ key, label, icon: Icon, action, locked }) => (
+      {items.map(({ key, label, icon: Icon, action, locked, badge, glow }) => (
         <button
           key={key}
           type="button"
-          className={`dock-item${locked ? ' is-locked' : ''}${key === 'finale' && !locked ? ' is-secret' : ''}`}
+          className={`dock-item${locked ? ' is-locked' : ''}${(key === 'finale' && !locked) || glow ? ' is-secret' : ''}`}
           onClick={() => {
             audio.sparkle()
             action()
@@ -112,6 +118,7 @@ function Dock() {
         >
           <Icon size={19} strokeWidth={1.7} />
           <span>{label}</span>
+          {badge && <b className="dock-badge">{badge}</b>}
           {visited[key] && <i className="dock-dot" aria-hidden="true" />}
         </button>
       ))}
@@ -166,9 +173,13 @@ export default function Hud() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return
-      const { view: v, selectedMemory, panel, capsuleLetter, activeStar, setPanel, closeStar } = useStore.getState()
+      const st = useStore.getState()
+      const { view: v, selectedMemory, panel, capsuleLetter, activeStar, setPanel, closeStar } = st
       if (panel) return setPanel(null)
-      if (v === 'explore' || v === 'intro' || v === 'finale') return
+      if (st.dialog) return st.closeDialog()
+      if (v === 'explore' || v === 'intro' || v === 'finale' || v === 'cutscene' || v === 'finalRoom') return
+      if (v === 'timemachine' && st.timeIndex !== null) return st.closeTimeEntry()
+      if (v === 'distance' && st.threadMessage) return // the message card closes itself
       if (v === 'memories' && selectedMemory !== null) return // the lightbox handles its own Escape
       if (v === 'capsule' && capsuleLetter) return // the capsule closes its letter first
       if (v === 'constellation' && activeStar !== null) return closeStar()
@@ -179,11 +190,13 @@ export default function Hud() {
   }, [back])
 
   if (phase === 'loading') return null
-  const focused = inWorld && view !== 'explore' && view !== 'finale'
+  const cinematic = view === 'cutscene'
+  const focused = inWorld && view !== 'explore' && view !== 'finale' && view !== 'finalRoom' && !cinematic
 
   return (
     <>
-      <header className="hud-top">
+      <StoryDirector />
+      <header className={`hud-top${cinematic ? ' is-hidden' : ''}`}>
         <AnimatePresence mode="wait">
           {focused ? (
             <motion.button
@@ -210,7 +223,7 @@ export default function Hud() {
           )}
         </AnimatePresence>
         <div className="hud-right">
-          {inWorld && view !== 'finale' && <HeartsPill />}
+          {inWorld && view !== 'finale' && view !== 'finalRoom' && !cinematic && <HeartsPill />}
           <AudioControls />
         </div>
       </header>
@@ -218,6 +231,9 @@ export default function Hud() {
       <Toast />
       <CountdownPanel />
       <HeartsPanel />
+      <StoryPanel />
+      <PlacesSheet />
+      {inWorld && !cinematic && <DialogBox />}
     </>
   )
 }

@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { CameraControls, CameraControlsImpl } from '@react-three/drei'
 import * as THREE from 'three'
-import { framePose, lanePose, poses, resolvePose } from '../../lib/layout'
+import { framePose, futurePose, lanePose, poses, reactorPosition, resolvePose } from '../../lib/layout'
 import { isTouch } from '../../lib/device'
 import { useStore } from '../../store'
+import { CUTSCENE_SECONDS } from '../../lib/story'
 
 const { ACTION } = CameraControlsImpl
 
@@ -30,10 +31,13 @@ export default function CameraDirector() {
   const camNonce = useStore((s) => s.camNonce)
   const laneIndex = useStore((s) => s.laneIndex)
   const riseCue = useStore((s) => s.riseCue)
+  const futureIndex = useStore((s) => s.futureIndex)
+  const cutStart = useRef(null)
+  const cutDone = useRef(false)
   const reducedMotion = useStore((s) => s.reducedMotion)
 
   const poseFor = (v) =>
-    v === 'memories' ? (selected === null ? poses.memories : framePose(selected)) : v === 'lane' ? lanePose(laneIndex) : poses[v]
+    v === 'memories' ? (selected === null ? poses.memories : framePose(selected)) : v === 'lane' ? lanePose(laneIndex) : v === 'future' ? futurePose(futureIndex) : poses[v]
 
   const fly = (p, smooth = true) => {
     const { position, target, dist } = resolvePose(p, camera.fov, size.width / size.height)
@@ -103,6 +107,19 @@ export default function CameraDirector() {
       c.setLookAt(far.x, far.y, far.z, target.x, target.y, target.z, false)
       c.smoothTime = reducedMotion ? 0.25 : 2.6
       fly(poses.finale)
+    } else if (view === 'future') {
+      c.smoothTime = reducedMotion ? 0.25 : prevView.current === 'future' ? 1.0 : 1.6
+      fly(futurePose(futureIndex))
+    } else if (view === 'cutscene') {
+      // the cutscene drives the camera frame by frame (see useFrame below)
+      cutStart.current = null
+    } else if (view === 'finalRoom') {
+      // appear a little further back, then drift slowly toward the heart
+      const { position, target } = resolvePose(poses.finalRoom, camera.fov, size.width / size.height)
+      const far = position.clone().sub(target).multiplyScalar(1.6).add(target)
+      c.setLookAt(far.x, far.y + 1.5, far.z, target.x, target.y, target.z, false)
+      c.smoothTime = reducedMotion ? 0.25 : 3
+      fly(poses.finalRoom)
     } else if (view === 'lane') {
       // walking the lane: a slower, floaty glide from lantern to lantern
       c.smoothTime = reducedMotion ? 0.25 : 1.15
@@ -114,7 +131,7 @@ export default function CameraDirector() {
     prevView.current = view
     return () => clearTimeout(timer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, selected, laneIndex, camNonce, reducedMotion])
+  }, [view, selected, laneIndex, futureIndex, camNonce, reducedMotion])
 
   // before the finale: lift off toward the sky while the screen slowly dims
   useEffect(() => {
@@ -137,10 +154,29 @@ export default function CameraDirector() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.width, size.height])
 
-  // soft parallax from pointer / device tilt
-  useFrame(() => {
+  // soft parallax from pointer / device tilt (+ the scripted ending cutscene)
+  useFrame(({ clock }) => {
     const c = ref.current
     if (!c) return
+    if (view === 'cutscene') {
+      if (cutStart.current === null) cutStart.current = clock.elapsedTime
+      const duration = reducedMotion ? 3 : CUTSCENE_SECONDS
+      const t = Math.min(1, (clock.elapsedTime - cutStart.current) / duration)
+      const e = t * t * (3 - 2 * t)
+      // a slow rising spiral around the heart, closing in as it awakens
+      const angle = reducedMotion ? 0 : -0.4 + e * Math.PI * 1.6
+      const radius = reducedMotion ? 9 : THREE.MathUtils.lerp(15, 6.5, e)
+      const height = reducedMotion ? 1 : THREE.MathUtils.lerp(-3.5, 1.8, e)
+      const r = reactorPosition
+      c.setLookAt(r.x + Math.sin(angle) * radius, r.y + height, r.z + Math.cos(angle) * radius, r.x, r.y, r.z, false)
+      c.setFocalOffset(0, 0, 0, false)
+      if (t >= 1 && !cutDone.current) {
+        cutDone.current = true
+        useStore.getState().finishCutscene()
+      }
+      return
+    }
+    cutDone.current = false
     const p = useStore.getState().pointer
     const amount = reducedMotion ? 0 : view === 'intro' ? 0.45 : view === 'explore' ? 0.18 : view === 'distance' || view === 'constellation' ? 0.35 : 0
     c.setFocalOffset(p.x * amount, p.y * amount * 0.6, 0, true)

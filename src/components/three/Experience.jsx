@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { AdaptiveDpr, PerformanceMonitor, Preload } from '@react-three/drei'
 import { tier } from '../../lib/device'
@@ -12,10 +12,15 @@ import FinaleHeart from './FinaleHeart'
 import MemoryLane from './MemoryLane'
 import Constellation from './Constellation'
 import DebugBridge from './DebugBridge'
+
+// heavy, rarely-visited places are split into their own chunks and only mounted when needed
+const FutureWorlds = lazy(() => import('./FutureWorlds'))
+const FinalRoom = lazy(() => import('./FinalRoom'))
 import { Effects, Lights } from './Atmosphere'
 
 export default function Experience() {
   const [dpr, setDpr] = useState(tier === 'high' ? 1.75 : 1.5)
+  const view = useStore((s) => s.view)
 
   return (
     <Canvas
@@ -45,6 +50,10 @@ export default function Experience() {
         <DistanceWorld />
         <FinaleHeart />
         <Preload all />
+      </Suspense>
+      <Suspense fallback={null}>
+        {view === 'future' && <FutureWorlds />}
+        {(view === 'finalRoom' || view === 'cutscene') && <FinalRoom />}
       </Suspense>
       <Effects />
     </Canvas>

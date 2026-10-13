@@ -20,7 +20,7 @@ export default function CapsuleOverlay({ flat = false }) {
   useEffect(() => {
     setPaperUp(false)
     if (!letter) return
-    const t = setTimeout(() => setPaperUp(true), reducedMotion ? 0 : 900)
+    const t = setTimeout(() => setPaperUp(true), reducedMotion ? 0 : 650)
     return () => clearTimeout(t)
   }, [letter, reducedMotion])
 
@@ -41,7 +41,6 @@ export default function CapsuleOverlay({ flat = false }) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <AnimatePresence mode="wait">
             {!letter ? (
               <motion.div
                 key="choices"
@@ -136,7 +135,6 @@ export default function CapsuleOverlay({ flat = false }) {
                 </AnimatePresence>
               </motion.div>
             )}
-          </AnimatePresence>
         </motion.section>
       )}
     </AnimatePresence>

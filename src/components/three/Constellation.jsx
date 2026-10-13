@@ -92,7 +92,7 @@ export default function Constellation() {
 
   if (!n) return null
   return (
-    <group position={areas.constellation} visible={view !== 'finale'}>
+    <group position={areas.constellation} visible={view !== 'finale' && view !== 'finalRoom'}>
       {starPositions.map((p, i) => {
         const j = (i + 1) % n
         return <Segment key={`s${i}`} a={p} b={starPositions[j]} visible={starsFound.includes(i) && starsFound.includes(j)} />

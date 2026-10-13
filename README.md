@@ -70,6 +70,37 @@ next to it adds soft wind and wind-chimes.
 
 Progress (hearts found, stars lit, envelopes opened, letter read) is saved in the browser.
 
+### Story Mode — “Every Universe Leads to You”
+
+Five chapters, unlocked one after another. Progress is measured from what she actually does
+(see `src/lib/story.js`), so nothing is ever marked complete just by opening a panel.
+
+| Chapter | What completes it |
+|---|---|
+| 1 · The First Page | open 3 memories in the floating frames + visit every Memory Lane lantern |
+| 2 · Back in Time | travel to every date in the **Time Machine** |
+| 3 · The Red Thread | tie the thread on both islands + open both island messages |
+| 4 · Words I Kept for You | read the letter + open 3 Love Capsule envelopes + light every star |
+| 5 · Every Universe Leads to You | visit every world in the **Future Simulator** portal |
+
+Each finished chapter lights one ring of the **Heart Reactor** above the island. At 5/5, the reactor
+starts the final cutscene (camera spiral, particles, shockwave, music climax), which ends in the
+**Secret Room** with your final letter, optional video/voice note, a *Replay the ending* button and
+the original “One last question” finale.
+
+Edit in `config.js`:
+
+| What | Key |
+|---|---|
+| Chapter titles, intro/outro dialog (`{me}` / `{you}` become nicknames) | `story` |
+| Dates, titles, narration, photos per date | `timeMachine.entries` |
+| Island messages + optional voice notes (`audio: 'audio/…'`) | `redThread.messages` |
+| Dream worlds (home, travel, simple moments, wedding) | `futureWorlds.worlds` |
+| Reactor texts | `heartReactor` |
+| Final letter, signature, optional `video` / `voice` | `finalMessage` |
+
+A voice-note play button only appears when a file is configured, so there are no buttons that don’t do anything.
+
 ### Days counter
 `couple.since: 'YYYY-MM-DD'` shows “day N of …” in the corner. Set it to `null` to hide it.
 

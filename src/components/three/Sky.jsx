@@ -152,7 +152,7 @@ export default function Sky() {
     <>
       <SkyGradient />
       <StarDome count={count(2600, 1300)} />
-      <group visible={view !== 'finale'}>
+      <group visible={view !== 'finale' && view !== 'finalRoom'}>
         <Moon />
         <Clouds />
       </group>

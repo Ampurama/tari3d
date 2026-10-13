@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { heightAt } from './island'
-import { constellation, memories, memoryLane } from '../content/config'
+import { constellation, futureWorlds, memories, memoryLane } from '../content/config'
 import { heartPoint } from './heart'
 
 const v = (x, y, z) => new THREE.Vector3(x, y, z)
@@ -13,8 +13,18 @@ export const spots = {
   table: ground(2.4, 1.2),
   telescope: ground(-3.0, 1.9),
   arch: ground(3.5, -3.55),
-  capsule: ground(-2.85, -0.3),
+  timeMachine: ground(-4.05, -1.85),
+  portal: ground(4.75, -0.55),
 }
+
+/** The Heart Reactor floats high above the meadow, behind the blossom tree. */
+export const reactorPosition = v(0, 6.1, -1.4)
+
+/** The bench is turned slightly toward the front of the island. */
+export const benchRotation = 0.15
+
+/** The Love Capsule jar sits on the left end of the bench seat (seat top is 0.485 above the ground). */
+spots.capsule = spots.bench.clone().add(v(-0.38, 0.485, 0.02).applyAxisAngle(new THREE.Vector3(0, 1, 0), benchRotation))
 
 export const moonPosition = v(-48, 34, -86)
 
@@ -68,7 +78,15 @@ export const areas = {
   distance: v(72, 14, -34),
   finale: v(0, 230, 0),
   constellation: v(34, 40, -62),
+  future: v(-84, 22, -36),
+  finalRoom: v(0, 140, -170),
 }
+
+/** Dream worlds behind the portal, in a gentle arc (local to areas.future). */
+export const futureWorldPositions = futureWorlds.worlds.map((_, i, all) => {
+  const t = all.length === 1 ? 0 : i / (all.length - 1) - 0.5
+  return v(t * 16, Math.sin((i / Math.max(1, all.length - 1)) * Math.PI) * 0.8, -Math.abs(t) * 5)
+})
 
 /** Memory Lane: a gentle curve of floating lanterns drifting away from the island's left side. */
 export const laneCurve = new THREE.CatmullRomCurve3([
@@ -130,8 +148,19 @@ export const poses = {
   ),
   distance: pose(areas.distance.clone().add(v(0, 0.8, 0)), v(0, 0.18, 1), 24, 11, 20),
   finale: pose(areas.finale.clone(), v(0, 0, 1), 10.5, 10, 16),
-  capsule: pose(spots.capsule.clone().add(v(0, 0.55, 0)), v(-0.55, 0.62, 1), 1.9, 1.5, 2.6),
+  capsule: pose(spots.capsule.clone().add(v(0, 0.3, 0)), v(-0.35, 0.55, 1), 1.7, 1.4, 2.4),
   constellation: pose(areas.constellation.clone(), v(0, -0.16, 1), 14, 12.5, 19),
+  timemachine: pose(spots.timeMachine.clone().add(v(0, 1.0, 0)), v(-0.2, 0.42, 1), 2.6, 2.4, 3.6),
+  reactor: pose(reactorPosition.clone().add(v(0, -0.6, 0)), v(0, 0.12, 1), 6, 6.5, 8),
+  finalRoom: pose(areas.finalRoom.clone().add(v(0, 1.6, 0)), v(0, 0.12, 1), 9, 6.5, 9),
+  future: pose(areas.future.clone(), v(0, 0.2, 1), 22, 8, 16),
+}
+
+/** Camera for one dream world. */
+export function futurePose(index) {
+  const p = futureWorldPositions[index]
+  if (!p) return poses.future
+  return pose(p.clone().add(areas.future).add(v(0, 0.3, 0)), v(0, 0.22, 1), 4.6, 4.6, 6)
 }
 
 /** Camera for one lantern on the Memory Lane: outside the lane, looking back toward the island. */

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { constellation, hints, loveCapsule, memoryLane } from './content/config'
+import { constellation, futureWorlds, hints, loveCapsule, memoryLane, story, timeMachine } from './content/config'
+import { CHAPTER_COUNT, CHAPTER_PLACES, chapterStatus, completedCount } from './lib/story'
 
 export const HIDDEN_HEART_COUNT = 5
 
@@ -22,6 +23,7 @@ function save(patch) {
 }
 
 const saved = loadSaved()
+const arr = (v) => (Array.isArray(v) ? v : [])
 let toastId = 0
 
 const motionQuery =
@@ -32,7 +34,10 @@ const motionQuery =
 export const useStore = create((set, get) => ({
   /** 'loading' → 'intro' → 'world' */
   phase: 'loading',
-  /** 'intro' | 'explore' | 'memories' | 'lane' | 'letter' | 'capsule' | 'distance' | 'constellation' | 'finale' */
+  /**
+   * 'intro' | 'explore' | 'memories' | 'lane' | 'letter' | 'capsule' | 'distance' | 'constellation' | 'finale'
+   * | 'timemachine' | 'future' | 'reactor' | 'cutscene' | 'finalRoom'
+   */
   view: 'intro',
   selectedMemory: null,
   /** current lantern on the Memory Lane */
@@ -46,13 +51,34 @@ export const useStore = create((set, get) => ({
   starsFound: Array.isArray(saved.starsFound) ? saved.starsFound : [],
   /** the star whose reason is showing */
   activeStar: null,
-  /** small floating panels over any view: 'countdown' | 'hearts' | null */
+  /* ── story mode progress (all persisted; every value comes from something she actually did) ── */
+  viewedMemories: arr(saved.viewedMemories),
+  laneVisited: arr(saved.laneVisited),
+  timeVisited: arr(saved.timeVisited),
+  /** which Time Machine entry is open (null = the dial) */
+  timeIndex: null,
+  /** true while the time-travel animation plays */
+  timeTravelling: false,
+  threadTied: { me: Boolean(saved.threadTied?.me), you: Boolean(saved.threadTied?.you) },
+  threadConnected: Boolean(saved.threadConnected),
+  threadRead: arr(saved.threadRead),
+  /** 'me' | 'you' | null — the island message that's open */
+  threadMessage: null,
+  futureVisited: arr(saved.futureVisited),
+  futureIndex: 0,
+  prologueSeen: Boolean(saved.prologueSeen),
+  introsSeen: arr(saved.introsSeen),
+  celebrated: arr(saved.celebrated),
+  endingSeen: Boolean(saved.endingSeen),
+  /** visual-novel style dialog: { lines, index, key } */
+  dialog: null,
+  /** small floating panels over any view: 'countdown' | 'hearts' | 'story' | 'places' | null */
   panel: null,
   /** bumps to make the camera rise toward the sky before the finale */
   riseCue: 0,
   letterRead: Boolean(saved.letterRead),
   unlockPending: false,
-  visited: { memories: false, lane: false, letter: false, capsule: false, distance: false, constellation: false },
+  visited: { memories: false, lane: false, letter: false, capsule: false, distance: false, constellation: false, timemachine: false, future: false, reactor: false },
   toast: null,
   reducedMotion: Boolean(motionQuery?.matches),
   pointer: { x: 0, y: 0 },
@@ -94,7 +120,11 @@ export const useStore = create((set, get) => ({
 
   enterWorld: () => {
     set({ phase: 'world', view: 'explore' })
-    setTimeout(() => get().showToast(hints.explore, 6000), 2600)
+    setTimeout(() => {
+      // first visit: the prologue tells her what this universe is; afterwards just a gentle hint
+      if (!get().prologueSeen) get().startDialog(story.prologue, 'prologue')
+      else get().showToast(hints.explore, 6000)
+    }, 2800)
   },
 
   goTo: (view) => {
@@ -110,21 +140,34 @@ export const useStore = create((set, get) => ({
       capsuleLetter: null,
       activeStar: null,
       panel: null,
+      timeIndex: view === 'timemachine' ? get().timeIndex : null,
+      threadMessage: null,
       visited: view in visited ? { ...visited, [view]: true } : visited,
     })
   },
 
   back: () =>
-    set((s) => ({ view: 'explore', selectedMemory: null, capsuleLetter: null, activeStar: null, camNonce: s.camNonce + 1 })),
+    set((s) => ({
+      view: 'explore',
+      selectedMemory: null,
+      capsuleLetter: null,
+      activeStar: null,
+      timeIndex: null,
+      threadMessage: null,
+      camNonce: s.camNonce + 1,
+    })),
 
   /** Fly to a lantern on the Memory Lane. */
   openLane: (index = get().laneIndex) => {
     const n = memoryLane.milestones.length
     if (!n) return
     const i = ((index % n) + n) % n
+    const laneVisited = get().laneVisited.includes(i) ? get().laneVisited : [...get().laneVisited, i]
+    save({ laneVisited })
     set((s) => ({
       view: 'lane',
       laneIndex: i,
+      laneVisited,
       panel: null,
       camNonce: s.camNonce + 1,
       visited: { ...s.visited, lane: true },
@@ -168,13 +211,153 @@ export const useStore = create((set, get) => ({
 
   setPanel: (panel) => set((s) => ({ panel: s.panel === panel ? null : panel })),
 
-  selectMemory: (index) =>
+  /* ───────── story & dialog ───────── */
+
+  /** Show a sequence of dialog lines. `key` lets us remember that it was seen. */
+  startDialog: (lines, key = null) => {
+    if (!lines?.length) return
+    set({ dialog: { lines, index: 0, key } })
+  },
+
+  advanceDialog: () => {
+    const d = get().dialog
+    if (!d) return
+    if (d.index < d.lines.length - 1) set({ dialog: { ...d, index: d.index + 1 } })
+    else get().closeDialog()
+  },
+
+  closeDialog: () => {
+    const d = get().dialog
+    if (!d) return
+    const patch = { dialog: null }
+    if (d.key === 'prologue') patch.prologueSeen = true
+    if (d.key?.startsWith('intro:')) {
+      const i = Number(d.key.slice(6))
+      if (!get().introsSeen.includes(i)) patch.introsSeen = [...get().introsSeen, i]
+    }
+    save({ prologueSeen: patch.prologueSeen ?? get().prologueSeen, introsSeen: patch.introsSeen ?? get().introsSeen })
+    set(patch)
+  },
+
+  /** Jump to a chapter's place and play its intro. Locked chapters only explain why. */
+  startChapter: (index, chapterUnlocked) => {
+    if (!chapterUnlocked) {
+      get().showToast('Finish the previous chapter to unlock this one ♡')
+      return
+    }
+    const place = CHAPTER_PLACES[index] || 'explore'
+    set({ panel: null })
+    if (place === 'explore') get().back()
+    else get().goTo(place)
+    const chapter = story.chapters[index]
+    if (chapter?.intro) setTimeout(() => get().startDialog(chapter.intro, `intro:${index}`), 900)
+  },
+
+  markCelebrated: (index) => {
+    if (get().celebrated.includes(index)) return
+    const celebrated = [...get().celebrated, index]
+    save({ celebrated })
+    set({ celebrated })
+  },
+
+  /* ───────── time machine ───────── */
+
+  /** Travel to one date: plays the warp, then shows that day. Counts as visited. */
+  travelTo: (index) => {
+    if (index < 0 || index >= timeMachine.entries.length || get().timeTravelling) return
+    const timeVisited = get().timeVisited.includes(index) ? get().timeVisited : [...get().timeVisited, index]
+    save({ timeVisited })
+    const quick = get().reducedMotion
+    set({ timeTravelling: true, timeIndex: null })
+    setTimeout(() => set({ timeTravelling: false, timeIndex: index, timeVisited }), quick ? 200 : 2000)
+  },
+
+  closeTimeEntry: () => set({ timeIndex: null }),
+
+  /* ───────── red thread ───────── */
+
+  tieThread: (side) => {
+    if (side !== 'me' && side !== 'you') return
+    const s = get()
+    if (s.threadConnected) {
+      // once connected, tapping an island opens its message
+      const threadRead = s.threadRead.includes(side) ? s.threadRead : [...s.threadRead, side]
+      save({ threadRead })
+      set({ threadMessage: side, threadRead })
+      return
+    }
+    const threadTied = { ...s.threadTied, [side]: true }
+    const connected = threadTied.me && threadTied.you
+    save({ threadTied, threadConnected: connected })
+    set({ threadTied, threadConnected: connected })
+    if (connected) get().showToast('The red thread is tied. Tap an island to open its message ♡', 5200)
+    else get().showToast('One side tied — now the other island.', 3200)
+  },
+
+  closeThreadMessage: () => set({ threadMessage: null }),
+
+  /* ───────── future simulator ───────── */
+
+  openFuture: (index = get().futureIndex) => {
+    const n = futureWorlds.worlds.length
+    if (!n) return
+    const i = ((index % n) + n) % n
+    const futureVisited = get().futureVisited.includes(i) ? get().futureVisited : [...get().futureVisited, i]
+    save({ futureVisited })
     set((s) => ({
+      view: 'future',
+      futureIndex: i,
+      futureVisited,
+      panel: null,
+      camNonce: s.camNonce + 1,
+      visited: { ...s.visited, future: true },
+    }))
+  },
+
+  /* ───────── heart reactor & ending ───────── */
+
+  /** Starts the final cutscene — only possible once every chapter is complete. */
+  igniteReactor: () => {
+    if (completedCount(get()) < CHAPTER_COUNT) {
+      get().showToast('The heart still needs more light. Finish every chapter first ♡')
+      return
+    }
+    set((s) => ({ view: 'cutscene', panel: null, dialog: null, camNonce: s.camNonce + 1 }))
+  },
+
+  /** After the cutscene (or when skipped): fade into the secret room. */
+  finishCutscene: () => {
+    if (get().view !== 'cutscene') return
+    save({ endingSeen: true })
+    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', endingSeen: true, camNonce: s.camNonce + 1 })), 900)
+  },
+
+  /** The secret room is only reachable after all chapters are complete. */
+  openFinalRoom: () => {
+    if (completedCount(get()) < CHAPTER_COUNT) {
+      get().showToast('This room only opens when every chapter is complete ♡')
+      return
+    }
+    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', panel: null, camNonce: s.camNonce + 1 })), 1200)
+  },
+
+  replayEnding: () => get().throughCurtain(() => get().igniteReactor(), 1000),
+
+  leaveFinalRoom: () => get().throughCurtain(() => get().back(), 1200),
+
+  selectMemory: (index) =>
+    set((s) => {
+      const viewedMemories =
+        index === null || s.viewedMemories.includes(index) ? s.viewedMemories : [...s.viewedMemories, index]
+      if (viewedMemories !== s.viewedMemories) save({ viewedMemories })
+      return {
+      viewedMemories,
       view: 'memories',
       selectedMemory: index,
       camNonce: s.camNonce + 1,
       visited: { ...s.visited, memories: true },
-    })),
+      }
+    }),
 
   markLetterRead: () => {
     if (get().letterRead) return
@@ -216,3 +399,7 @@ if (typeof window !== 'undefined') {
     { passive: true },
   )
 }
+
+/** Story helpers for components: is chapter `i` unlocked / done? (cheap booleans, so no re-render storms) */
+export const useChapterUnlocked = (i) => useStore((s) => Boolean(chapterStatus(s)[i]?.unlocked))
+export const useChaptersDone = () => useStore((s) => completedCount(s))

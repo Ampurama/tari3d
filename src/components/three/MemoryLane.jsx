@@ -152,7 +152,7 @@ export default function MemoryLane() {
   const view = useStore((s) => s.view)
   if (!lanePoints.length) return null
   return (
-    <group visible={view !== 'finale'}>
+    <group visible={view !== 'finale' && view !== 'finalRoom'}>
       <LanePath />
       {memoryLane.milestones.map((m, i) => (
         <Lantern key={i} index={i} position={lanePoints[i]} milestone={m} />

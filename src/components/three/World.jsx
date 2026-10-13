@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { spots } from '../../lib/layout'
+import { benchRotation, spots } from '../../lib/layout'
 import { count } from '../../lib/device'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
@@ -13,6 +13,9 @@ import MemoryFrames from './MemoryFrames'
 import FloatingHearts from './FloatingHearts'
 import LoveCapsule from './LoveCapsule'
 import HiddenHearts from './HiddenHearts'
+import TimeMachine from './TimeMachine'
+import FuturePortal from './FuturePortal'
+import HeartReactor from './HeartReactor'
 
 const faceCenter = (p) => Math.atan2(-p.x, -p.z)
 
@@ -36,14 +39,14 @@ export default function World() {
   }
 
   return (
-    <group ref={root} visible={view !== 'finale'}>
+    <group ref={root} visible={view !== 'finale' && view !== 'finalRoom'}>
       <IslandBody />
       <Flowers avoid={mainIslandAvoid} />
       <GlowPaths />
       <FloatingRocks />
 
       <BlossomTree position={spots.tree} />
-      <Bench position={spots.bench} rotation={[0, 0.15, 0]} />
+      <Bench position={spots.bench} rotation={[0, benchRotation, 0]} />
 
       <Interactive label="A letter for you" onSelect={open('letter')} position={spots.table} sparkleOffset={[0.05, 1.05, 0.05]}>
         <LetterTable rotation={[0, faceCenter(spots.table) + Math.PI, 0]} />
@@ -66,7 +69,11 @@ export default function World() {
         <SecretArch rotation={[0, faceCenter(spots.arch), 0]} />
       </Interactive>
 
-      <LoveCapsule position={spots.capsule} rotation={[0, 0.5, 0]} />
+      {/* the Love Capsule jar rests on the bench seat */}
+      <LoveCapsule position={spots.capsule} rotation={[0, benchRotation + 0.4, 0]} scale={0.8} />
+      <TimeMachine position={spots.timeMachine} rotation={[0, 0.35, 0]} />
+      <FuturePortal position={spots.portal} rotation={[0, faceCenter(spots.portal), 0]} />
+      <HeartReactor />
 
       <MemoryFrames />
       <FloatingHearts />

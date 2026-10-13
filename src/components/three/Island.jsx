@@ -193,7 +193,8 @@ export const mainIslandAvoid = [
   [spots.table.x, spots.table.z, 0.85],
   [spots.telescope.x, spots.telescope.z, 0.75],
   [spots.arch.x, spots.arch.z, 1.0],
-  [spots.capsule.x, spots.capsule.z, 0.45],
+  [spots.timeMachine.x, spots.timeMachine.z, 0.7],
+  [spots.portal.x, spots.portal.z, 0.8],
   ...paths.flatMap((pts) => {
     const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)))
     return curve.getSpacedPoints(Math.ceil(curve.getLength() / 0.35)).map((p) => [p.x, p.z, 0.36])

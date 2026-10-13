@@ -11,6 +11,9 @@ import FinaleOverlay, { Curtain } from './components/ui/FinaleOverlay'
 import LaneOverlay from './components/ui/LaneOverlay'
 import CapsuleOverlay from './components/ui/CapsuleOverlay'
 import ConstellationOverlay from './components/ui/ConstellationOverlay'
+import TimeMachineOverlay from './components/ui/TimeMachineOverlay'
+import FutureOverlay from './components/ui/FutureOverlay'
+import { CutsceneOverlay, FinalRoomOverlay, ReactorOverlay } from './components/ui/Ending'
 
 const Experience = lazy(() => import('./components/three/Experience'))
 
@@ -29,6 +32,11 @@ export default function App() {
         <LaneOverlay />
         <CapsuleOverlay />
         <ConstellationOverlay />
+        <TimeMachineOverlay />
+        <FutureOverlay />
+        <ReactorOverlay />
+        <CutsceneOverlay />
+        <FinalRoomOverlay />
         <LetterOverlay />
         <DistanceOverlay />
         <FinaleOverlay />

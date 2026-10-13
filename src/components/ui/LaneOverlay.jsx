@@ -91,7 +91,6 @@ export default function LaneOverlay({ flat = false }) {
             ))}
           </div>
 
-          <AnimatePresence mode="wait" custom={dir}>
             {m && (
               <motion.article
                 key={shownIndex}
@@ -132,7 +131,6 @@ export default function LaneOverlay({ flat = false }) {
                 </div>
               </motion.article>
             )}
-          </AnimatePresence>
 
           {milestones.length > 1 && (
             <div className="lane-nav">

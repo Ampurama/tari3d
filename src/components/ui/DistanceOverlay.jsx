@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { couple, distance } from '../../content/config'
 import { useStore } from '../../store'
 import { CountdownBody } from './Countdown'
+import RedThreadUI from './RedThreadUI'
 
 /** 2D version of the two islands, used when 3D isn't available. */
 function FlatIllustration() {
@@ -72,6 +73,7 @@ export default function DistanceOverlay({ flat = false }) {
           </motion.span>
           <motion.h2 {...show(2)}>{distance.line1}</motion.h2>
           {flat && <FlatIllustration />}
+          <RedThreadUI flat={flat} />
           <motion.p {...show(3)}>{distance.line2}</motion.p>
           <motion.div className="distance-countdown" {...show(3)}>
             <CountdownBody compact />

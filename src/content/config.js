@@ -326,3 +326,202 @@ export const hints = {
   secretLocked: 'This path is still sleeping… read the letter first ♡',
   secretUnlocked: 'Something just woke up at the end of the glowing path ✦',
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ *  STORY MODE — "EVERY UNIVERSE LEADS TO YOU"
+ *  Five chapters. Each one unlocks after the previous is finished.
+ *  What counts as "finished" is measured from what she actually does
+ *  (see src/lib/story.js) — progress is never faked.
+ *  In dialog lines, {me} and {you} become the nicknames above.
+ * ═══════════════════════════════════════════════════════════════ */
+
+export const story = {
+  title: 'Our Little Universe',
+  tagline: 'Every universe leads to you',
+  narrator: 'The Universe',
+  prologue: [
+    { speaker: 'narrator', text: 'Somewhere between Jakarta and Makassar, a little universe was born.' },
+    { speaker: 'narrator', text: 'It is made of moments, words and dreams — and every single one of them leads to one person.' },
+    { speaker: 'me', text: 'Hi {you}. I built this place for you. There are five chapters hidden in it.' },
+    { speaker: 'me', text: 'Finish them all and the heart above the island will wake up. Something is waiting for you there. ♡' },
+  ],
+  chapters: [
+    {
+      id: 'beginning',
+      title: 'The First Page',
+      subtitle: 'Where our story began',
+      intro: [
+        { speaker: 'narrator', text: 'Chapter One. Every story has a first page.' },
+        { speaker: 'me', text: 'Look around the floating frames, then walk the Memory Lane all the way to the last lantern.' },
+      ],
+      outro: [{ speaker: 'me', text: 'Every one of those days still feels like yesterday to me.' }],
+    },
+    {
+      id: 'time',
+      title: 'Back in Time',
+      subtitle: 'The machine that remembers',
+      intro: [
+        { speaker: 'narrator', text: 'Chapter Two. Somewhere on the island, an old machine keeps every date we shared.' },
+        { speaker: 'me', text: 'Find the Time Machine and travel to every day it remembers.' },
+      ],
+      outro: [{ speaker: 'me', text: 'If I could, I would go back to every one of those days. With you, again.' }],
+    },
+    {
+      id: 'thread',
+      title: 'The Red Thread',
+      subtitle: 'Two cities, one string of fate',
+      intro: [
+        { speaker: 'narrator', text: 'Chapter Three. They say an invisible red thread connects those who are meant to meet.' },
+        { speaker: 'me', text: 'Go to our two islands. Tie the thread on both sides — then open the messages waiting there.' },
+      ],
+      outro: [{ speaker: 'me', text: 'It can stretch. It can tangle. But it never breaks.' }],
+    },
+    {
+      id: 'words',
+      title: 'Words I Kept for You',
+      subtitle: 'Letters, moods and stars',
+      intro: [
+        { speaker: 'narrator', text: 'Chapter Four. Some things are easier to write than to say.' },
+        { speaker: 'me', text: 'Read my letter, open a few envelopes from the Love Capsule, and light up every star of our constellation.' },
+      ],
+      outro: [{ speaker: 'me', text: 'And I still haven’t run out of things to tell you.' }],
+    },
+    {
+      id: 'future',
+      title: 'Every Universe Leads to You',
+      subtitle: 'The worlds we haven’t visited yet',
+      intro: [
+        { speaker: 'narrator', text: 'Chapter Five. A portal has opened at the edge of the island.' },
+        { speaker: 'me', text: 'Step through it and visit every world we dream about.' },
+      ],
+      outro: [
+        { speaker: 'me', text: 'In every one of those universes, I end up with you.' },
+        { speaker: 'narrator', text: 'The heart above the island is full. It’s time.' },
+      ],
+    },
+  ],
+}
+
+/**
+ * TIME MACHINE — one entry per date. Uses your real photos; `narration` is yours to edit.
+ * `photos` can list several files (photo or .mp4). Leave it [] for a soft placeholder.
+ */
+export const timeMachine = {
+  title: 'Time Machine',
+  subtitle: 'Choose a date. The universe will take you back.',
+  entries: [
+    {
+      date: '2026-08-01',
+      label: '1 Agustus 2026',
+      title: 'The day we became us',
+      narration: 'The first day of our story.',
+      photos: [],
+    },
+    {
+      date: '2026-08-02',
+      label: '2 Agustus 2026',
+      title: 'Our first photo booth',
+      narration: 'Silly poses and our very first photos together.',
+      photos: ['photos/2agustus.jpeg', 'photos/2agustus(1).jpg'],
+    },
+    {
+      date: '2026-08-16',
+      label: '16 Agustus 2026',
+      title: 'A day full of us',
+      narration: 'Car selfies, a café, and so many little moments.',
+      photos: ['photos/16agustus(2).jpeg', 'photos/16agustus.jpeg', 'photos/16agustus(1).jpeg', 'photos/16gustus(3).jpeg', 'photos/16agustus.mp4'],
+    },
+    {
+      date: '2026-08-29',
+      label: '29 Agustus 2026',
+      title: 'Under the blossoms',
+      narration: 'Pink flowers and red lanterns.',
+      photos: ['photos/29agustus.jpeg'],
+    },
+    {
+      date: '2026-08-30',
+      label: '30 Agustus 2026',
+      title: 'Road trip company',
+      narration: 'Another drive side by side.',
+      photos: ['photos/30agustus.jpeg'],
+    },
+    {
+      date: '2026-09-26',
+      label: '26 September 2026',
+      title: 'Golden hour',
+      narration: 'Sand, sea breeze and a sunset together.',
+      photos: ['photos/26september(1).jpeg'],
+    },
+  ],
+}
+
+/**
+ * RED THREAD — the two islands under the same sky.
+ * `audio`: put a voice note in /public/audio (e.g. 'audio/voice-1.m4a') to show a play button.
+ * When audio is null, only the written message is shown (no fake play button).
+ */
+export const redThread = {
+  prompt: 'Tap both islands to tie the red thread.',
+  connected: 'Connected. No distance can untie this.',
+  messages: {
+    me: {
+      title: 'A message from Jakarta',
+      text: 'Every night I look at the same sky you’re under, and I feel a little closer to you.',
+      audio: null,
+    },
+    you: {
+      title: 'A message waiting in Makassar',
+      text: 'Wherever you are, this thread finds you. Pull it whenever you miss me — I’ll feel it.',
+      audio: null,
+    },
+  },
+}
+
+/** FUTURE SIMULATOR — the worlds behind the portal. Edit titles and messages freely. */
+export const futureWorlds = {
+  title: 'Future Simulator',
+  subtitle: 'Worlds we haven’t visited yet — but will.',
+  worlds: [
+    {
+      id: 'home',
+      title: 'Our Home',
+      message: 'A small house with warm lights, a messy kitchen, and you as the first thing I see every morning.',
+    },
+    {
+      id: 'travel',
+      title: 'Our Adventures',
+      message: 'New cities, long flights, wrong turns — every place becomes my favorite place when you’re there.',
+    },
+    {
+      id: 'simple',
+      title: 'Simple Moments',
+      message: 'Two cups of tea, a quiet night, no screens between us. Just us, and that’s enough.',
+    },
+    {
+      id: 'wedding',
+      title: 'Our Dream Wedding',
+      message: 'One day, under flowers and soft lights, I hope to say forever — and mean every letter of it.',
+    },
+  ],
+}
+
+/** HEART REACTOR — the core above the island that fills up as chapters are completed. */
+export const heartReactor = {
+  title: 'Heart Reactor',
+  idle: 'Every chapter you finish gives the heart a little more light.',
+  ready: 'The heart is full. Are you ready?',
+  igniteButton: 'Awaken the heart ♡',
+}
+
+/**
+ * FINAL MESSAGE — the secret room behind the ending.
+ * `letter` stays in Bahasa Indonesia. `video` / `voice`: a path in /public, or null to hide.
+ */
+export const finalMessage = {
+  title: 'The Secret Room',
+  letter:
+    'Tari,\n\nKalau kamu sampai di sini, berarti kamu sudah menjelajahi seluruh universe kecil ini — semua kenangan, semua surat, semua mimpi kita.\n\nAku bikin tempat ini karena aku pengen kamu tahu satu hal: di semesta mana pun, aku akan tetap menemukan jalan ke kamu.\n\nTerima kasih sudah jadi bagian paling indah dari ceritaku. Ini baru awal, dan aku nggak sabar menulis halaman-halaman berikutnya sama kamu.\n\nI love you, always. ♡',
+  signature: '— Rayhan',
+  video: null,
+  voice: null,
+}

@@ -354,6 +354,73 @@ class AudioEngine {
     }
   }
 
+  /**
+   * Final cutscene: the music swells to a climax, then settles.
+   * Must be called from a user gesture (the "Awaken" button), so it may also start the music.
+   */
+  climax(seconds = 12) {
+    if (!this.ensure()) return
+    const ctx = this.ctx
+    if (!this.musicOn) this.setMusic(true)
+    const volume = musicConfig.volume ?? 0.55
+    const now = ctx.currentTime
+    if (!musicConfig.src) {
+      this.fade(this.musicBus.gain, Math.min(1, volume * 1.7), seconds * 0.45)
+      // a wide, slowly blooming chord under everything
+      ;['F2', 'C3', 'F3', 'A3', 'C4', 'G4', 'A4', 'E5'].forEach((n, i) => {
+        const out = ctx.createGain()
+        out.gain.setValueAtTime(0, now)
+        out.gain.linearRampToValueAtTime(0.03 + (i < 2 ? 0.02 : 0), now + seconds * 0.55)
+        out.gain.linearRampToValueAtTime(0, now + seconds + 2)
+        out.connect(this.musicBus)
+        const osc = ctx.createOscillator()
+        osc.type = i < 2 ? 'sine' : 'triangle'
+        osc.frequency.value = freq(n)
+        osc.connect(out)
+        osc.start(now)
+        osc.stop(now + seconds + 2.2)
+      })
+      // a rising cascade of bells at the peak
+      const bells = ['C5', 'E5', 'G5', 'A5', 'C6', 'E6', 'G6', 'A6', 'C7']
+      bells.forEach((n, i) => this.bell(freq(n), now + seconds * 0.5 + i * 0.16, 0.07, 3.2))
+      setTimeout(() => this.musicOn && this.fade(this.musicBus.gain, volume, 4), seconds * 1000)
+    } else if (this.file) {
+      // with a custom song: simply bring it up for the climax
+      this.file.volume = Math.min(1, volume * 1.6)
+      setTimeout(() => this.file && (this.file.volume = volume), seconds * 1000)
+    }
+  }
+
+  /**
+   * Plays a voice note, gently lowering the music while it speaks.
+   * Returns the <audio> element (so the UI can show play/pause), or null if it can't play.
+   */
+  playVoice(src, onEnd) {
+    this.stopVoice()
+    const el = new Audio(src)
+    this.voice = el
+    const restore = () => {
+      if (this.voice === el) this.voice = null
+      if (this.ctx && this.musicOn && !musicConfig.src) this.fade(this.musicBus.gain, musicConfig.volume ?? 0.55, 1)
+      if (this.file && this.musicOn) this.file.volume = musicConfig.volume ?? 0.55
+      onEnd?.()
+    }
+    el.addEventListener('ended', restore)
+    el.addEventListener('error', restore)
+    if (this.ensure() && this.musicOn && !musicConfig.src) this.fade(this.musicBus.gain, 0.12, 0.6)
+    if (this.file && this.musicOn) this.file.volume = 0.12
+    el.play().catch(restore)
+    return el
+  }
+
+  stopVoice() {
+    if (!this.voice) return
+    const el = this.voice
+    this.voice = null
+    el.pause()
+    el.dispatchEvent(new Event('ended'))
+  }
+
   /** Little sparkle when something magical is opened (only if sound is already on). */
   sparkle() {
     if (!this.ctx || (!this.musicOn && !this.ambientOn)) return
