@@ -407,8 +407,8 @@ class AudioEngine {
     this.voice = el
     const restore = () => {
       if (this.voice === el) this.voice = null
-      if (this.ctx && this.musicOn && !musicConfig.src) this.fade(this.musicBus.gain, musicConfig.volume ?? 0.55, 1)
-      if (this.file && this.musicOn) this.file.volume = musicConfig.volume ?? 0.55
+      if (this.ctx && this.musicOn && !musicConfig.src) this.fade(this.musicBus.gain, this.baseLevel(), 1)
+      if (this.file && this.musicOn) this.file.volume = this.baseLevel()
       onEnd?.()
     }
     el.addEventListener('ended', restore)
@@ -430,11 +430,41 @@ class AudioEngine {
   /** Lower the music while a video or recording in the page is playing; restore it afterwards. */
   duck(on) {
     this.ducked = on
-    const volume = musicConfig.volume ?? 0.55
+    const volume = this.baseLevel()
     if (on) clearTimeout(this.climaxTimer)
     if (!this.musicOn || this.voice) return
     if (this.ctx && !musicConfig.src) this.fade(this.musicBus.gain, on ? 0.12 : volume, on ? 0.5 : 1.2)
     if (this.file) this.file.volume = on ? 0.12 : volume
+  }
+
+  /** Normal music level, or the quieter one while the secret ending is playing. */
+  baseLevel() {
+    const volume = musicConfig.volume ?? 0.55
+    return this.softened ? volume * 0.25 : volume
+  }
+
+  /**
+   * Slowly lowers the music (secret ending) or brings it back. Never starts music by itself.
+   * `seconds` is how long the fade takes.
+   */
+  soften(on, seconds = 5) {
+    if (this.softened === on) return
+    this.softened = on
+    clearTimeout(this.climaxTimer)
+    clearInterval(this.softTimer)
+    if (!this.musicOn || this.ducked || this.voice) return
+    const target = this.baseLevel()
+    if (this.ctx && !musicConfig.src) this.fade(this.musicBus.gain, target, seconds)
+    if (this.file) {
+      // HTMLAudio has no ramps: step the volume gently
+      const from = this.file.volume
+      const start = performance.now()
+      this.softTimer = setInterval(() => {
+        const t = Math.min(1, (performance.now() - start) / (seconds * 1000))
+        if (this.file) this.file.volume = from + (target - from) * t
+        if (t >= 1) clearInterval(this.softTimer)
+      }, 100)
+    }
   }
 
   /** Little sparkle when something magical is opened (only if sound is already on). */

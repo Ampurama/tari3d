@@ -17,6 +17,7 @@ import { FlatHiddenHearts } from './HeartsPanel'
 import TimeMachineOverlay from './TimeMachineOverlay'
 import FutureOverlay from './FutureOverlay'
 import { CutsceneOverlay, FinalRoomOverlay, ReactorOverlay } from './Ending'
+import SecretEnding from './SecretEnding'
 import { useChapterUnlocked, useChaptersDone } from '../../store'
 import { CHAPTER_COUNT } from '../../lib/story'
 import { loveCapsule, memoryLane, constellation } from '../../content/config'
@@ -129,6 +130,7 @@ export default function Fallback() {
       <ReactorOverlay flat />
       <CutsceneOverlay flat />
       <FinalRoomOverlay flat />
+      <SecretEnding flat />
       <LetterOverlay flat />
       <DistanceOverlay flat />
       <FinaleOverlay flat />

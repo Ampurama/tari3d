@@ -13,7 +13,7 @@ import {
   Telescope,
   X,
 } from 'lucide-react'
-import { couple, heartReactor, story } from '../../content/config'
+import { couple, heartReactor, secretEnding, story } from '../../content/config'
 import { CHAPTER_COUNT, chapterStatus, completedCount, fillNames } from '../../lib/story'
 import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
@@ -142,7 +142,7 @@ export function StoryDirector() {
   // a chapter just got completed → celebrate it once
   useEffect(() => {
     // never interrupt: wait until no dialog, card, letter or panel is open
-    if (phase !== 'world' || dialog || reading || ['cutscene', 'finalRoom', 'finale', 'letter'].includes(view)) return
+    if (phase !== 'world' || dialog || reading || ['cutscene', 'finalRoom', 'finale', 'letter', 'epilogue'].includes(view)) return
     const s = useStore.getState()
     const status = chapterStatus(s)
     const fresh = status.find((c) => c.done && !celebrated.includes(c.index))
@@ -196,6 +196,8 @@ export function StoryPanel() {
   const goTo = useStore((s) => s.goTo)
   const openFinalRoom = useStore((s) => s.openFinalRoom)
   const endingSeen = useStore((s) => s.endingSeen)
+  const secretKnown = useStore((s) => s.secretFound || s.secretSeen)
+  const replaySecret = useStore((s) => s.replaySecret)
   // re-render whenever any measured progress changes
   const signature = useStore((s) => JSON.stringify(chapterStatus(s).map((c) => [c.done, c.unlocked, c.tasks.map((t) => t.have)])))
   const chapters = useMemo(() => chapterStatus(useStore.getState()), [signature]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -283,6 +285,11 @@ export function StoryPanel() {
                 {endingSeen && (
                   <button type="button" className="btn-ghost" onClick={openFinalRoom}>
                     Enter the Secret Room
+                  </button>
+                )}
+                {secretKnown && (
+                  <button type="button" className="btn-ghost" onClick={replaySecret}>
+                    {secretEnding.replay}
                   </button>
                 )}
               </div>

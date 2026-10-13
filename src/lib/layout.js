@@ -154,6 +154,10 @@ export const poses = {
   reactor: pose(reactorPosition.clone().add(v(0, -0.6, 0)), v(0, 0.12, 1), 6, 6.5, 8),
   finalRoom: pose(areas.finalRoom.clone().add(v(0, 1.6, 0)), v(0, 0.12, 1), 9, 6.5, 9),
   future: pose(areas.future.clone(), v(0, 0.2, 1), 22, 8, 16),
+  /** secret ending: drift in close to the big heart in the Secret Room */
+  secretClose: pose(areas.finalRoom.clone().add(v(0, 2.9, -1.5)), v(0, 0.08, 1), 3.6, 3.4, 5.2),
+  /** the final moment: pull far back to see the whole little universe at once */
+  epilogue: pose(v(-6, 2.5, 0), v(0.18, 0.5, 1), 46, 30, 38),
 }
 
 /** Camera for one dream world. */

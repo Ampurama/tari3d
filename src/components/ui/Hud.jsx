@@ -157,6 +157,7 @@ export default function Hud() {
   const consumeUnlock = useStore((s) => s.consumeUnlock)
   const showToast = useStore((s) => s.showToast)
   const inWorld = phase === 'world'
+  const secretStage = useStore((s) => s.secretStage)
 
   // tell her when the secret path wakes up — once she's back on the island
   useEffect(() => {
@@ -177,7 +178,7 @@ export default function Hud() {
       const { view: v, selectedMemory, panel, capsuleLetter, activeStar, setPanel, closeStar } = st
       if (panel) return setPanel(null)
       if (st.dialog) return st.closeDialog()
-      if (v === 'explore' || v === 'intro' || v === 'finale' || v === 'cutscene' || v === 'finalRoom') return
+      if (['explore', 'intro', 'finale', 'cutscene', 'finalRoom', 'epilogue'].includes(v)) return
       if (v === 'timemachine' && st.timeIndex !== null) return st.closeTimeEntry()
       if (v === 'distance' && st.threadMessage) return // the message card closes itself
       if (v === 'memories' && selectedMemory !== null) return // the lightbox handles its own Escape
@@ -190,8 +191,10 @@ export default function Hud() {
   }, [back])
 
   if (phase === 'loading') return null
+  // only the cutscene hides the whole HUD; during the secret ending just the music controls stay (so sound is always in her hands)
   const cinematic = view === 'cutscene'
-  const focused = inWorld && view !== 'explore' && view !== 'finale' && view !== 'finalRoom' && !cinematic
+  const secretActive = view === 'epilogue' || (view === 'finalRoom' && Boolean(secretStage))
+  const focused = inWorld && view !== 'explore' && view !== 'finale' && view !== 'finalRoom' && view !== 'epilogue' && !cinematic
 
   return (
     <>
@@ -223,7 +226,7 @@ export default function Hud() {
           )}
         </AnimatePresence>
         <div className="hud-right">
-          {inWorld && view !== 'finale' && view !== 'finalRoom' && !cinematic && <HeartsPill />}
+          {inWorld && view !== 'finale' && view !== 'finalRoom' && view !== 'epilogue' && !cinematic && <HeartsPill />}
           <AudioControls />
         </div>
       </header>
@@ -233,7 +236,7 @@ export default function Hud() {
       <HeartsPanel />
       <StoryPanel />
       <PlacesSheet />
-      {inWorld && !cinematic && <DialogBox />}
+      {inWorld && !cinematic && !secretActive && <DialogBox />}
     </>
   )
 }

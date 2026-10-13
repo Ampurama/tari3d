@@ -525,3 +525,86 @@ export const finalMessage = {
   video: null,
   voice: null,
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ *  SECRET ENDING — "THE ONE THING I COULD NEVER CODE ♡"
+ *  Hidden in the Secret Room after the game is finished: a small star
+ *  beside the big heart lights up once the final letter has appeared.
+ *  Touching it opens this ending. Everything below is editable.
+ * ═══════════════════════════════════════════════════════════════ */
+
+export const secretEnding = {
+  title: 'The One Thing I Could Never Code ♡',
+  /** small hint shown in the Secret Room once the star is awake (also a tappable button) */
+  starHint: 'A tiny star just lit up beside the heart…',
+
+  found: {
+    line1: 'You found everything I prepared for you...',
+    line2: "But there's one little thing I haven't told you yet.",
+    button: 'Open my heart ♡',
+  },
+
+  transition: {
+    line1: "Out of all the things I could create in this little universe, there's one thing I can never fully put into code...",
+    line2: 'How much you mean to me.',
+  },
+
+  /** The letter. A blank line starts a new paragraph. */
+  letter: `Sayangku, 🤍
+
+Kalau kamu sudah sampai di sini, berarti kamu sudah melihat dunia kecil yang aku buat khusus buat kamu.
+
+Tapi di balik semua bintang, animasi, permainan, dan hal-hal kecil yang kamu temukan di sini, sebenarnya ada satu alasan sederhana kenapa aku membuat semuanya.
+
+Aku ingin membuat sesuatu yang bisa mengingatkan kamu betapa berartinya kamu buat aku.
+
+Aku tahu aku bukan orang yang selalu benar. Aku masih belajar memahami kamu, belajar mendengarkan kamu, dan belajar mencintai kamu dengan cara yang juga membuat kamu merasa dicintai.
+
+Aku nggak bisa menjanjikan bahwa setiap hari kita akan selalu mudah. Tapi aku berharap, saat ada hari yang sulit, kita tetap bisa saling mendengarkan dan belajar memahami satu sama lain.
+
+Aku senang bisa mengenal kamu. Aku senang bisa berbagi cerita sama kamu, bahkan untuk hal-hal kecil yang mungkin terlihat sederhana.
+
+Dan kalau suatu hari nanti kamu membuka website ini lagi, aku harap kamu bukan cuma ingat permainan yang kamu selesaikan.
+
+Aku harap kamu juga ingat bahwa ada seseorang yang meluangkan waktu untuk membuat semua ini, karena kamu memang sepenting itu buat dia.
+
+Someone who wanted to give you something more meaningful than a simple 'I love you'.
+
+Someone who is still learning, still growing, and still grateful to have you in his life.
+
+That someone is me, sayang. ♡
+
+I love you, not because our story is perfect, but because our story is ours.
+
+And if you let me, I hope we get to write many more pages together.`,
+  readAll: 'Read it all',
+
+  /**
+   * Your own voice recording. Put the file in /public/audio and set `src`, e.g. 'audio/for-tari.m4a'
+   * (mp3 / m4a / ogg / wav). While `src` is null an elegant placeholder is shown instead of a player.
+   * `subtitles` are optional: [{ start: 0, end: 4.5, text: '…' }, …] in seconds.
+   */
+  voice: {
+    button: "There's something I want you to hear...",
+    src: null,
+    subtitles: [],
+    placeholder: 'My voice message will live here very soon ♡',
+    continue: 'Continue',
+  },
+
+  /** One real photo of the two of you (from /public/photos) and its caption. */
+  photo: {
+    src: 'photos/26september(1).jpeg',
+    caption: "Of all the little moments life could give me, I'm grateful that some of them brought me to you.",
+    continue: 'Continue ♡',
+  },
+
+  final: {
+    line1: 'If I had to find you in every universe, I would.',
+    line2: 'Thank you for being part of my little universe, sayang. ♡',
+    stay: 'Stay in our universe ♡',
+  },
+
+  replay: 'Replay the secret ending ♡',
+  skip: 'Skip',
+}

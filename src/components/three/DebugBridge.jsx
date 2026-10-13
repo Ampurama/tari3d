@@ -3,6 +3,7 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../store'
 import { areas, hiddenHeartSpots, lanePoints, starPositions } from '../../lib/layout'
+import { secretEnding } from '../../content/config'
 
 const enabled = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug')
 
@@ -28,9 +29,11 @@ export default function DebugBridge() {
     }
     window.__universe = {
       store: useStore,
+      secretEnding,
       heart: (i) => project(hiddenHeartSpots[i].position.clone().add(groupOrigin[hiddenHeartSpots[i].group])),
       star: (i) => project(starPositions[i].clone().add(areas.constellation)),
       lantern: (i) => project(lanePoints[i].clone().add(new THREE.Vector3(0, 0.4, 0))),
+      secretStar: () => project(areas.finalRoom.clone().add(new THREE.Vector3(2.15, 4.55, -1.4))),
     }
   }, [camera, size])
   return null

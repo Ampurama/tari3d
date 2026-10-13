@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { DoorOpen, RotateCcw, SkipForward } from 'lucide-react'
-import { finalMessage, heartReactor, story } from '../../content/config'
+import { finalMessage, heartReactor, secretEnding, story } from '../../content/config'
 import { CHAPTER_COUNT, chapterStatus, CUTSCENE_SECONDS } from '../../lib/story'
 import { useChaptersDone, useStore } from '../../store'
 import { audio } from '../../audio/engine'
@@ -154,8 +154,22 @@ export function FinalRoomOverlay({ flat = false }) {
   const startFinale = useStore((s) => s.startFinale)
   const leave = useStore((s) => s.leaveFinalRoom)
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const open = view === 'finalRoom'
+  const secretStage = useStore((s) => s.secretStage)
+  const starAwake = useStore((s) => s.starAwake)
+  const secretKnown = useStore((s) => s.secretFound || s.secretSeen)
+  const findSecret = useStore((s) => s.findSecret)
+  const replaySecret = useStore((s) => s.replaySecret)
+  // the room's own card steps aside while the secret ending plays
+  const open = view === 'finalRoom' && !secretStage
   const paragraphs = finalMessage.letter.split(/\n\s*\n/)
+
+  // once the final letter has fully appeared, the little star beside the heart wakes up
+  useEffect(() => {
+    if (view !== 'finalRoom') return
+    const ms = reducedMotion ? 300 : (2.4 + paragraphs.length * 0.9 + 2.2) * 1000
+    const t = setTimeout(() => useStore.getState().wakeSecretStar(), ms)
+    return () => clearTimeout(t)
+  }, [view, reducedMotion, paragraphs.length])
 
   return (
     <AnimatePresence>
@@ -198,7 +212,29 @@ export function FinalRoomOverlay({ flat = false }) {
               <button type="button" className="btn-ghost" onClick={leave}>
                 Back to our island
               </button>
+              {secretKnown && (
+                <button type="button" className="btn-ghost" onClick={replaySecret}>
+                  {secretEnding.replay}
+                </button>
+              )}
             </div>
+            <AnimatePresence>
+              {starAwake && (
+                <motion.button
+                  type="button"
+                  className="secret-hint"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 1.6 }}
+                  onClick={() => {
+                    if (findSecret()) audio.sparkle()
+                  }}
+                >
+                  <span aria-hidden="true">✦</span> {secretEnding.starHint}
+                </motion.button>
+              )}
+            </AnimatePresence>
           </motion.article>
         </motion.section>
       )}

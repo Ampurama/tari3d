@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useStore } from '../../store'
+import { timeScale, useStore } from '../../store'
 import { glowTexture, heartTexture, petalTexture } from '../../lib/textures'
 import { seeded } from '../../lib/island'
 
@@ -157,7 +157,7 @@ export function DriftParticles({
   useEffect(() => () => material.dispose(), [material])
 
   useFrame((state, delta) => {
-    material.uniforms.uTime.value += delta * (reducedMotion ? 0.25 : 1)
+    material.uniforms.uTime.value += delta * (reducedMotion ? 0.25 : 1) * timeScale(useStore.getState())
     updatePointScale(material, state)
   })
 
@@ -198,7 +198,7 @@ export function Fireflies({ count = 40, area = [12, 4, 12], size = 0.16, seed = 
   useEffect(() => () => material.dispose(), [material])
 
   useFrame((state, delta) => {
-    material.uniforms.uTime.value += delta * (reducedMotion ? 0.3 : 1)
+    material.uniforms.uTime.value += delta * (reducedMotion ? 0.3 : 1) * timeScale(useStore.getState())
     updatePointScale(material, state)
   })
   return <points geometry={geometry} material={material} frustumCulled={false} {...props} />
@@ -280,10 +280,14 @@ export function StarDome({ count = 2200, radius = 380 }) {
     return { geometry, material }
   }, [count, radius])
 
+  const lastView = useRef(null)
   useFrame((state, delta) => {
     const u = material.uniforms
+    const view = useStore.getState().view
+    if (view === 'epilogue' && lastView.current !== 'epilogue') u.uReveal.value = 0
+    lastView.current = view
     u.uTime.value += delta * (reducedMotion ? 0.2 : 1)
-    u.uReveal.value = Math.min(1, u.uReveal.value + delta * (reducedMotion ? 2 : 0.35))
+    u.uReveal.value = Math.min(1, u.uReveal.value + delta * (reducedMotion ? 2 : view === 'epilogue' ? 0.22 : 0.35))
     updatePointScale(material, state)
     // follow the camera with a whisper of parallax from the pointer
     const p = useStore.getState().pointer

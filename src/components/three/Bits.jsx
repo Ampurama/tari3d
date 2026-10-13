@@ -59,7 +59,7 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
   const view = useStore((s) => s.view)
   const reducedMotion = useStore((s) => s.reducedMotion)
   const showHints = active && hint && view === 'explore'
-  useCursor(hovered && active && view !== 'cutscene')
+  useCursor(hovered && active && view !== 'cutscene' && view !== 'epilogue')
 
   useFrame((state) => {
     if (!group.current) return
@@ -84,7 +84,7 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
   })
 
   // inactive objects (and everything during the ending cutscene) let taps pass through to what's behind
-  const live = active && view !== 'cutscene'
+  const live = active && view !== 'cutscene' && view !== 'epilogue'
   const select = (e) => {
     if (!live) return
     e.stopPropagation()

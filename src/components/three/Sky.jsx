@@ -61,7 +61,8 @@ function SkyGradient() {
   useFrame((state, delta) => {
     ref.current.position.copy(state.camera.position)
     // the finale happens in a darker, quieter corner of the universe
-    const target = view === 'finale' ? 0.35 : view === 'intro' ? 0.75 : 1
+    // the finale is dark and quiet; the secret ending's final moment is the brightest the sky ever gets
+    const target = view === 'finale' ? 0.35 : view === 'intro' ? 0.75 : view === 'epilogue' ? 1.35 : 1
     material.uniforms.uDim.value = THREE.MathUtils.damp(material.uniforms.uDim.value, target, 1.5, delta)
   })
   return (

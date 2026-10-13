@@ -37,7 +37,7 @@ export const useStore = create((set, get) => ({
   phase: 'loading',
   /**
    * 'intro' | 'explore' | 'memories' | 'lane' | 'letter' | 'capsule' | 'distance' | 'constellation' | 'finale'
-   * | 'timemachine' | 'future' | 'reactor' | 'cutscene' | 'finalRoom'
+   * | 'timemachine' | 'future' | 'reactor' | 'cutscene' | 'finalRoom' | 'epilogue'
    */
   view: 'intro',
   selectedMemory: null,
@@ -71,6 +71,13 @@ export const useStore = create((set, get) => ({
   introsSeen: arr(saved.introsSeen),
   celebrated: arr(saved.celebrated),
   endingSeen: Boolean(saved.endingSeen),
+  /* ── secret ending ("The one thing I could never code") ── */
+  /** null | 'found' | 'transition' | 'letter' | 'voice' | 'photo' — stages inside the Secret Room */
+  secretStage: null,
+  /** the little star in the Secret Room is lit and can be touched */
+  starAwake: false,
+  secretFound: Boolean(saved.secretFound),
+  secretSeen: Boolean(saved.secretSeen),
   /** visual-novel style dialog: { lines, index, key } */
   dialog: null,
   /** small floating panels over any view: 'countdown' | 'hearts' | 'story' | 'places' | null */
@@ -144,6 +151,7 @@ export const useStore = create((set, get) => ({
       timeIndex: view === 'timemachine' ? get().timeIndex : null,
       timeTravelling: view === 'timemachine' ? get().timeTravelling : false,
       threadMessage: null,
+      secretStage: null,
       visited: view in visited ? { ...visited, [view]: true } : visited,
     })
   },
@@ -157,6 +165,7 @@ export const useStore = create((set, get) => ({
       timeIndex: null,
       timeTravelling: false,
       threadMessage: null,
+      secretStage: null,
       camNonce: s.camNonce + 1,
     })),
 
@@ -345,7 +354,7 @@ export const useStore = create((set, get) => ({
   finishCutscene: () => {
     if (get().view !== 'cutscene') return
     save({ endingSeen: true })
-    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', endingSeen: true, camNonce: s.camNonce + 1 })), 900)
+    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', endingSeen: true, secretStage: null, starAwake: false, camNonce: s.camNonce + 1 })), 900)
   },
 
   /** The secret room is only reachable after all chapters are complete. */
@@ -354,12 +363,61 @@ export const useStore = create((set, get) => ({
       get().showToast('This room only opens when every chapter is complete ♡')
       return
     }
-    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', panel: null, camNonce: s.camNonce + 1 })), 1200)
+    get().throughCurtain(() => set((s) => ({ view: 'finalRoom', panel: null, secretStage: null, starAwake: false, camNonce: s.camNonce + 1 })), 1200)
   },
 
   replayEnding: () => get().throughCurtain(() => get().igniteReactor(), 1000),
 
   leaveFinalRoom: () => get().throughCurtain(() => get().back(), 1200),
+
+  /* ───────── secret ending ───────── */
+
+  /** Only true when the game really is finished: every chapter done and the ending reached. */
+  secretAvailable: () => {
+    const s = get()
+    return s.endingSeen && completedCount(s) >= CHAPTER_COUNT
+  },
+
+  /** The star wakes up once the final letter has appeared in the Secret Room. */
+  wakeSecretStar: () => {
+    if (get().view === 'finalRoom' && get().secretAvailable() && !get().starAwake) set({ starAwake: true })
+  },
+
+  /** She touched the star (or its hint). Starts the secret ending inside the existing Secret Room. */
+  findSecret: () => {
+    const s = get()
+    if (s.view !== 'finalRoom' || s.secretStage || !s.secretAvailable() || s.curtain) return false
+    save({ secretFound: true })
+    set({ secretFound: true, secretStage: 'found', starAwake: true, panel: null, dialog: null })
+    return true
+  },
+
+  /** Move forward through the secret ending. */
+  setSecretStage: (stage) => {
+    if (get().view !== 'finalRoom' || !get().secretAvailable()) return
+    if (!['found', 'transition', 'letter', 'voice', 'photo'].includes(stage)) return
+    set((s) => ({ secretStage: stage, camNonce: s.camNonce + 1 }))
+  },
+
+  /** The final moment: back to the whole universe, brighter, seen from afar. */
+  openEpilogue: () => {
+    if (get().view !== 'finalRoom' || !get().secretStage) return
+    save({ secretSeen: true })
+    get().throughCurtain(() => set((s) => ({ view: 'epilogue', secretStage: null, secretSeen: true, camNonce: s.camNonce + 1 })), 1800)
+  },
+
+  /** "Stay in our universe" — back to the normal island; all progress stays exactly as it was. */
+  stayInUniverse: () => get().throughCurtain(() => get().back(), 1400),
+
+  /** Replay only the secret ending (no need to replay the game). */
+  replaySecret: () => {
+    const s = get()
+    if (!s.secretAvailable() || !(s.secretFound || s.secretSeen)) return
+    get().throughCurtain(
+      () => set((st) => ({ view: 'finalRoom', secretStage: 'found', starAwake: true, panel: null, dialog: null, camNonce: st.camNonce + 1 })),
+      1200,
+    )
+  },
 
   selectMemory: (index) =>
     set((s) => {
@@ -419,3 +477,6 @@ if (typeof window !== 'undefined') {
 /** Story helpers for components: is chapter `i` unlocked / done? (cheap booleans, so no re-render storms) */
 export const useChapterUnlocked = (i) => useStore((s) => Boolean(chapterStatus(s)[i]?.unlocked))
 export const useChaptersDone = () => useStore((s) => completedCount(s))
+
+/** Everything slows down during the secret ending (particles read this every frame). */
+export const timeScale = (s) => (s.view === 'finalRoom' && s.secretStage ? 0.3 : s.view === 'epilogue' ? 0.55 : 1)

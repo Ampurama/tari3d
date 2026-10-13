@@ -32,12 +32,13 @@ export default function CameraDirector() {
   const laneIndex = useStore((s) => s.laneIndex)
   const riseCue = useStore((s) => s.riseCue)
   const futureIndex = useStore((s) => s.futureIndex)
+  const secretStage = useStore((s) => s.secretStage)
   const cutStart = useRef(null)
   const cutDone = useRef(false)
   const reducedMotion = useStore((s) => s.reducedMotion)
 
   const poseFor = (v) =>
-    v === 'memories' ? (selected === null ? poses.memories : framePose(selected)) : v === 'lane' ? lanePose(laneIndex) : v === 'future' ? futurePose(futureIndex) : poses[v]
+    v === 'memories' ? (selected === null ? poses.memories : framePose(selected)) : v === 'lane' ? lanePose(laneIndex) : v === 'future' ? futurePose(futureIndex) : v === 'finalRoom' && secretStage && secretStage !== 'found' ? poses.secretClose : poses[v]
 
   const fly = (p, smooth = true) => {
     const { position, target, dist } = resolvePose(p, camera.fov, size.width / size.height)
@@ -114,12 +115,24 @@ export default function CameraDirector() {
       // the cutscene drives the camera frame by frame (see useFrame below)
       cutStart.current = null
     } else if (view === 'finalRoom') {
-      // appear a little further back, then drift slowly toward the heart
-      const { position, target } = resolvePose(poses.finalRoom, camera.fov, size.width / size.height)
-      const far = position.clone().sub(target).multiplyScalar(1.6).add(target)
-      c.setLookAt(far.x, far.y + 1.5, far.z, target.x, target.y, target.z, false)
-      c.smoothTime = reducedMotion ? 0.25 : 3
-      fly(poses.finalRoom)
+      if (prevView.current !== 'finalRoom') {
+        // arriving: appear a little further back, then drift slowly toward the heart
+        const { position, target } = resolvePose(poses.finalRoom, camera.fov, size.width / size.height)
+        const far = position.clone().sub(target).multiplyScalar(1.6).add(target)
+        c.setLookAt(far.x, far.y + 1.5, far.z, target.x, target.y, target.z, false)
+      }
+      // the secret ending moves in slowly toward the heart; otherwise the usual room view
+      const close = secretStage && secretStage !== 'found'
+      c.smoothTime = reducedMotion ? 0.25 : close ? 4.5 : 3
+      fly(close ? poses.secretClose : poses.finalRoom)
+    } else if (view === 'epilogue') {
+      // start near the island, then pull far back to reveal the whole universe
+      if (prevView.current !== 'epilogue') {
+        const { position, target } = resolvePose(poses.explore, camera.fov, size.width / size.height)
+        c.setLookAt(position.x, position.y, position.z, target.x, target.y, target.z, false)
+      }
+      c.smoothTime = reducedMotion ? 0.25 : 5
+      fly(poses.epilogue)
     } else if (view === 'lane') {
       // walking the lane: a slower, floaty glide from lantern to lantern
       c.smoothTime = reducedMotion ? 0.25 : 1.15
@@ -131,7 +144,7 @@ export default function CameraDirector() {
     prevView.current = view
     return () => clearTimeout(timer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, selected, laneIndex, futureIndex, camNonce, reducedMotion])
+  }, [view, selected, laneIndex, futureIndex, secretStage, camNonce, reducedMotion])
 
   // before the finale: lift off toward the sky while the screen slowly dims
   useEffect(() => {
