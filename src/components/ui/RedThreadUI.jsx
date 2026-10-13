@@ -75,9 +75,9 @@ export default function RedThreadUI({ flat = false }) {
     <>
       {flat && unlocked && <FlatThread />}
       {unlocked && (
-        <motion.p className={`thread-prompt${connected ? ' is-connected' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+        <motion.div className={`thread-prompt${connected ? ' is-connected' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
           {connected ? `${redThread.connected} · ${read.length}/2 messages` : redThread.prompt}
-        </motion.p>
+        </motion.div>
       )}
       <AnimatePresence>
         {m && (
@@ -96,7 +96,7 @@ export default function RedThreadUI({ flat = false }) {
             <span className="eyebrow">{message === 'me' ? couple.me.place : couple.you.place}</span>
             <h3>{m.title}</h3>
             <p>{m.text}</p>
-            {m.audio && <VoiceNote src={m.audio} />}
+            {m.audio && <VoiceNote key={message} src={m.audio} />}
           </motion.div>
         )}
       </AnimatePresence>

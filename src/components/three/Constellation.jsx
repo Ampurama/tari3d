@@ -31,6 +31,7 @@ function Star({ index, position }) {
   })
 
   const select = (e) => {
+    if (view === 'cutscene') return
     e.stopPropagation()
     if (e.delta > 8) return
     audio.sparkle()

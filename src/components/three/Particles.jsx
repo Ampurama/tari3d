@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../store'
@@ -152,6 +152,10 @@ export function DriftParticles({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texture, size, speed, direction, key, opacity, intensity])
 
+  // free GPU buffers when this effect unmounts (the shared sprite textures stay cached)
+  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => material.dispose(), [material])
+
   useFrame((state, delta) => {
     material.uniforms.uTime.value += delta * (reducedMotion ? 0.25 : 1)
     updatePointScale(material, state)
@@ -190,6 +194,9 @@ export function Fireflies({ count = 40, area = [12, 4, 12], size = 0.16, seed = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [size, key],
   )
+  useEffect(() => () => geometry.dispose(), [geometry])
+  useEffect(() => () => material.dispose(), [material])
+
   useFrame((state, delta) => {
     material.uniforms.uTime.value += delta * (reducedMotion ? 0.3 : 1)
     updatePointScale(material, state)

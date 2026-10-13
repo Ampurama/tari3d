@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Archive,
@@ -32,7 +32,7 @@ export function DialogBox() {
   const [shown, setShown] = useState(0)
   const pos = useRef(0)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     pos.current = 0
     setShown(reducedMotion ? text.length : 0)
     if (!text || reducedMotion) {
@@ -125,6 +125,9 @@ export function StoryDirector() {
   const prologueSeen = useStore((s) => s.prologueSeen)
   const introsSeen = useStore((s) => s.introsSeen)
   const view = useStore((s) => s.view)
+  const reading = useStore(
+    (s) => s.selectedMemory !== null || Boolean(s.capsuleLetter) || Boolean(s.threadMessage) || s.activeStar !== null || s.timeIndex !== null || s.panel !== null,
+  )
 
   // right after the prologue, chapter one introduces itself
   useEffect(() => {
@@ -138,7 +141,8 @@ export function StoryDirector() {
 
   // a chapter just got completed → celebrate it once
   useEffect(() => {
-    if (phase !== 'world' || dialog || view === 'cutscene' || view === 'finalRoom' || view === 'finale') return
+    // never interrupt: wait until no dialog, card, letter or panel is open
+    if (phase !== 'world' || dialog || reading || ['cutscene', 'finalRoom', 'finale', 'letter'].includes(view)) return
     const s = useStore.getState()
     const status = chapterStatus(s)
     const fresh = status.find((c) => c.done && !celebrated.includes(c.index))
@@ -155,11 +159,11 @@ export function StoryDirector() {
         6500,
       )
       const lines = [...(fresh.outro || [])]
-      if (!next) lines.push({ speaker: 'narrator', text: 'Tap the glowing heart above the island when you’re ready.' })
+      if (!next) lines.push({ speaker: 'narrator', text: 'Open the Heart Reactor whenever you’re ready ♡' })
       st.startDialog(lines, `outro:${fresh.index}`)
     }, 1400)
     return () => clearTimeout(t)
-  }, [phase, doneCount, celebrated, dialog, view])
+  }, [phase, doneCount, celebrated, dialog, view, reading])
 
   return null
 }

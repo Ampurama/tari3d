@@ -4,47 +4,50 @@ import { constellation, futureWorlds, loveCapsule, memories, memoryLane, story, 
  * Chapter objectives, measured from real activity stored in the app state.
  * Each task returns [have, need]. A task with need === 0 (e.g. empty config) counts as done.
  */
+/** Count saved entries that still exist in the current config (stale ids never count). */
+const valid = (list, n) => list.filter((i) => Number.isInteger(i) && i >= 0 && i < n).length
+
 const TASKS = [
   // 1 — The First Page
   [
     {
       label: 'Open memories in the floating frames',
-      measure: (s) => [s.viewedMemories.length, Math.min(3, memories.length)],
+      measure: (s) => [valid(s.viewedMemories, memories.length), Math.min(3, memories.length)],
     },
     {
       label: 'Visit every lantern on Memory Lane',
-      measure: (s) => [s.laneVisited.length, memoryLane.milestones.length],
+      measure: (s) => [valid(s.laneVisited, memoryLane.milestones.length), memoryLane.milestones.length],
     },
   ],
   // 2 — Back in Time
   [
     {
       label: 'Travel to every date in the Time Machine',
-      measure: (s) => [s.timeVisited.length, timeMachine.entries.length],
+      measure: (s) => [valid(s.timeVisited, timeMachine.entries.length), timeMachine.entries.length],
     },
   ],
   // 3 — The Red Thread
   [
     { label: 'Tie the red thread on both islands', measure: (s) => [s.threadConnected ? 1 : 0, 1] },
-    { label: 'Open the message on each island', measure: (s) => [s.threadRead.length, 2] },
+    { label: 'Open the message on each island', measure: (s) => [['me', 'you'].filter((k) => s.threadRead.includes(k)).length, 2] },
   ],
   // 4 — Words I Kept for You
   [
     { label: 'Read the letter on the little table', measure: (s) => [s.letterRead ? 1 : 0, 1] },
     {
       label: 'Open envelopes from the Love Capsule',
-      measure: (s) => [s.capsuleOpened.length, Math.min(3, loveCapsule.letters.length)],
+      measure: (s) => [loveCapsule.letters.filter((l) => s.capsuleOpened.includes(l.id)).length, Math.min(3, loveCapsule.letters.length)],
     },
     {
       label: 'Light every star of our constellation',
-      measure: (s) => [s.starsFound.length, constellation.reasons.length],
+      measure: (s) => [valid(s.starsFound, constellation.reasons.length), constellation.reasons.length],
     },
   ],
   // 5 — Every Universe Leads to You
   [
     {
       label: 'Visit every world in the Future Simulator',
-      measure: (s) => [s.futureVisited.length, futureWorlds.worlds.length],
+      measure: (s) => [valid(s.futureVisited, futureWorlds.worlds.length), futureWorlds.worlds.length],
     },
   ],
 ]

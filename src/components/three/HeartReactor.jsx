@@ -88,7 +88,7 @@ export default function HeartReactor() {
         <HeartMesh ref={heart} scale={0.62} color="#7d6bb8" emissive="#7d6bb8" glow={0.25} />
         {/* tap target */}
         <mesh>
-          <sphereGeometry args={[1.2, 12, 10]} />
+          <sphereGeometry args={[0.75, 12, 10]} />
           <meshBasicMaterial colorWrite={false} depthWrite={false} />
         </mesh>
       </Interactive>

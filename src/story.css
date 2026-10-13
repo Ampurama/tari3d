@@ -63,10 +63,17 @@
   line-height: 1.5;
 }
 
-/* toasts move to the top so they never collide with dialog boxes at the bottom */
+/* toasts move to the top so they never collide with dialog boxes at the bottom,
+   and sit above panel backdrops (52) but below the curtain / cutscene (55+) */
 .toast-wrap {
   top: calc(130px + var(--safe-top));
   bottom: auto;
+  z-index: 53;
+}
+
+.flat-world {
+  align-content: safe center;
+  padding-bottom: calc(100px + var(--safe-bottom));
 }
 
 /* ───────────── dialog ───────────── */

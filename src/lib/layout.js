@@ -23,8 +23,8 @@ export const reactorPosition = v(0, 6.1, -1.4)
 /** The bench is turned slightly toward the front of the island. */
 export const benchRotation = 0.15
 
-/** The Love Capsule jar sits on the left end of the bench seat (seat top is 0.485 above the ground). */
-spots.capsule = spots.bench.clone().add(v(-0.38, 0.485, 0.02).applyAxisAngle(new THREE.Vector3(0, 1, 0), benchRotation))
+/** The Love Capsule jar sits on the right end of the bench seat (seat top is 0.485 above the ground). */
+spots.capsule = spots.bench.clone().add(v(0.38, 0.485, 0.02).applyAxisAngle(new THREE.Vector3(0, 1, 0), benchRotation))
 
 export const moonPosition = v(-48, 34, -86)
 
@@ -122,7 +122,7 @@ export const starPositions = (() => {
  */
 export const hiddenHeartSpots = [
   { group: 'island', position: ground(-0.72, -2.42, 0.13) }, // behind the blossom tree
-  { group: 'island', position: ground(-4.35, -3.55, 0.1) }, // among the far flowers
+  { group: 'island', position: ground(-2.6, -3.9, 0.1) }, // among the far flowers
   { group: 'sky', position: v(8.4, -0.25, -2.6) }, // on a tiny floating rock
   { group: 'distance', position: v(10.35, 1.0, 0.95) }, // on her island under the same sky
   { group: 'constellation', position: v(6.8, -4.6, 0.6) }, // just beside the heart of stars

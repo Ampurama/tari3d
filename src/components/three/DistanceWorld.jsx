@@ -80,15 +80,19 @@ function Person({ who, side }) {
     knot.current.scale.setScalar(THREE.MathUtils.damp(knot.current.scale.x, tied ? 1 : 0.0001, 4, delta))
   })
 
-  const select = (e) => {
-    e.stopPropagation()
-    if (e.delta > 8) return
+  const activate = () => {
     if (!unlocked) {
       showToast('The red thread is waiting for Chapter Three ♡')
       return
     }
     audio.sparkle()
     tieThread(key)
+  }
+  const select = (e) => {
+    if (view === 'cutscene') return
+    e.stopPropagation()
+    if (e.delta > 8) return
+    activate()
   }
 
   const color = side < 0 ? '#ffb3d1' : '#cdb3ff'
@@ -125,7 +129,10 @@ function Person({ who, side }) {
       </group>
       {view === 'distance' && (
         <Html center position={[0, 2.35, 0]} zIndexRange={[20, 0]}>
-          <button type="button" className={`person-tag ${side < 0 ? 'is-me' : 'is-you'}`} onClick={() => (unlocked ? tieThread(key) : null)}>
+          <button type="button" className={`person-tag ${side < 0 ? 'is-me' : 'is-you'}`} onClick={(e) => {
+              e.stopPropagation()
+              activate()
+            }}>
             <span className="person-icon" aria-hidden="true">
               {who.icon}
             </span>

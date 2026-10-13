@@ -48,7 +48,7 @@ function HiddenHeart({ id, position }) {
 
   const collect = (e) => {
     e.stopPropagation()
-    if (found || phase !== 'world' || curtain || e.delta > 8) return
+    if (found || phase !== 'world' || curtain || useStore.getState().view === 'cutscene' || e.delta > 8) return
     if (findHeart(id)) {
       burst.current = 1
       audio.sparkle()

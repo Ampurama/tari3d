@@ -10,10 +10,13 @@ import '@fontsource/caveat/500.css'
 import './styles.css'
 import './features.css'
 import './story.css'
+import { MotionConfig } from 'framer-motion'
 import App from './App'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <MotionConfig reducedMotion="user">
+      <App />
+    </MotionConfig>
   </StrictMode>,
 )

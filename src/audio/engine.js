@@ -131,8 +131,10 @@ class AudioEngine {
 
   /* ───────── music ───────── */
 
-  setMusic(on) {
+  setMusic(on, { user = false } = {}) {
     if (!this.ensure()) return
+    if (user) this.userMuted = !on
+    if (!on) clearTimeout(this.climaxTimer)
     this.musicOn = on
     const volume = musicConfig.volume ?? 0.55
 
@@ -361,7 +363,11 @@ class AudioEngine {
   climax(seconds = 12) {
     if (!this.ensure()) return
     const ctx = this.ctx
-    if (!this.musicOn) this.setMusic(true)
+    clearTimeout(this.climaxTimer) // a replay must not be cut short by an older restore
+    if (!this.musicOn) {
+      if (this.userMuted) return // she muted the music herself: respect that
+      this.setMusic(true)
+    }
     const volume = musicConfig.volume ?? 0.55
     const now = ctx.currentTime
     if (!musicConfig.src) {
@@ -383,11 +389,11 @@ class AudioEngine {
       // a rising cascade of bells at the peak
       const bells = ['C5', 'E5', 'G5', 'A5', 'C6', 'E6', 'G6', 'A6', 'C7']
       bells.forEach((n, i) => this.bell(freq(n), now + seconds * 0.5 + i * 0.16, 0.07, 3.2))
-      setTimeout(() => this.musicOn && this.fade(this.musicBus.gain, volume, 4), seconds * 1000)
+      this.climaxTimer = setTimeout(() => this.musicOn && !this.ducked && this.fade(this.musicBus.gain, volume, 4), seconds * 1000)
     } else if (this.file) {
       // with a custom song: simply bring it up for the climax
       this.file.volume = Math.min(1, volume * 1.6)
-      setTimeout(() => this.file && (this.file.volume = volume), seconds * 1000)
+      this.climaxTimer = setTimeout(() => this.file && !this.ducked && (this.file.volume = volume), seconds * 1000)
     }
   }
 
@@ -419,6 +425,16 @@ class AudioEngine {
     this.voice = null
     el.pause()
     el.dispatchEvent(new Event('ended'))
+  }
+
+  /** Lower the music while a video or recording in the page is playing; restore it afterwards. */
+  duck(on) {
+    this.ducked = on
+    const volume = musicConfig.volume ?? 0.55
+    if (on) clearTimeout(this.climaxTimer)
+    if (!this.musicOn || this.voice) return
+    if (this.ctx && !musicConfig.src) this.fade(this.musicBus.gain, on ? 0.12 : volume, on ? 0.5 : 1.2)
+    if (this.file) this.file.volume = on ? 0.12 : volume
   }
 
   /** Little sparkle when something magical is opened (only if sound is already on). */

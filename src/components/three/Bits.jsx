@@ -26,9 +26,11 @@ export function HeartMesh({ color = '#ff8fbf', emissive = '#ff5fa2', glow = 0.6,
 }
 
 /** A soft additive glow sprite. */
+const noRaycast = () => null
+
 export function Glow({ color = '#ffc2dd', size = 1, opacity = 0.6, ...props }) {
   return (
-    <sprite scale={[size, size, 1]} {...props}>
+    <sprite scale={[size, size, 1]} raycast={noRaycast} {...props}>
       <spriteMaterial
         map={glowTexture()}
         color={color}
@@ -57,7 +59,7 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
   const view = useStore((s) => s.view)
   const reducedMotion = useStore((s) => s.reducedMotion)
   const showHints = active && hint && view === 'explore'
-  useCursor(hovered && active)
+  useCursor(hovered && active && view !== 'cutscene')
 
   useFrame((state) => {
     if (!group.current) return
@@ -81,9 +83,12 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
     }
   })
 
+  // inactive objects (and everything during the ending cutscene) let taps pass through to what's behind
+  const live = active && view !== 'cutscene'
   const select = (e) => {
+    if (!live) return
     e.stopPropagation()
-    if (!active || e.delta > 8) return
+    if (e.delta > 8) return
     onSelect?.()
   }
 
@@ -93,6 +98,7 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
       {...props}
       onClick={select}
       onPointerOver={(e) => {
+        if (!live) return
         e.stopPropagation()
         setHovered(true)
       }}

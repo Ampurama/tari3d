@@ -18,7 +18,7 @@ export function AudioControls() {
       <button
         type="button"
         className={`icon-btn${state.musicOn ? ' is-on' : ''}`}
-        onClick={() => audio.setMusic(!state.musicOn)}
+        onClick={() => audio.setMusic(!state.musicOn, { user: true })}
         aria-pressed={state.musicOn}
         aria-label={state.musicOn ? 'Turn music off' : 'Turn music on'}
         title={state.musicOn ? 'Music on' : 'Music off'}

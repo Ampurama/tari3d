@@ -92,7 +92,7 @@ export default function CameraDirector() {
         },
         reducedMotion ? 250 : 1700,
       )
-    } else if (view === 'explore' && prevView.current === 'finale') {
+    } else if (view === 'explore' && (prevView.current === 'finale' || prevView.current === 'finalRoom')) {
       // coming back from the finale: appear softly in front of the island instead of a long flight
       ref.current.setLookAt(0, 9, 30, 0, 1.6, 0, false)
       lockExplore(fly(poses.explore))

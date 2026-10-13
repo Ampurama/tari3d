@@ -44,8 +44,7 @@ export function ReactorOverlay({ flat = false }) {
                   className="btn-glow"
                   onClick={() => {
                     // this tap is the user gesture that lets the music swell
-                    audio.climax(CUTSCENE_SECONDS)
-                    ignite()
+                    if (ignite()) audio.climax(useStore.getState().reducedMotion ? 3 : CUTSCENE_SECONDS)
                   }}
                 >
                   {heartReactor.igniteButton}
@@ -132,13 +131,15 @@ export function CutsceneOverlay({ flat = false }) {
 function FinalMedia() {
   const [videoFailed, setVideoFailed] = useState(false)
   const [voiceFailed, setVoiceFailed] = useState(false)
+  useEffect(() => () => audio.duck(false), [])
+  const duck = { onPlay: () => audio.duck(true), onPause: () => audio.duck(false), onEnded: () => audio.duck(false) }
   return (
     <>
       {finalMessage.video && !videoFailed && (
-        <video className="final-video" src={finalMessage.video} controls playsInline preload="metadata" onError={() => setVideoFailed(true)} />
+        <video className="final-video" src={finalMessage.video} controls playsInline preload="metadata" onError={() => setVideoFailed(true)} {...duck} />
       )}
       {finalMessage.voice && !voiceFailed && (
-        <audio className="final-voice" src={finalMessage.voice} controls preload="none" onError={() => setVoiceFailed(true)}>
+        <audio className="final-voice" src={finalMessage.voice} controls preload="none" onError={() => setVoiceFailed(true)} {...duck}>
           <track kind="captions" />
         </audio>
       )}
@@ -184,7 +185,8 @@ export function FinalRoomOverlay({ flat = false }) {
                 type="button"
                 className="btn-glow small"
                 onClick={() => {
-                  audio.climax(CUTSCENE_SECONDS)
+                  if (useStore.getState().curtain) return
+                  audio.climax(useStore.getState().reducedMotion ? 3 : CUTSCENE_SECONDS)
                   replay()
                 }}
               >

@@ -25,6 +25,7 @@ function save(patch) {
 const saved = loadSaved()
 const arr = (v) => (Array.isArray(v) ? v : [])
 let toastId = 0
+let travelToken = 0
 
 const motionQuery =
   typeof window !== 'undefined' && window.matchMedia
@@ -141,6 +142,7 @@ export const useStore = create((set, get) => ({
       activeStar: null,
       panel: null,
       timeIndex: view === 'timemachine' ? get().timeIndex : null,
+      timeTravelling: view === 'timemachine' ? get().timeTravelling : false,
       threadMessage: null,
       visited: view in visited ? { ...visited, [view]: true } : visited,
     })
@@ -153,6 +155,7 @@ export const useStore = create((set, get) => ({
       capsuleLetter: null,
       activeStar: null,
       timeIndex: null,
+      timeTravelling: false,
       threadMessage: null,
       camNonce: s.camNonce + 1,
     })),
@@ -216,6 +219,8 @@ export const useStore = create((set, get) => ({
   /** Show a sequence of dialog lines. `key` lets us remember that it was seen. */
   startDialog: (lines, key = null) => {
     if (!lines?.length) return
+    // replacing a dialog still records what was seen (prologue, intros)
+    if (get().dialog) get().closeDialog()
     set({ dialog: { lines, index: 0, key } })
   },
 
@@ -248,6 +253,7 @@ export const useStore = create((set, get) => ({
     const place = CHAPTER_PLACES[index] || 'explore'
     set({ panel: null })
     if (place === 'explore') get().back()
+    else if (place === 'future') get().openFuture()
     else get().goTo(place)
     const chapter = story.chapters[index]
     if (chapter?.intro) setTimeout(() => get().startDialog(chapter.intro, `intro:${index}`), 900)
@@ -265,11 +271,19 @@ export const useStore = create((set, get) => ({
   /** Travel to one date: plays the warp, then shows that day. Counts as visited. */
   travelTo: (index) => {
     if (index < 0 || index >= timeMachine.entries.length || get().timeTravelling) return
-    const timeVisited = get().timeVisited.includes(index) ? get().timeVisited : [...get().timeVisited, index]
-    save({ timeVisited })
+    const token = ++travelToken
     const quick = get().reducedMotion
     set({ timeTravelling: true, timeIndex: null })
-    setTimeout(() => set({ timeTravelling: false, timeIndex: index, timeVisited }), quick ? 200 : 2000)
+    setTimeout(() => {
+      // she left (or started another trip) during the warp: nothing was shown, so nothing counts
+      if (token !== travelToken || get().view !== 'timemachine' || !get().timeTravelling) {
+        if (token === travelToken) set({ timeTravelling: false })
+        return
+      }
+      const timeVisited = get().timeVisited.includes(index) ? get().timeVisited : [...get().timeVisited, index]
+      save({ timeVisited })
+      set({ timeTravelling: false, timeIndex: index, timeVisited })
+    }, quick ? 200 : 2000)
   },
 
   closeTimeEntry: () => set({ timeIndex: null }),
@@ -318,11 +332,13 @@ export const useStore = create((set, get) => ({
 
   /** Starts the final cutscene — only possible once every chapter is complete. */
   igniteReactor: () => {
+    if (get().view === 'cutscene') return false // a double tap must not restart the ending
     if (completedCount(get()) < CHAPTER_COUNT) {
       get().showToast('The heart still needs more light. Finish every chapter first ♡')
-      return
+      return false
     }
     set((s) => ({ view: 'cutscene', panel: null, dialog: null, camNonce: s.camNonce + 1 }))
+    return true
   },
 
   /** After the cutscene (or when skipped): fade into the secret room. */

@@ -135,7 +135,7 @@ export function Bench(props) {
         </group>
       ))}
       {/* a tiny heart cushion resting on the bench */}
-      <HeartMesh position={[0.36, 0.6, 0.02]} rotation={[-0.25, -0.3, 0]} scale={0.11} glow={0.25} />
+      <HeartMesh position={[-0.36, 0.6, 0.02]} rotation={[-0.25, 0.3, 0]} scale={0.11} glow={0.25} />
     </group>
   )
 }
