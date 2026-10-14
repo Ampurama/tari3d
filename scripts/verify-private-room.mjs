@@ -249,5 +249,76 @@ if (datesTable.error) {
   }
 }
 
+console.log('\n── the pet')
+const petRow = await owner.c.from('pets').select('*').eq('id', 1).maybeSingle()
+if (petRow.error) {
+  check('pet table exists', false, `${petRow.error.message} — run supabase/migrations/004_pet.sql`)
+} else {
+  const anonPet = await anon.from('pets').select('id')
+  check('signed-out visitor cannot see the pet', !anonPet.data?.length, anonPet.error?.message || `${anonPet.data?.length} rows`)
+  const anonAdopt = await anon.rpc('pet_adopt', { p_kind: 'cat', p_name: 'test' })
+  check('signed-out visitor cannot adopt', Boolean(anonAdopt.error), anonAdopt.error?.message)
+  const directPet = await owner.c.from('pets').insert({ id: 1, kind: 'dog', name: 'test' })
+  check('a pet can only be adopted through the adoption flow', Boolean(directPet.error), directPet.error?.message)
+  if (outsider) {
+    const outsiderAdopt = await outsider.c.rpc('pet_adopt', { p_kind: 'cat', p_name: 'test' })
+    check('outsider cannot adopt', Boolean(outsiderAdopt.error), outsiderAdopt.error?.message)
+  } else skip('outsider cannot adopt')
+  if (!petRow.data) {
+    console.log('SKIP  pet commands  — no pet adopted yet (adopt one in the game, then run this again)')
+  } else {
+    const before = petRow.data
+    const twice = await tari.c.rpc('pet_adopt', { p_kind: before.kind === 'cat' ? 'dog' : 'cat', p_name: 'another one' })
+    check('adopting again never makes a second pet', twice.data?.kind === before.kind && twice.data?.name === before.name, twice.error?.message)
+    const steer = await owner.c.from('pets').update({ follow_target: tari.id, mode: 'follow' }).eq('id', 1).select('id')
+    check('nobody can set whom the pet follows directly', Boolean(steer.error) || !steer.data?.length, steer.error?.message)
+    const follow = await tari.c.rpc('pet_command', { p_mode: 'follow' })
+    check('"Ajak Ikut" makes it follow the one who asked', follow.data?.follow_target === tari.id && follow.data?.mode === 'follow', follow.error?.message)
+    // put it back the way it was
+    if (before.mode === 'home') await owner.c.rpc('pet_command', { p_mode: 'home' })
+    else if (before.follow_target === owner.id) await owner.c.rpc('pet_command', { p_mode: 'follow' })
+  }
+}
+
+console.log('\n── sky island')
+const skyRow = await owner.c.from('sky_progress').select('*').eq('id', 1).maybeSingle()
+if (skyRow.error) {
+  check('sky island tables exist', false, `${skyRow.error.message} — run supabase/migrations/005_sky_island.sql`)
+} else {
+  const anonSky = await anon.from('sky_progress').select('id')
+  check('signed-out visitor cannot see sky progress', !anonSky.data?.length, anonSky.error?.message || `${anonSky.data?.length} rows`)
+  const anonStar = await anon.rpc('sky_find_star', { p_id: 'obs1' })
+  check('signed-out visitor cannot collect a star', Boolean(anonStar.error), anonStar.error?.message)
+  const anonHop = await anon.rpc('hop_start', { p_id: crypto.randomUUID() })
+  check('signed-out visitor cannot start Cloud Hop', Boolean(anonHop.error), anonHop.error?.message)
+  const forgeStar = await owner.c.from('sky_stars').insert({ id: 'obs1' })
+  check('stars can only be collected through the game', Boolean(forgeStar.error), forgeStar.error?.message)
+  const fakeStar = await owner.c.rpc('sky_find_star', { p_id: 'obs99' })
+  check('a star that doesn\'t exist is refused', Boolean(fakeStar.error), fakeStar.error?.message)
+  const forgeProgress = await owner.c.from('sky_progress').update({ hop_completions: 99, moment_unlocked: true }).eq('id', 1).select('id')
+  check('nobody can write progress directly', Boolean(forgeProgress.error) || !forgeProgress.data?.length, forgeProgress.error?.message)
+  if (outsider) {
+    const outsiderHop = await outsider.c.rpc('hop_start', { p_id: crypto.randomUUID() })
+    check('outsider cannot start Cloud Hop', Boolean(outsiderHop.error), outsiderHop.error?.message)
+  } else skip('outsider cannot start Cloud Hop')
+  const active = await owner.c.from('hop_rounds').select('id').eq('status', 'active')
+  if (active.data?.length) {
+    console.log('SKIP  Cloud Hop round checks  — a real round is going on; finish or leave it in the game, then run this again')
+  } else {
+    const round = await owner.c.rpc('hop_start', { p_id: crypto.randomUUID() })
+    check('owner can start a round (with Tari, decided by the server)', round.data?.status === 'active' && round.data?.player_a === owner.id && round.data?.player_b === tari.id, round.error?.message)
+    const join = await tari.c.rpc('hop_start', { p_id: crypto.randomUUID() })
+    check('starting again joins the same round (never two)', join.data?.id === round.data?.id, join.error?.message)
+    const tariCp = await tari.c.rpc('hop_checkpoint', { p_round: round.data?.id, p_index: 1 })
+    check('a checkpoint only moves your own progress', tariCp.data?.cp_b === 1 && tariCp.data?.cp_a === 0, tariCp.error?.message)
+    const early = await owner.c.rpc('hop_finish', { p_round: round.data?.id })
+    check('nobody finishes without reaching the goal', early.data?.done_a === false && early.data?.status === 'active', early.error?.message)
+    const badStar = await owner.c.rpc('hop_star', { p_round: round.data?.id, p_star: 'h99' })
+    check('a Cloud Hop star that doesn\'t exist is refused', Boolean(badStar.error), badStar.error?.message)
+    const left = await owner.c.rpc('hop_leave', { p_round: round.data?.id })
+    check('a round can be left (test round put away)', left.data?.status === 'abandoned', left.error?.message)
+  }
+}
+
 console.log(failures ? `\n${failures} check(s) FAILED — the room is NOT private yet.` : '\nAll checks passed: the room only lets the two of you in.')
 process.exit(failures ? 1 : 0)

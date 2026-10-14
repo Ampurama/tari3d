@@ -34,10 +34,16 @@ export const partner = {
   /** where they're sitting { id, seat, at } and the gesture they're making { id, kind, at } */
   seat: null,
   emote: null,
+  /** holding hands: { id, state: 'invite' | 'accept' | 'decline' | 'hold', at } */
+  hand: null,
+  /** something they just did with the pet: { id, kind: 'pet' | 'sit', at } */
+  pet: null,
+  /** where their character is drawn right now (smoothed), written by the 3D scene */
+  shown: { x: 0, y: 0, z: 0, yaw: 0, speed: 0, ok: false },
 }
 
 /** What I'm doing that the other person should know about (sent with my character). */
-export const presence = { editing: null, seat: null, emote: null }
+export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null }
 
 const ID = /^[\w:-]{1,80}$/
 /** Only well-formed little objects get through: { id, seat?, kind?, at } (strings and a number). */
@@ -46,6 +52,7 @@ function cleanAct(a) {
   const out = { id: a.id, at: Number.isFinite(a.at) ? a.at : 0 }
   if (typeof a.seat === 'string' && ID.test(a.seat)) out.seat = a.seat
   if (typeof a.kind === 'string' && /^[a-z_]{1,20}$/.test(a.kind)) out.kind = a.kind
+  if (typeof a.state === 'string' && /^[a-z]{1,12}$/.test(a.state)) out.state = a.state
   return out
 }
 
@@ -154,6 +161,8 @@ async function joinRoom(myId, mateId) {
       // a new call or invitation to sit: tell the UI once
       if (emote && emote.id !== partner.emote?.id && emote.kind === 'call') window.dispatchEvent(new CustomEvent('couple:call', { detail: emote }))
       partner.emote = emote
+      partner.hand = cleanAct(payload.hand)
+      partner.pet = cleanAct(payload.pet)
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
@@ -186,6 +195,8 @@ async function joinRoom(myId, mateId) {
       editing: presence.editing,
       seat: presence.seat,
       emote: presence.emote,
+      hand: presence.hand,
+      pet: presence.pet,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -216,6 +227,8 @@ async function leaveRoom() {
   partner.editing = null
   partner.seat = null
   partner.emote = null
+  partner.hand = null
+  partner.pet = null
   set({ mateOnline: false })
   roomHooks.forEach((h) => h.left?.())
   const old = channels

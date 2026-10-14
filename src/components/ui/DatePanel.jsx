@@ -27,6 +27,8 @@ import {
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { dates } from '../../content/config'
+import { acceptHand, declineHand, releaseHand, useHand } from '../../lib/hand'
+import { SkyCards } from './SkyPanel'
 
 /*
  * LIFE TOGETHER + VIRTUAL DATE — the screens: two small buttons ("Aktivitas", "Virtual Date"),
@@ -353,6 +355,56 @@ function DateFloat() {
   return <AnimatePresence>{card}</AnimatePresence>
 }
 
+/* ───────── holding hands ───────── */
+
+function HandFloat() {
+  const { state, incoming, leader } = useHand()
+  const view = useStore((s) => s.view)
+  if (view !== 'explore') return null
+  let card = null
+  if (incoming && state === 'none') {
+    card = (
+      <motion.section key="in" className="date-float is-invite hand-float" initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -12, opacity: 0 }} aria-live="polite">
+        <p>
+          <strong>{mateName()}</strong> ngajak gandengan ♡
+        </p>
+        <div className="couple-actions">
+          <button type="button" className="btn-glow" onClick={acceptHand}>
+            <Check size={15} /> Terima
+          </button>
+          <button type="button" className="btn-ghost" onClick={declineHand}>
+            Tolak
+          </button>
+        </div>
+      </motion.section>
+    )
+  } else if (state === 'inviting' || state === 'joining') {
+    card = (
+      <motion.section key="wait" className="date-float hand-float" initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -12, opacity: 0 }}>
+        <p>{state === 'inviting' ? `Menunggu ${mateName()} menyambut tanganmu…` : 'Menggandeng…'}</p>
+        <div className="couple-actions">
+          <button type="button" className="btn-ghost" onClick={() => releaseHand('self')}>
+            Batalkan
+          </button>
+        </div>
+      </motion.section>
+    )
+  } else if (state === 'holding') {
+    card = (
+      <motion.section key="hold" className="date-float hand-float is-holding" initial={{ y: -12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -12, opacity: 0 }}>
+        <p>
+          🤝 Bergandengan dengan {mateName()}
+          {!leader && <small> · kamu ikut langkahnya</small>}
+        </p>
+        <button type="button" className="btn-ghost" onClick={() => releaseHand('self')}>
+          Lepas Gandengan
+        </button>
+      </motion.section>
+    )
+  }
+  return <AnimatePresence>{card}</AnimatePresence>
+}
+
 /* ───────── Kenangan Kita ───────── */
 
 function MemoryRow({ row }) {
@@ -454,7 +506,11 @@ export default function DatePanel() {
   return (
     <>
       <CoupleBar />
-      <DateFloat />
+      <div className="top-stack">
+        <DateFloat />
+        <HandFloat />
+        <SkyCards />
+      </div>
       <AnimatePresence>
         {panel === 'actions' && <ActionsSheet key="a" onClose={close} />}
         {panel === 'date' && <DateSheet key="d" onClose={close} />}

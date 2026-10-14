@@ -287,6 +287,8 @@ function SmallTree() {
 
 /* ───────── keepsakes from dates ───────── */
 
+export { PetBed }
+
 export function PicnicBasket() {
   return (
     <group>
@@ -344,6 +346,43 @@ function Postcard() {
   )
 }
 
+/** A round, soft pet bed (lies flat like a rug, so it never blocks the way). */
+function PetBed() {
+  return (
+    <group>
+      <C p={[0, 0.05, 0]} rt={0.32} rb={0.34} h={0.1} c="#f7a8c4" seg={16} />
+      <C p={[0, 0.075, 0]} rt={0.24} h={0.06} c="#fff0f5" seg={16} />
+      <S p={[0.12, 0.12, 0.08]} s={[0.05, 0.04, 0.05]} c="#ffd27f" />
+    </group>
+  )
+}
+
+/** Rewards from Sky Island: a lamp with a star on top, and a paper lantern with a cloud. */
+function StarLamp() {
+  return (
+    <group>
+      <C p={[0, 0.03, 0]} rt={0.14} h={0.06} c="#6d5a6e" />
+      <C p={[0, 0.35, 0]} rt={0.02} h={0.6} c="#6d5a6e" seg={6} />
+      <mesh position={[0, 0.75, 0]} material={mat('#ffe27a', 1.6)} scale={0.13}>
+        <octahedronGeometry args={[1, 0]} />
+      </mesh>
+      <Glow position={[0, 0.75, 0]} color="#ffe2a8" size={1.1} opacity={0.55} />
+    </group>
+  )
+}
+
+function SkyLantern() {
+  return (
+    <group>
+      <C p={[0, 0.03, 0]} rt={0.12} h={0.06} c="#a5714a" />
+      <C p={[0, 0.3, 0]} rt={0.12} rb={0.15} h={0.42} c="#ffd6ea" glow={0.9} />
+      <S p={[0, 0.3, 0.14]} s={[0.07, 0.04, 0.02]} c="#ffffff" />
+      <C p={[0, 0.53, 0]} rt={0.05} rb={0.12} h={0.05} c="#a5714a" />
+      <Glow position={[0, 0.3, 0]} color="#ffc2dd" size={1.0} opacity={0.5} />
+    </group>
+  )
+}
+
 const MODELS = {
   bed: Bed,
   sofa: Sofa,
@@ -361,6 +400,9 @@ const MODELS = {
   candles: Candles,
   camp_lantern: CampLantern,
   postcard: Postcard,
+  pet_bed: PetBed,
+  star_lamp: StarLamp,
+  sky_lantern: SkyLantern,
   flowers: Flowers,
   bush: Bush,
   lantern: Lantern,

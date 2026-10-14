@@ -5,6 +5,7 @@ import { standHeight, walkable } from './terrain'
 import { useInteractable } from './interactions'
 import { partner, presence } from './couple'
 import { mateName } from './home'
+import { releaseHand } from './hand'
 
 /*
  * LIFE TOGETHER — sitting down and little gestures, shared with the other person.
@@ -71,6 +72,7 @@ export const seatTaken = (id) => partner.online && partner.seat?.seat === id
 export function sitAt(id) {
   const s = seatDef(id)
   if (!s || seatTaken(id)) return false
+  releaseHand('sit') // let go of hands to sit down
   if (!player.seat) player.sitFrom = [player.position.x, player.position.z]
   player.seat = id
   player.walkTarget = null

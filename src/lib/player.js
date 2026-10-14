@@ -24,6 +24,10 @@ export const player = {
   sitFrom: null,
   /** a gesture in progress: { kind, t0 (seconds) } */
   emote: null,
+  /** jumping (only up on Sky Island): vertical speed, in the air?, and the last safe ground she stood on */
+  vy: 0,
+  air: false,
+  safe: { x: SPAWN.x, z: SPAWN.z },
 }
 
 /**
@@ -46,6 +50,8 @@ export function resetPlayer() {
   player.speed = 0
   player.walkTarget = null
   player.onArrive = null
+  player.vy = 0
+  player.air = false
 }
 
 /* ───────── input ───────── */
@@ -58,6 +64,8 @@ export const input = {
   run: false,
   /** increments whenever the interact key/button is pressed */
   interactPresses: 0,
+  /** increments whenever Space / the "Lompat" button is pressed */
+  jumpPresses: 0,
   /** true while the interact key/button is held down (for "hold to…" interactions) */
   interactHeld: false,
   /** last time (ms) she touched anything — the camera turns by itself after a while */
@@ -90,6 +98,11 @@ if (typeof window !== 'undefined') {
       if (e.code.startsWith('Arrow')) e.preventDefault()
     }
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') input.run = true
+    if (e.code === 'Space' && !e.repeat) {
+      input.jumpPresses++
+      // keep the page from scrolling (but a focused button still works)
+      if (e.target === document.body || e.target instanceof HTMLCanvasElement) e.preventDefault()
+    }
     if ((e.code === 'KeyE' || e.code === 'KeyF') && !e.repeat) {
       input.interactPresses++
       input.interactHeld = true

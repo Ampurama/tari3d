@@ -75,6 +75,14 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
       body.current.position.y = breathe
       body.current.rotation.x = 0
     }
+    // holding hands: the leader's right hand and the follower's left reach out to each other
+    if (motion.hand === 'right') {
+      armR.current.rotation.x = -0.25 - s * swing * 0.3
+      armR.current.rotation.z = -0.62
+    } else if (motion.hand === 'left') {
+      armL.current.rotation.x = -0.25 + s * swing * 0.3
+      armL.current.rotation.z = 0.62
+    }
     // little gestures (all procedural: a few joint angles over a couple of seconds)
     const e = motion.emote
     if (e) {

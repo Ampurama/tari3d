@@ -14,6 +14,7 @@ import Tappable from './Interact'
 import { Glow } from './Bits'
 import EmoteFx from './EmoteFx'
 import { partnerEmote } from '../../lib/actions'
+import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from '../../lib/hand'
 
 /*
  * PLAYING TOGETHER, in the world: the other person's character walking around the island
@@ -41,6 +42,7 @@ function Partner() {
     // visible only when both of you are on the island
     const here = partner.online && ['explore', 'picnic'].includes(partner.view) && ['explore', 'picnic'].includes(view)
     g.visible = here
+    partner.shown.ok = here
     if (!here) return
     if (g.userData.placed !== true) {
       g.position.set(t.x, t.y, t.z)
@@ -56,6 +58,13 @@ function Partner() {
     motion.current.speed = damp(motion.current.speed, t.speed, 8, delta)
     motion.current.sit = Boolean(partner.seat)
     motion.current.emote = partnerEmote()
+    motion.current.hand = mateHand()
+    // where they're drawn, for holding hands and for the pet
+    partner.shown.x = g.position.x
+    partner.shown.y = g.position.y
+    partner.shown.z = g.position.z
+    partner.shown.yaw = g.rotation.y
+    partner.shown.speed = motion.current.speed
     if (partner.avatarId !== avatarId) setAvatarId(partner.avatarId)
   })
 
@@ -205,6 +214,39 @@ function DriftingBottle() {
   )
 }
 
+/**
+ * Holding hands: keeps the state in step with the other person every frame (even with a menu open),
+ * lets go when she leaves the island for a story moment, and puts "Ajak Gandengan" /
+ * "Lepas Gandengan" on the other person's character.
+ */
+function HandKeeper() {
+  const view = useStore((s) => s.view)
+  const at = useRef(new THREE.Vector3())
+  useEffect(() => {
+    if (view !== 'explore') releaseHand('self')
+  }, [view])
+  // leaving the room (signed out, disconnected): let go, and forget where they were drawn
+  useEffect(
+    () => () => {
+      releaseHand('self')
+      partner.shown.ok = false
+    },
+    [],
+  )
+  useFrame((_, delta) => tickHand(Math.min(delta, 0.1)))
+  useInteractable('hand', {
+    get position() {
+      return at.current.set(partner.shown.x, partner.shown.y, partner.shown.z)
+    },
+    radius: 2.2,
+    priority: 0.25,
+    enabled: () => (useHand.getState().state === 'holding' ? true : useHand.getState().state === 'none' && !useHand.getState().incoming && canAskHand()),
+    label: () => (useHand.getState().state === 'holding' ? 'Lepas Gandengan' : 'Ajak Gandengan'),
+    onInteract: () => (useHand.getState().state === 'holding' ? releaseHand('self') : inviteHand()),
+  })
+  return null
+}
+
 /** Everything about playing together that lives in the 3D world. */
 export default function CoupleWorld() {
   const status = useCouple((s) => s.status)
@@ -218,6 +260,7 @@ export default function CoupleWorld() {
       {status === 'connected' && (
         <>
           <Partner />
+          <HandKeeper />
           {waiting.map((l, i) => (
             <FloatingBottle key={l.id} letter={l} index={i} />
           ))}

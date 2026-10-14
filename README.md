@@ -222,6 +222,56 @@ the reward can't be claimed twice). One limitation: whether someone is *at* the 
 their own game (positions aren't stored on the server), so "Siap" means "I say I'm here" — but nobody can
 say it for the other person.
 
+### Hand in hand, and your pet
+
+Needs `supabase/migrations/004_pet.sql` (run it once, after 003), then the verify script again.
+
+- **Gandengan**: walk up to the other person and press E / ✦ (**Ajak Gandengan**). They get a small card
+  (**Terima** / **Tolak**). The one who asked leads; the other walks beside them on their own character
+  controller (same walls and edges, no teleporting; where there's no room beside, they fall in just behind).
+  **Lepas Gandengan** (card at the top, or E near them) lets go. It also ends by itself when someone goes offline,
+  you drift more than 5 m apart, the follower is blocked for a couple of seconds, someone sits down, or a story
+  moment begins. An unanswered invitation runs out after 30 seconds. It travels on the private Realtime channel
+  (only the two of you, each speaking only for yourself) and is never stored.
+- **Peliharaan** (button on the home island): adopt one cat or dog, name it, pick an accessory. It lives by the
+  house (on its cushion in the garden, or wherever you place a **Kasur peliharaan** from Dekorasi Rumah), wanders
+  around its bed, and comes when called. Near it: **Elus**, **Ajak Ikut** (it follows whoever asked),
+  **Duduk**, **Kembali ke Rumah**. No hunger, no needs, nothing bad happens while you're away.
+  Stored: kind, name, accessory, and home/follow (the server only lets you ask it to follow yourself, and there can
+  only ever be one pet). Not stored: where it is; each game works that out from the stored state and the clock, so
+  you both see it wander to the same places, and a pat or "Duduk" travels with your character. Its position can
+  differ slightly between your two screens (a known limitation of not storing movement).
+
+### Sky Island
+
+Needs `supabase/migrations/005_sky_island.sql` (run once, after 004; it only adds tables and functions, and has a
+rollback section at the bottom), then the verify script again.
+
+A higher island east of the main one, over the sea of clouds, in golden-hour light. It's part of the same world
+(no loading screen, same characters, same private room): cross the lake bridge, follow the path to the east shore
+and walk up the rope bridge (signpost and lanterns show the way). Five places, named as you walk in:
+
+- **Sky Dock**: where the bridge arrives, under an arch of clouds.
+- **Cloud Garden**: a gazebo with a bench, a sunset bench looking back at the main island, flowers and lanterns.
+  Sitting and gestures (Aktivitas) work here like everywhere else.
+- **Star Observatory**: **Amati langit** at the telescope turns the sky to night for a moment and makes the hidden
+  stars shine. Eight hidden stars are spread over the island (one is on a cloud in Cloud Hop): **Ambil bintang**.
+  Each is found once for both of you; 4 unlock the **Lampu bintang** for the house, all 8 open Our Little Moment.
+- **Cloud Hop** (south-east): **Mulai Cloud Hop** at the start pad, then jump along the clouds together. Five stars
+  to collect (shared), two checkpoints, the goal flag at the end. The round is complete when you've *both* reached
+  the goal (it unlocks the **Lentera langit** and Our Little Moment, once). Fall off and you come back at your last
+  checkpoint; drop offline and your checkpoint is kept. **Keluar ronde** puts the round away.
+- **Our Little Moment** (behind the hedges in the south-west): a bench toward the sunset, a photo spot
+  (**Foto berdua**), a board showing your memory corner's title and message, and, once unlocked, a heart arch.
+
+**Controls up here**: **Space** to jump (on touch screens, the **Lompat** button). Jumping only works on Sky Island,
+so moving around the rest of the world is unchanged. Falling anywhere brings you back to safe ground.
+
+Server-side: membership is checked on every call, stars and keepsakes can't be duplicated, only one Cloud Hop round
+can exist at a time, checkpoints only move forward and only for yourself, finishing needs your checkpoint to be the
+goal, and the round completes only when both of you have finished. As with dates, where you are is reported by your
+own game (positions aren't stored), so the server can't prove you actually jumped every cloud.
+
 Not included yet: **photo frames with your own pictures**. That needs private image uploads (a Supabase Storage
 bucket with policies for the two members, size/type limits, and a `photo_path` column on `house_items`), so the
 frames and the memory corner are text-only for now.

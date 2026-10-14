@@ -107,7 +107,7 @@ export function FloatingRocks({ amount = 7 }) {
     return Array.from({ length: amount }, (_, i) => ({
       a: (i / amount) * Math.PI * 2,
       r: 19.5 + rand() * 4,
-      y: ((y) => (y > -1 && y < 1.6 ? (y < 0.3 ? -1.3 : 1.9) : y))(-1.5 + rand() * 4), // never at the sky bridge's height
+      y: ((y) => (y > -1 ? (y < 0.75 ? -1.4 : 3.9) : y))(-1.5 + rand() * 4), // never at the height of the sky bridges
       s: 0.18 + rand() * 0.35,
     }))
   }, [amount])

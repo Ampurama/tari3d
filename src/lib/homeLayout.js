@@ -76,6 +76,11 @@ export const CATALOG = {
   candles: { label: 'Lilin makan malam', icon: '🕯️', area: 'inside', w: 0.4, d: 0.4, keepsake: 'dinner_home' },
   camp_lantern: { label: 'Lentera kemah', icon: '🏮', area: 'inside', w: 0.4, d: 0.4, keepsake: 'camping' },
   postcard: { label: 'Kartu pos danau', icon: '💌', area: 'inside', w: 0.5, d: 0.05, layer: 'wall', keepsake: 'lakeside' },
+  // the pet's own bed: wherever it's placed becomes the pet's home (supabase/migrations/004_pet.sql)
+  pet_bed: { label: 'Kasur peliharaan', icon: '🐾', area: 'inside', w: 0.7, d: 0.55, layer: 'rug' },
+  // rewards from Sky Island (supabase/migrations/005_sky_island.sql)
+  star_lamp: { label: 'Lampu bintang', icon: '🌟', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Temukan 4 bintang tersembunyi di Sky Island' },
+  sky_lantern: { label: 'Lentera langit', icon: '🎐', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Selesaikan Cloud Hop berdua' },
   flowers: { label: 'Petak bunga', icon: '🌷', area: 'garden', w: 1.0, d: 0.6 },
   bush: { label: 'Semak bulat', icon: '🌳', area: 'garden', w: 0.8, d: 0.8 },
   lantern: { label: 'Lentera taman', icon: '🏮', area: 'garden', w: 0.4, d: 0.4 },
@@ -112,6 +117,8 @@ const KEEP_FREE = [
 const PARTITION_RECT = { x0: PARTITION.x - 0.09, x1: PARTITION.x + 0.09, z0: IN.z0, z1: PARTITION.z1 }
 /** The campsite for "Kemah di Bawah Bintang", west of the house (kept free of garden things). */
 export const CAMP = { fire: [-5.0, 1.7], tent: [-5.3, 0.15], zone: { x0: -6.6, x1: -3.75, z0: -0.75, z1: 2.85 } }
+/** The pet's cushion in the garden (its home until a pet bed is placed in the house). */
+export const PET_SPOT = { at: [4.6, 4.4], radius: 2.2, zone: { x0: 4.0, x1: 5.2, z0: 3.8, z1: 5.0 } }
 /** The house, its porch and a little margin: no garden things here. */
 const HOUSE_ZONE = { x0: -OUTER.hw - 0.45, x1: OUTER.hw + 0.45, z0: -OUTER.hd - 0.45, z1: PORCH.z1 + 0.3 }
 
@@ -187,6 +194,7 @@ export function checkPlacement(kind, x, z, rot, others, ignoreId = null) {
     if (corners.some(([cx, cz]) => homeDistance(...toWorld(cx, cz)) > 0.78)) return { ok: false, reason: 'Terlalu dekat tepi pulau.' }
     if (overlaps(r, HOUSE_ZONE)) return { ok: false, reason: 'Terlalu dekat rumah.' }
     if (overlaps(r, CAMP.zone)) return { ok: false, reason: 'Tempat ini disimpan untuk kemah, ya.' }
+    if (overlaps(r, PET_SPOT.zone)) return { ok: false, reason: 'Ini bantal tidur peliharaan kalian.' }
     if ([[x, z], ...corners].some(([px, pz]) => segDist(px, pz, GARDEN_PATH[0], GARDEN_PATH[1]) < 0.6)) return { ok: false, reason: 'Jangan halangi jalan setapak.' }
     if (Math.hypot(x - LANDING.x, z - LANDING.z) < 1.8) return { ok: false, reason: 'Ujung jembatan biarkan lega, ya.' }
   }

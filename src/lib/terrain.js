@@ -119,6 +119,8 @@ export const PATHS = [
   [[-0.3, 7.6], [-1.9, 7.5], [-3.1, 7.2]],
   // tree → the sky bridge to Our Little Home (north coast)
   [[0.3, -2.0], [0.15, -5.0], [0.0, -8.0], [0.0, -11.1]],
+  // across the lake bridge → the east shore, where the bridge up to Sky Island starts
+  [[7.6, -5.0], [8.9, -3.95], [10.1, -3.2]],
 ].map((path) => path.map(([x, z]) => [x * SPREAD, z * SPREAD]))
 
 const segDist = (px, pz, ax, az, bx, bz) => {
@@ -163,15 +165,91 @@ export function skyBridgeHeight(z) {
   return skyStart + (HOME_ISLAND.level - skyStart) * t - 0.3 * Math.sin(Math.PI * t) + 0.04
 }
 
-/** Height of the ground that isn't the main island (the sky bridge, the home island), or null. */
+/* ───────── Sky Island: a higher island to the east, over the sea of clouds ───────── */
+
+export const SKY = { x: 40, z: -4, r: 10, level: 3.0 }
+const skyOutline = (theta) => 1 + 0.05 * Math.sin(3 * theta + 0.4) + 0.03 * Math.sin(7 * theta - 1.0)
+/** 0 at Sky Island's centre, 1 at its edge. */
+export const skyDistance = (x, z) => Math.hypot(x - SKY.x, z - SKY.z) / (SKY.r * skyOutline(Math.atan2(z - SKY.z, x - SKY.x)))
+export const onSkyIsland = (x, z) => skyDistance(x, z) < 1
+export const skyIslandHeight = (x, z) => SKY.level - 0.5 * smooth(0.84, 1.0, skyDistance(x, z))
+
+/** The rope bridge from the main island's east shore (past the lake) up to Sky Island's dock. */
+export const EAST_BRIDGE = { ax: 12.3, az: -3.9, bx: SKY.x - SKY.r * 0.8, bz: SKY.z, halfWidth: 0.6 }
+const EB = (() => {
+  const dx = EAST_BRIDGE.bx - EAST_BRIDGE.ax
+  const dz = EAST_BRIDGE.bz - EAST_BRIDGE.az
+  const len = Math.hypot(dx, dz)
+  return { dx: dx / len, dz: dz / len, len }
+})()
+/** How far along the east bridge (0 → 1) the point is, and how far off its centre line. */
+export function eastBridgeAt(x, z) {
+  const px = x - EAST_BRIDGE.ax
+  const pz = z - EAST_BRIDGE.az
+  return { t: (px * EB.dx + pz * EB.dz) / EB.len, off: Math.abs(-px * EB.dz + pz * EB.dx) }
+}
+export const onEastBridge = (x, z) => {
+  const { t, off } = eastBridgeAt(x, z)
+  return t > 0 && t < 1 && off < EAST_BRIDGE.halfWidth
+}
+let eastStart = null
+export function eastBridgeHeight(t) {
+  eastStart ??= worldHeight(EAST_BRIDGE.ax, EAST_BRIDGE.az)
+  const k = Math.min(1, Math.max(0, t))
+  // it climbs gently toward the higher island, sagging a little in the middle
+  return eastStart + (SKY.level - eastStart) * (k * k * (3 - 2 * k)) - 0.25 * Math.sin(Math.PI * k) + 0.04
+}
+
+/**
+ * Cloud Hop: little cloud platforms off Sky Island's south-east edge, for jumping along together.
+ * World positions; `y` is the top. The last one is the goal, and it touches the island again.
+ */
+export const HOP_PLATFORMS = [
+  [3.0, 9.9, 0.0, 0.95],
+  [4.4, 12.0, 0.25, 0.85],
+  [6.6, 13.1, 0.55, 0.85],
+  [8.9, 12.6, 0.85, 0.8],
+  [10.6, 10.9, 0.6, 0.85],
+  [11.6, 8.7, 0.95, 0.85],
+  [9.8, 6.8, 0.65, 0.8],
+  [8.0, 4.9, 0.3, 1.3],
+].map(([x, z, y, r]) => ({ x: SKY.x + x, z: SKY.z + z, y: SKY.level + y, r }))
+/** The platform at (x, z) (within `k` of its radius), or null. */
+export function platformAt(x, z, k = 1) {
+  for (const p of HOP_PLATFORMS) if ((x - p.x) ** 2 + (z - p.z) ** 2 < (p.r * k) ** 2) return p
+  return null
+}
+
+/** Height of the ground that isn't the main island (bridges, the home island, Sky Island, clouds), or null. */
 function otherGround(x, z) {
   if (onSkyBridge(x, z)) {
     const deck = skyBridgeHeight(z)
     if (onHomeIsland(x, z)) return Math.max(deck, homeHeight(x, z))
     return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
   }
+  if (onEastBridge(x, z)) {
+    const deck = eastBridgeHeight(eastBridgeAt(x, z).t)
+    if (onSkyIsland(x, z)) return Math.max(deck, skyIslandHeight(x, z))
+    return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
+  }
+  const cloud = platformAt(x, z)
+  if (cloud) return onSkyIsland(x, z) ? Math.max(cloud.y, skyIslandHeight(x, z)) : cloud.y
+  if (onSkyIsland(x, z)) return skyIslandHeight(x, z)
   return onHomeIsland(x, z) ? homeHeight(x, z) : null
 }
+
+/**
+ * Ground under (x, z) for something in the air (a jump), or null over the void.
+ * Same as standHeight wherever there's land.
+ */
+export function groundAt(x, z) {
+  const other = otherGround(x, z)
+  if (other !== null) return other
+  return Math.hypot(x, z) < edgeRadius(x, z) ? standHeight(x, z) : null
+}
+
+/** Is this Sky Island (or its clouds)? Jumping only works up there. */
+export const inSkyArea = (x, z) => skyDistance(x, z) < 1.02 || Boolean(platformAt(x, z, 1.05))
 
 /** Height the player stands at (terrain, or the bridge deck over the lake). */
 export function standHeight(x, z) {
@@ -196,10 +274,12 @@ export function addCollider(x, z, r) {
  * Blocks the island edge, deep water, steep cliff faces and solid objects.
  */
 export function walkable(x, z, fromY) {
-  if (onSkyBridge(x, z)) {
-    // the bridge (where it meets the home island, the island's own rules apply)
+  if (onSkyBridge(x, z) || onEastBridge(x, z) || platformAt(x, z, 0.92)) {
+    // a bridge deck or a cloud platform
   } else if (onHomeIsland(x, z)) {
     if (homeDistance(x, z) > 0.86) return false
+  } else if (onSkyIsland(x, z)) {
+    if (skyDistance(x, z) > 0.86) return false
   } else {
     if (Math.hypot(x, z) > edgeRadius(x, z) * 0.9) return false
     if (isWater(x, z)) return false
@@ -208,6 +288,13 @@ export function walkable(x, z, fromY) {
   for (const c of colliders) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return false
   for (const b of blockers) if (b(x, z)) return false
   return true
+}
+
+/** Is something solid in the way at (x, z) (trees, props, walls) — for moving through the air. */
+export function solidAt(x, z) {
+  for (const c of colliders) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return true
+  for (const b of blockers) if (b(x, z)) return true
+  return false
 }
 
 /** Other obstacles, as functions (x, z) → blocked? (the house's walls and furniture). */

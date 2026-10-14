@@ -20,6 +20,8 @@ import PicnicUI from './components/ui/PicnicUI'
 import CouplePanel from './components/ui/CouplePanel'
 import HomePanel from './components/ui/HomePanel'
 import DatePanel from './components/ui/DatePanel'
+import PetPanel from './components/ui/PetPanel'
+import SkyPanel from './components/ui/SkyPanel'
 
 const Experience = lazy(() => import('./components/three/Experience'))
 
@@ -50,6 +52,8 @@ export default function App() {
         <CouplePanel />
         <HomePanel />
         <DatePanel />
+        <PetPanel />
+        <SkyPanel />
         <FinaleOverlay />
         <Hud />
         <Curtain />

@@ -167,13 +167,20 @@ export default function Companion() {
     position: mochi.position,
     radius: 1.5,
     priority: awake ? -0.6 : 0.4,
-    label: () => (useStore.getState().mochiAwake ? `Pet ${companion.name}` : 'Wake the sleeping fluffy heart'),
+    label: () => {
+      const store = useStore.getState()
+      if (!store.mochiAwake) return 'Wake the sleeping fluffy heart'
+      return store.mochiStay ? `Ajak ${companion.name} ikut lagi` : `Suruh ${companion.name} tunggu di sini`
+    },
     enabled: () => useStore.getState().view === 'explore',
     onInteract: () => {
       const store = useStore.getState()
       if (!store.mochiAwake) return store.wakeMochi()
+      // each time she talks to it, it gets a pat, and it either stays or comes along
+      const stay = !store.mochiStay
+      store.setMochiStay(stay)
       store.cueMochi('pet')
-      store.mochiSay(pick(companion.pet), 2600)
+      store.mochiSay(pick(stay ? companion.stay : companion.comeBack), 2800)
     },
   })
 
@@ -287,6 +294,13 @@ export default function Companion() {
             store.mochiSay(companion.envelope, 3200)
           }
         }
+      } else if (s.mode === 'follow' && store.mochiStay) {
+        // waiting where she left it: looks around, and turns to watch her
+        let dy = Math.atan2(player.position.x - mochi.position.x, player.position.z - mochi.position.z) - mochi.yaw
+        dy = Math.atan2(Math.sin(dy), Math.cos(dy))
+        mochi.yaw += dy * Math.min(1, delta * 2)
+        mochi.position.y = standHeight(mochi.position.x, mochi.position.z)
+        squash = 0.12 + Math.sin(t * 1.6) * 0.03
       } else if (s.mode === 'follow') {
         // follow a little behind and to the side, hopping
         const fx = Math.sin(player.yaw)

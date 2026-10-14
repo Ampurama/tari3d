@@ -11,6 +11,7 @@ import {
   buildUndersideGeometry,
   edgeRadius,
   HOME_ISLAND,
+  SKY,
   PATHS,
   seeded,
   standHeight,
@@ -363,7 +364,7 @@ export function DistantIslands() {
       const a = (i / 7) * Math.PI * 2 + rand() * 0.5
       const r = 34 + rand() * 26
       return { position: [Math.cos(a) * r, -3 + rand() * 12, Math.sin(a) * r], radius: 1.2 + rand() * 2.2, seed: 20 + i }
-    }).filter(({ position: [x, , z] }) => Math.hypot(x - HOME_ISLAND.x, z - HOME_ISLAND.z) > HOME_ISLAND.r + 12) // the home island's patch of sky stays open
+    }).filter(({ position: [x, , z] }) => Math.hypot(x - HOME_ISLAND.x, z - HOME_ISLAND.z) > HOME_ISLAND.r + 12 && Math.hypot(x - SKY.x, z - SKY.z) > SKY.r + 16) // the home island's and Sky Island's patches of sky stay open
   }, [])
   useFrame(({ clock }) => {
     if (reducedMotion) return

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, Hammer, Home, Paintbrush, RotateCw, Trash2, X } from 'lucide-react'
+import { Check, Hammer, Home, Paintbrush, PawPrint, RotateCw, Trash2, X } from 'lucide-react'
 import { coupleAvailable, useCouple } from '../../lib/couple'
 import {
   cancelDraft,
@@ -194,6 +194,11 @@ function HomeButtons() {
               <Paintbrush size={16} /> Dekorasi Rumah
             </button>
           )}
+          {status === 'ready' && (
+            <button type="button" onClick={() => useStore.getState().setPanel('pet')}>
+              <PawPrint size={16} /> Peliharaan
+            </button>
+          )}
         </motion.div>
       )}
     </AnimatePresence>
@@ -256,7 +261,7 @@ function EditBar() {
               <button
                 key={k}
                 type="button"
-                title={CATALOG[k].keepsake && !keepsakes[k] ? `Didapat dari kencan ${dates[CATALOG[k].keepsake]?.title}` : undefined}
+                title={CATALOG[k].keepsake && !keepsakes[k] ? CATALOG[k].hint || `Didapat dari kencan ${dates[CATALOG[k].keepsake]?.title}` : undefined}
                 disabled={(tab === 'garden' && stage < 3) || (CATALOG[k].keepsake && !keepsakes[k])}
                 onClick={() => {
                   audio.sparkle()

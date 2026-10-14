@@ -83,6 +83,8 @@ export const useStore = create((set, get) => ({
   /* ── story progress: every value comes from something she actually did ── */
   /** Chapter 1: the companion has been woken up, and the glowing flowers collected */
   mochiAwake: Boolean(saved.mochiAwake),
+  /** she asked Mochi to wait where it is (instead of following her) */
+  mochiStay: Boolean(saved.mochiStay),
   flowersFound: arr(saved.flowersFound),
   littleFound: arr(saved.littleFound),
   connectionsDone: arr(saved.connectionsDone),
@@ -336,6 +338,12 @@ export const useStore = create((set, get) => ({
 
   /** Ask the companion to act something out. */
   cueMochi: (kind) => set((s) => ({ mochiCue: { kind, n: s.mochiCue.n + 1 } })),
+
+  /** "Tunggu di sini" / "Ayo ikut": Mochi stays put, or follows her again. */
+  setMochiStay: (stay) => {
+    save({ mochiStay: stay })
+    set({ mochiStay: stay })
+  },
 
   /** Chapter 1 begins: the fluffy heart wakes up (after pretending it isn't). */
   wakeMochi: () => {

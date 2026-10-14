@@ -422,6 +422,9 @@ export const companion = {
   sleeping: 'Zzz… (beneran nggak ngintip)',
   wake: ['…Aku belum bangun. Nggak ada buktinya.', 'Iya, iya, aku bangun!! Hai, aku Mochi! Aku udah nungguin kamu dari lama banget. (Sepuluh menit.)'],
   follow: 'Eh, tungguin aku dong! Kakiku pendek, tau!',
+  /** when she asks it to wait here, and when she calls it along again */
+  stay: ['Oke, aku jagain tempat ini. Jangan lama-lama, ya!', 'Siap! Aku duduk manis di sini.', 'Aku tunggu di sini. Nanti panggil aku lagi, ya!'],
+  comeBack: ['Yay, ikut lagi!', 'Aku dataaang!', 'Kangen tau. Padahal baru sebentar.'],
   pet: ['Hehe, geli!', '*goyang-goyang senang*', 'Aku mau ngikutin kamu ke mana aja. Soalnya aku nggak tahu jalan.', 'Lagi! Lagi!', 'Kamu wangi bunga. Eh, itu bunganya ding.'],
   flower: ['Bunga yang bercahaya! Petik, petik!', 'Yeay! Satu bunga ketemu! Tinggal dua lagi. Semangat, {you}!', 'Udah tiga semuanya!! Aku mau nangis. Nangis bahagia. Nangis berbulu.'],
   carry: ['Biar aku yang bawa yang ini!', '…', 'Lho, bunganya kok lebih tinggi dari aku?!'],

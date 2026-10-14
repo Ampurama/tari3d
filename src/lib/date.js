@@ -5,7 +5,7 @@ import { useHome } from './home'
 import { player } from './player'
 import { ground } from './layout'
 import { HOME_ISLAND, ZONES } from './terrain'
-import { CAMP, toWorld } from './homeLayout'
+import { CAMP, CATALOG, toWorld } from './homeLayout'
 import { atmosphere } from './atmosphere'
 import { useStore } from '../store'
 import { dates } from '../content/config'
@@ -155,7 +155,10 @@ onRoom({
         if (p.eventType !== 'DELETE') applySession(p.new)
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'keepsakes' }, (p) => {
-        if (p.new?.kind) set({ keepsakes: { ...get().keepsakes, [p.new.kind]: true } })
+        if (p.new?.kind && !get().keepsakes[p.new.kind]) {
+          set({ keepsakes: { ...get().keepsakes, [p.new.kind]: true } })
+          toast(`🎁 Hadiah baru untuk rumah: ${CATALOG[p.new.kind]?.label || p.new.kind}. Ada di Dekorasi Rumah.`, 6000)
+        }
       })
   },
   subscribed: () => loadDates(),

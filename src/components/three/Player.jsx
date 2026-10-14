@@ -3,11 +3,13 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { currentAvatar, useStore } from '../../store'
 import { input, player, readMove } from '../../lib/player'
-import { HOME_ISLAND, SKY_BRIDGE, slope, standHeight, walkable } from '../../lib/terrain'
+import { eastBridgeAt, groundAt, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
 import { holdSeat, standUp } from '../../lib/actions'
+import { followBlocked, handFollow, holding, myHand, releaseHand } from '../../lib/hand'
+import { respawnPoint } from '../../lib/sky'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
 import Avatar from './Avatar'
@@ -33,9 +35,47 @@ const follow = new THREE.Vector3()
 const MAIN_CENTER = new THREE.Vector3(0, 0.4, 0.8)
 /** The middle of the home island, the same way. */
 const HOME_CENTER = new THREE.Vector3(HOME_ISLAND.x, HOME_ISLAND.level + 0.4, HOME_ISLAND.z + 0.8)
+/** …and of Sky Island. */
+const SKY_CENTER = new THREE.Vector3(SKY.x + 1.5, SKY.level + 0.4, SKY.z + 2)
 const center = new THREE.Vector3()
-/** The diorama is whichever island she's on (blending across the sky bridge). */
-const islandCenter = () => center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-player.position.z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
+/** The diorama is whichever island she's on (blending across the bridges). */
+const islandCenter = () => {
+  const { x, z } = player.position
+  if (skyDistance(x, z) < 1.6) return center.copy(SKY_CENTER)
+  const e = eastBridgeAt(x, z)
+  if (e.t > 0 && e.t < 1 && e.off < 3) return center.lerpVectors(MAIN_CENTER, SKY_CENTER, THREE.MathUtils.smoothstep(e.t, 0.15, 0.85))
+  return center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
+}
+
+/** Jumping (only on Sky Island and its clouds): about a metre high, three and a half metres at a run. */
+const JUMP_SPEED = 5.6
+const GRAVITY = 15
+
+/** Moving through the air: only solid things (trees, walls) stop her; the edge doesn't. */
+function stepAir(x, z, dx, dz) {
+  const y = player.position.y
+  const ok = (nx, nz) => {
+    if (solidAt(nx, nz)) return false
+    const g = groundAt(nx, nz)
+    return g === null || g <= y + 0.25 // can't fly into the side of something higher
+  }
+  if (ok(x + dx, z + dz)) return [x + dx, z + dz]
+  if (ok(x + dx, z)) return [x + dx, z]
+  if (ok(x, z + dz)) return [x, z + dz]
+  return null
+}
+
+/** A fall into the clouds: back to the checkpoint (in Cloud Hop) or the last safe ground. */
+function recover() {
+  const p = respawnPoint()
+  player.position.set(p.x, p.y ?? standHeight(p.x, p.z), p.z)
+  player.vy = 0
+  player.air = false
+  player.speed = 0
+  player.walkTarget = null
+  player.onArrive = null
+  useStore.getState().showToast('Hampir jatuh! Kembali ke tempat aman ✦', 2600)
+}
 
 /**
  * Where the camera looks: between the island's centre and the avatar.
@@ -69,6 +109,7 @@ export function PlayerController() {
   const controls = useThree((s) => s.controls)
   const camera = useThree((s) => s.camera)
   const lastPresses = useRef(input.interactPresses)
+  const lastJump = useRef(input.jumpPresses)
   const smoothFollow = useRef(new THREE.Vector3().copy(followTarget(ISO.follow)))
   const wasExploring = useRef(false)
   const inViewpoint = useRef(false)
@@ -83,6 +124,16 @@ export function PlayerController() {
     if (!exploring) {
       // leaving the island for a story moment: stand up first
       if (player.seat && s.view !== 'explore') standUp()
+      // a menu opened mid-jump: come down where she is (or back to safety over the clouds)
+      if (player.air) {
+        const g = groundAt(player.position.x, player.position.z)
+        if (g !== null) {
+          player.position.y = g
+          player.air = false
+          player.vy = 0
+        } else recover()
+      }
+      lastJump.current = input.jumpPresses
       wasExploring.current = false
       player.speed = THREE.MathUtils.damp(player.speed, 0, 8, delta)
       lastPresses.current = input.interactPresses
@@ -101,10 +152,24 @@ export function PlayerController() {
     const move = readMove()
     // sitting: any move (keys, joystick, a tap somewhere) gets her up again
     if (player.seat && (move.mag > 0.05 || player.walkTarget)) standUp()
+    // holding hands and following: walk beside the leader (her own keys wait; "Lepas Gandengan" lets go)
+    const lead = handFollow()
+    let leadDist = 0
     let dirX = 0
     let dirZ = 0
     let targetSpeed = 0
-    if (move.mag > 0.05) {
+    if (lead) {
+      player.walkTarget = null
+      player.onArrive = null
+      const dx = lead.x - player.position.x
+      const dz = lead.z - player.position.z
+      leadDist = Math.hypot(dx, dz)
+      if (leadDist > 0.06) {
+        dirX = dx / leadDist
+        dirZ = dz / leadDist
+        targetSpeed = Math.min(RUN * 1.25, lead.speed + leadDist * 3.2)
+      }
+    } else if (move.mag > 0.05) {
       player.walkTarget = null
       player.onArrive = null
       camera.getWorldDirection(tmpDir)
@@ -139,9 +204,24 @@ export function PlayerController() {
       }
     }
 
+    // jump (Space / "Lompat"), only up on Sky Island
+    if (input.jumpPresses !== lastJump.current) {
+      lastJump.current = input.jumpPresses
+      if (!player.air && !player.seat && !lead && inSkyArea(player.position.x, player.position.z)) {
+        if (holding()) releaseHand('self')
+        player.air = true
+        player.vy = JUMP_SPEED
+        player.walkTarget = null
+        player.onArrive = null
+        audio.sfx('boing', 1)
+      }
+    }
     player.speed = THREE.MathUtils.damp(player.speed, targetSpeed, targetSpeed > player.speed ? 7 : 10, delta)
+    // never overshoot the place beside the leader (no jitter back and forth)
+    if (lead) player.speed = Math.min(player.speed, leadDist / Math.max(delta, 1e-3))
     if (player.speed > 0.01 && (dirX || dirZ)) {
-      const next = step(player.position.x, player.position.z, dirX * player.speed * delta, dirZ * player.speed * delta)
+      const next = (player.air ? stepAir : step)(player.position.x, player.position.z, dirX * player.speed * delta, dirZ * player.speed * delta)
+      if (lead) followBlocked(delta, !next && leadDist > 0.8)
       if (next) {
         player.position.x = next[0]
         player.position.z = next[1]
@@ -158,8 +238,30 @@ export function PlayerController() {
       dy = Math.atan2(Math.sin(dy), Math.cos(dy))
       player.yaw += dy * Math.min(1, delta * 12)
     }
+    // beside the leader: look the same way they do
+    if (lead && leadDist < 0.4) {
+      let dy = lead.yaw - player.yaw
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy))
+      player.yaw += dy * Math.min(1, delta * 8)
+    }
     if (player.seat) holdSeat()
-    else player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
+    else if (player.air) {
+      player.vy -= GRAVITY * delta
+      player.position.y += player.vy * delta
+      const g = groundAt(player.position.x, player.position.z)
+      if (g !== null && player.vy <= 0 && player.position.y <= g) {
+        player.position.y = g
+        player.air = false
+        player.vy = 0
+      } else if (player.position.y < SKY.level - 4.5) recover()
+    } else {
+      player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
+      // remember the last safe ground (for coming back after a fall)
+      if (walkable(player.position.x, player.position.z)) {
+        player.safe.x = player.position.x
+        player.safe.z = player.position.z
+      }
+    }
     // soft footsteps
     if (player.speed > 0.6) {
       stepTimer.current -= delta
@@ -290,7 +392,7 @@ export function PlayerAvatar() {
   return (
     <>
       <group ref={group}>
-        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: Boolean(player.seat), emote: player.emote })} />
+        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: Boolean(player.seat), emote: player.emote, hand: myHand() })} />
         <EmoteFx get={() => player.emote} />
         {(carrying || hasWater) && (
           <group ref={carry} position={[0, 1.55, 0]}>
