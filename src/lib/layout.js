@@ -100,37 +100,51 @@ export const viewpointSpot = { x: ZONES.cliff.x + 0.4, z: ZONES.cliff.z + 0.1, r
 /** The little star near the Love Tree that opens the secret ending (after the main ending). */
 export const secretStarSpot = v(loveTree.x + 1.7, loveTree.y + 4.3, loveTree.z + 0.8)
 
-/** How many photos stand in the plaza (all of them are in the album at its centre). */
+/** How many photos hang in the plaza (two under each arch; all of them are in the album). */
 export const MAX_FRAMES = 12
-/** Gallery frames are drawn at this scale. */
-export const FRAME_SCALE = 0.6
+/** Polaroids are drawn at this scale. */
+export const FRAME_SCALE = 1
 
 /*
- * OUR MEMORIES — a round stone plaza in the south-west. The photos stand on slim golden posts in
- * a ring, all facing the middle; the ring opens toward the path so she walks in between them.
- * With more than 12 memories, the rest live in the album on the pedestal in the centre.
+ * OUR MEMORIES — a round garden plaza in the south-west. A heart fountain in the middle; around it a
+ * ring of flowering arches, each with two polaroids hanging on ribbons, all facing the fountain.
+ * The ring opens toward the path (a flower gate), so she walks in between the arches.
+ * With more than 12 memories, the rest live in the album on the stand by the fountain.
  */
 export const gallery = ground(ZONES.gallery.x, ZONES.gallery.z)
-export const GALLERY_RING = 2.25
+/** Radius of the ring of arches. */
+export const GALLERY_RING = 2.55
 /** direction (angle in the x/z plane) of the plaza's entrance, toward the end of its path */
-const ENTRANCE = (() => {
+export const GALLERY_ENTRANCE = (() => {
   const end = PATHS[6][PATHS[6].length - 1]
   return Math.atan2(end[1] - ZONES.gallery.z, end[0] - ZONES.gallery.x)
 })()
+/** The arches: angle around the plaza (spread over the ring, leaving the entrance open). */
+export const galleryArches = (() => {
+  const n = Math.max(3, Math.ceil(Math.min(memories.length, MAX_FRAMES) / 2))
+  const span = Math.PI * 2 - 1.6 // the gap at the entrance
+  return Array.from({ length: n }, (_, i) => GALLERY_ENTRANCE + 0.8 + (n === 1 ? span / 2 : (i * span) / (n - 1)))
+})()
+/** Half the width of an arch (posts at ± this along the ring), and where the two photos hang. */
+export const ARCH_HALF = 0.95
+export const HANG = 0.46
+/** Height of the centre of a hanging polaroid above the plaza. */
+export const PHOTO_Y = 1.62
 export const framePositions = (() => {
   const n = Math.min(memories.length, MAX_FRAMES)
-  if (n === 0) return []
-  const step = n === 1 ? 0 : Math.min(0.52, (Math.PI * 2 - 1.3) / (n - 1))
   return Array.from({ length: n }, (_, i) => {
-    // centred opposite the entrance, so the first thing she sees walking in is the whole ring
-    const a = ENTRANCE + Math.PI + (i - (n - 1) / 2) * step
-    const x = gallery.x + Math.cos(a) * GALLERY_RING
-    const z = gallery.z + Math.sin(a) * GALLERY_RING
-    return v(x, gallery.y + 1.05, z)
+    const a = galleryArches[Math.floor(i / 2)]
+    const side = i % 2 ? 1 : -1
+    // along the ring's tangent, so each pair hangs side by side under its arch
+    const x = gallery.x + Math.cos(a) * GALLERY_RING - Math.sin(a) * side * HANG
+    const z = gallery.z + Math.sin(a) * GALLERY_RING + Math.cos(a) * side * HANG
+    return v(x, gallery.y + PHOTO_Y, z)
   })
 })()
-/** Every frame faces the middle of the plaza. */
+/** Every photo faces the fountain in the middle. */
 export const frameFacing = (p) => v(gallery.x, p.y, gallery.z)
+/** The album's stand: between the fountain and the gate. */
+export const albumSpot = ground(gallery.x + Math.cos(GALLERY_ENTRANCE) * 1.55, gallery.z + Math.sin(GALLERY_ENTRANCE) * 1.55)
 
 export const areas = {
   intro: v(0, 70, 60),
@@ -211,7 +225,7 @@ export const poses = {
   avatar: pose(avatarStage.clone().add(v(0, 0.8, 0)), v(0, 0.2, 1), 3.4, 4.0, 4.2),
   enterMid: pose(v(0, 1.5, 3), isoDir(52), 30, 22, 30),
   explore: pose(v(0, 1.6, 0), isoDir(), 16, 12, 22),
-  memories: pose(gallery.clone().add(v(0, 0.9, 0)), isoDir(46), 6.6, 5.4, 0),
+  memories: pose(gallery.clone().add(v(0, 1.1, 0)), isoDir(46), 7.6, 6.2, 0),
   letter: pose(spots.table.clone().add(v(0, 0.95, 0)), isoDir(60), 1.9, 1.7, 2.6),
   distance: pose(areas.distance.clone().add(v(0, 2.3, 0)), isoDir(22), 23, 8.5, 0),
   finale: pose(areas.finale.clone(), v(0, 0, 1), 10.5, 10, 16),

@@ -24,8 +24,8 @@ export const ZONES = {
   lake: zone(5, -5, 2.7),
   cliff: zone(8.3, 2.3, 2.3),
   cove: zone(6.6, 7.6, 2.1),
-  /** Our Memories: a round, flat gallery plaza with the photos standing in a ring */
-  gallery: zone(-5.8, 6.9, 2.5),
+  /** Our Memories: a round, flat garden plaza — a fountain in the middle, photos under a ring of arches */
+  gallery: zone(-5.8, 6.9, 2.7),
   /** The Disaster Date: a soft, level hill for the picnic */
   picnic: zone(4.4, 4.6, 1.9),
 }
@@ -68,9 +68,9 @@ export function worldHeight(x, z, skipPicnic = false) {
   // the meadow is gentle and open
   const m = bump(x, z, ZONES.meadow, 4)
   h = h * (1 - m * 0.75) + 0.32 * m * 0.75
-  // the memories plaza is flat and level, like a little stone courtyard
+  // the memories plaza is perfectly flat and level (its mosaic floor lies right on it)
   const g = 1 - smooth(ZONES.gallery.r + 0.1, ZONES.gallery.r + 1.4, dist(x, z, ZONES.gallery))
-  h = h * (1 - g * 0.9) + 0.26 * g * 0.9
+  h = h * (1 - g) + 0.26 * g
   // a soft hill under the Love Tree
   h += 0.4 * bump(x, z, ZONES.tree, 3.4)
   // the forest floor rolls a bit more

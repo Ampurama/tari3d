@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { addCollider, edgeRadius, MAIN_RADIUS, SKY_BRIDGE, SPREAD, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
-import { envelopeSpot, glowFlowerSpots, littleSpots, loveTree, mochiHome, noteSpots, PICNIC, picnicSpot, spots, viewpointSpot } from '../../lib/layout'
+import { envelopeSpot, gallery, glowFlowerSpots, littleSpots, loveTree, mochiHome, noteSpots, PICNIC, picnicSpot, spots, viewpointSpot } from '../../lib/layout'
 import { blocksView } from '../../lib/iso'
 import { tier } from '../../lib/device'
 import { wind, windMaterial } from '../../lib/wind'
@@ -57,6 +57,7 @@ const MUST_SEE = [
   ...Object.values(noteSpots),
   ...Object.values(spots),
   viewpointSpot,
+  gallery, // Our Memories: nothing tall in front of the arches
 ]
 /** Would something of this height (world units) at (x, z) hide any of them? */
 const hidesSomething = (x, z, height, half) => {
