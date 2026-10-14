@@ -285,6 +285,65 @@ function SmallTree() {
   )
 }
 
+/* ───────── keepsakes from dates ───────── */
+
+export function PicnicBasket() {
+  return (
+    <group>
+      <B p={[0, 0.13, 0]} s={[0.46, 0.26, 0.34]} c="#d9a574" />
+      <B p={[0, 0.27, 0]} s={[0.48, 0.03, 0.36]} c="#f7a8c4" />
+      <B p={[0, 0.2, 0.175]} s={[0.46, 0.06, 0.01]} c="#ffffff" />
+      <mesh position={[0, 0.27, 0]} material={mat('#a5714a')}>
+        <torusGeometry args={[0.16, 0.018, 5, 14, Math.PI]} />
+      </mesh>
+    </group>
+  )
+}
+
+function Candles() {
+  return (
+    <group>
+      <C p={[0, 0.02, 0]} rt={0.17} h={0.04} c="#e9c98b" />
+      {[
+        [-0.07, 0.16, 0],
+        [0.07, 0.12, 0.04],
+        [0.02, 0.1, -0.08],
+      ].map(([x, h, z], i) => (
+        <group key={i}>
+          <C p={[x, 0.04 + h / 2, z]} rt={0.03} h={h} c="#fff4e4" seg={8} />
+          <S p={[x, 0.07 + h, z]} s={[0.018, 0.035, 0.018]} c="#ffcf7a" glow={2} />
+        </group>
+      ))}
+      <Glow position={[0, 0.25, 0]} color="#ffd9a0" size={0.8} opacity={0.5} />
+    </group>
+  )
+}
+
+function CampLantern() {
+  return (
+    <group>
+      <C p={[0, 0.03, 0]} rt={0.12} h={0.06} c="#6d5a6e" />
+      <C p={[0, 0.2, 0]} rt={0.09} h={0.28} c="#ffe2a8" glow={1.1} />
+      <C p={[0, 0.37, 0]} rt={0.05} rb={0.12} h={0.07} c="#6d5a6e" />
+      <mesh position={[0, 0.42, 0]} material={mat('#6d5a6e')}>
+        <torusGeometry args={[0.05, 0.01, 4, 10]} />
+      </mesh>
+      <Glow position={[0, 0.2, 0]} color="#ffd9a0" size={1.0} opacity={0.5} />
+    </group>
+  )
+}
+
+function Postcard() {
+  return (
+    <group position={[0, 1.3, 0]}>
+      <B p={[0, 0, 0.012]} s={[0.5, 0.34, 0.02]} c="#fffaf0" />
+      <B p={[-0.08, 0.02, 0.024]} s={[0.28, 0.22, 0.01]} c="#9fd6e8" />
+      <B p={[-0.08, -0.06, 0.026]} s={[0.28, 0.06, 0.01]} c="#7fc59a" />
+      <B p={[0.16, 0.09, 0.024]} s={[0.07, 0.08, 0.01]} c="#ff8fbf" />
+    </group>
+  )
+}
+
 const MODELS = {
   bed: Bed,
   sofa: Sofa,
@@ -298,6 +357,10 @@ const MODELS = {
   heart_lamp: HeartLamp,
   teddy: Teddy,
   vase: Vase,
+  picnic_basket: PicnicBasket,
+  candles: Candles,
+  camp_lantern: CampLantern,
+  postcard: Postcard,
   flowers: Flowers,
   bush: Bush,
   lantern: Lantern,

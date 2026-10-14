@@ -191,6 +191,37 @@ lets the stage go up only one step at a time (and only once if you both press it
 an outdated copy of an item, so simultaneous edits never overwrite each other silently. While one of you is
 holding an item, the other can't pick it up. Run the verify script again afterwards; it now checks the house too.
 
+### Life together and Virtual Date
+
+Needs `supabase/migrations/003_dates.sql` (run it once, after 002), then the verify script again.
+
+- **Sitting down**: walk up to a sofa, chair, bed, garden bench, the edge of the porch, or the benches by the
+  lake and on Starfall Cliff, and press E / ✦ (**Duduk**, **Bersantai**). Moving (or E again) stands you up.
+  If you both pick the same seat at the same moment, whoever sat a little later slides to the seat next to it.
+  Sitting side by side, a few hearts float up.
+- **Aktivitas** (top right): wave, send a heart, a happy jump, a photo pose, or call the other person
+  (they get a gentle toast). Seats and gestures travel with your character over the private channel and are
+  never stored.
+- **House lights**: a switch by the door (from stage 3) and one for the fairy lights on the porch (stage 5),
+  shared between you.
+- **Virtual Date**: pick *Piknik Senja* (on the Secret Cove beach), *Makan Malam di Rumah* (needs a table and
+  two chairs in the house), *Kemah di Bawah Bintang* (beside the house) or *Kencan di Tepi Danau* (the bench at
+  Reflection Lake), and send **Ajak Kencan**. The other person gets an **Undangan Kencan** card
+  (**Terima** / **Tolak**). After accepting, each of you walks there (**Antar ke sana** finds the way), and says
+  **Siap** inside the glowing ring; the date begins when both are ready. Conversation prompts (editable in
+  `dates` in `config.js`) can be stepped through together. **Akhiri Kencan** ends it: a date of at least a minute
+  is kept in **Kenangan Kita** (with a note you can both write) and unlocks a keepsake for the house catalog,
+  once. If one of you drops offline for 20 seconds, the date pauses and can be picked up again (**Lanjutkan**).
+  Invitations expire after 15 minutes, accepted dates after 3 hours.
+- `dates.lakeLetter` in `config.js`: a short letter that appears on the lake bench during the lakeside date
+  (empty until you write one).
+
+Every step of a date is a database function that checks who is asking (only the invited person can accept,
+each person can only mark themselves ready, one open date at a time, the same invitation can't be sent twice,
+the reward can't be claimed twice). One limitation: whether someone is *at* the meeting place is checked by
+their own game (positions aren't stored on the server), so "Siap" means "I say I'm here" — but nobody can
+say it for the other person.
+
 Not included yet: **photo frames with your own pictures**. That needs private image uploads (a Supabase Storage
 bucket with policies for the two members, size/type limits, and a `photo_path` column on `house_items`), so the
 frames and the memory corner are text-only for now.

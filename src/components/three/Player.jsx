@@ -7,10 +7,12 @@ import { HOME_ISLAND, SKY_BRIDGE, slope, standHeight, walkable } from '../../lib
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
+import { holdSeat, standUp } from '../../lib/actions'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
 import Avatar from './Avatar'
 import { Glow, HeartMesh } from './Bits'
+import EmoteFx from './EmoteFx'
 
 /** The silhouette: additive, drawn in the opaque pass, only where it's behind something. */
 const GHOST = new THREE.MeshBasicMaterial({
@@ -79,6 +81,8 @@ export function PlayerController() {
     // a panel or a dialog on screen has her attention: the avatar waits
     const exploring = s.phase === 'world' && s.view === 'explore' && !s.curtain && !player.frozen && !s.panel && !s.dialog
     if (!exploring) {
+      // leaving the island for a story moment: stand up first
+      if (player.seat && s.view !== 'explore') standUp()
       wasExploring.current = false
       player.speed = THREE.MathUtils.damp(player.speed, 0, 8, delta)
       lastPresses.current = input.interactPresses
@@ -95,6 +99,8 @@ export function PlayerController() {
 
     // ── movement intent: keyboard / joystick, or tap-to-walk
     const move = readMove()
+    // sitting: any move (keys, joystick, a tap somewhere) gets her up again
+    if (player.seat && (move.mag > 0.05 || player.walkTarget)) standUp()
     let dirX = 0
     let dirZ = 0
     let targetSpeed = 0
@@ -152,7 +158,8 @@ export function PlayerController() {
       dy = Math.atan2(Math.sin(dy), Math.cos(dy))
       player.yaw += dy * Math.min(1, delta * 12)
     }
-    player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
+    if (player.seat) holdSeat()
+    else player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
     // soft footsteps
     if (player.speed > 0.6) {
       stepTimer.current -= delta
@@ -283,7 +290,8 @@ export function PlayerAvatar() {
   return (
     <>
       <group ref={group}>
-        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer })} />
+        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: Boolean(player.seat), emote: player.emote })} />
+        <EmoteFx get={() => player.emote} />
         {(carrying || hasWater) && (
           <group ref={carry} position={[0, 1.55, 0]}>
             <mesh>

@@ -843,3 +843,64 @@ And if you let me, I hope we get to write many more pages together.`,
   replay: 'Replay the secret ending ♡',
   skip: 'Skip',
 }
+
+/**
+ * VIRTUAL DATE — kencan berdua (butuh "Main berdua"). Semua teks di sini boleh kamu ganti.
+ * `prompts` adalah pertanyaan obrolan pilihan yang muncul satu per satu selama kencan
+ * (bukan kenangan yang dikarang — isi dengan versi kalian sendiri kalau mau).
+ * `lakeLetter`: surat kecil yang muncul di bangku danau saat kencan di tepi danau. Biarkan null kalau belum ada.
+ */
+export const dates = {
+  sunset_picnic: {
+    title: 'Piknik Senja',
+    place: 'Pantai Teluk Rahasia',
+    text: 'Tikar, keranjang, dan langit yang pelan-pelan jadi jingga. Duduk berdua sambil nunggu matahari turun.',
+    prompts: [
+      'Apa hal kecil yang bikin kamu senyum minggu ini?',
+      'Kalau sore ini bisa diulang, bagian mana yang mau kamu putar lagi?',
+      'Tempat mana yang pengin banget kita datangi berdua suatu hari nanti?',
+      'Lagu apa yang cocok jadi latar sore ini?',
+    ],
+  },
+  dinner_home: {
+    title: 'Makan Malam di Rumah',
+    place: 'Rumah Kita',
+    text: 'Meja kecil, lilin, dan dua kursi yang saling berhadapan. Makan malam sederhana di rumah sendiri.',
+    needs: 'Butuh rumah yang sudah dibangun, satu meja, dan dua kursi.',
+    prompts: [
+      'Kalau kita masak bareng beneran, kamu mau masak apa?',
+      'Apa makanan yang paling bikin kamu ngerasa “pulang”?',
+      'Hal apa yang pengin kamu ceritain dari harimu hari ini?',
+      'Kebiasaan kecil apa yang pengin kita punya di rumah kita?',
+    ],
+  },
+  camping: {
+    title: 'Kemah di Bawah Bintang',
+    place: 'Sisi barat pulau rumah',
+    text: 'Tenda kecil, api unggun yang hangat, dan langit penuh bintang di atas kita.',
+    prompts: [
+      'Kalau bisa kasih nama satu bintang, kamu mau kasih nama apa?',
+      'Apa mimpi kecil yang belum pernah kamu ceritain ke siapa-siapa?',
+      'Suara apa yang paling bikin kamu tenang?',
+      'Kalau malam ini ada satu permintaan, kamu minta apa?',
+    ],
+  },
+  lakeside: {
+    title: 'Kencan di Tepi Danau',
+    place: 'Bangku di Reflection Lake',
+    text: 'Duduk di bangku, lihat airnya berkilau, ngobrol pelan-pelan.',
+    prompts: [
+      'Apa yang pengin kamu bilang ke dirimu setahun lalu?',
+      'Momen tenang favoritmu itu kayak gimana?',
+      'Apa satu hal yang pengin kita coba bareng tahun ini?',
+      'Kalau danau ini bisa nyimpen satu rahasia, kamu titip apa?',
+    ],
+  },
+  lakeLetter: null,
+  keepsakes: {
+    picnic_basket: 'Keranjang piknik',
+    candles: 'Lilin makan malam',
+    camp_lantern: 'Lentera kemah',
+    postcard: 'Kartu pos danau',
+  },
+}

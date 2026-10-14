@@ -66,6 +66,47 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
     body.current.rotation.x = moving ? 0.08 * Math.min(1, speed / 3) : 0
     head.current.rotation.y = moving || reducedMotion ? 0 : Math.sin(t * 0.6) * 0.18
     head.current.rotation.z = moving || reducedMotion ? 0 : Math.sin(t * 0.9) * 0.04
+    // sitting: legs forward, hands resting on the lap
+    if (motion.sit) {
+      legL.current.rotation.x = legR.current.rotation.x = -1.45
+      armL.current.rotation.x = armR.current.rotation.x = -0.55
+      armL.current.rotation.z = 0.2
+      armR.current.rotation.z = -0.2
+      body.current.position.y = breathe
+      body.current.rotation.x = 0
+    }
+    // little gestures (all procedural: a few joint angles over a couple of seconds)
+    const e = motion.emote
+    if (e) {
+      const et = performance.now() / 1000 - e.t0
+      const wig = reducedMotion ? 0 : Math.sin(et * 11)
+      const k = Math.min(1, et * 4)
+      if (e.kind === 'wave' || e.kind === 'call') {
+        armR.current.rotation.x = -2.7 * k
+        armR.current.rotation.z = -0.35 + wig * 0.35
+        if (e.kind === 'call') {
+          armL.current.rotation.x = -2.0 * k
+          armL.current.rotation.z = 0.5
+        }
+      } else if (e.kind === 'heart') {
+        // both hands above the head, curved into a heart
+        armL.current.rotation.x = armR.current.rotation.x = -2.85 * k
+        armL.current.rotation.z = -0.55 * k
+        armR.current.rotation.z = 0.55 * k
+      } else if (e.kind === 'happy') {
+        armL.current.rotation.x = armR.current.rotation.x = -2.5 * k
+        armL.current.rotation.z = 0.4
+        armR.current.rotation.z = -0.4
+        if (!motion.sit && !reducedMotion) body.current.position.y = Math.abs(Math.sin(et * 9)) * 0.12
+      } else if (e.kind === 'photo') {
+        // a peace sign by the face, head tilted
+        armR.current.rotation.x = -2.3 * k
+        armR.current.rotation.z = -0.9 * k
+        armL.current.rotation.z = 0.35
+        head.current.rotation.z = 0.18 * k
+        head.current.rotation.y = 0
+      }
+    }
     // blink every few seconds
     blink.current -= delta
     const closed = blink.current < 0.12

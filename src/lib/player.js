@@ -19,6 +19,11 @@ export const player = {
   cheer: 0,
   /** set while a cinematic or a focused view has control */
   frozen: false,
+  /** the seat she's sitting on (id, see lib/actions.js), and where she sat down from */
+  seat: null,
+  sitFrom: null,
+  /** a gesture in progress: { kind, t0 (seconds) } */
+  emote: null,
 }
 
 /**

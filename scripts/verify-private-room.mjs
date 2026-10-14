@@ -200,5 +200,54 @@ if (house.data) {
   }
 }
 
+console.log('\n── virtual dates')
+const datesTable = await owner.c.from('date_sessions').select('id, status').in('status', ['pending', 'accepted', 'preparing', 'active', 'interrupted'])
+if (datesTable.error) {
+  check('date tables exist', false, `${datesTable.error.message} — run supabase/migrations/003_dates.sql`)
+} else {
+  const anonDates = await anon.from('date_sessions').select('id')
+  check('signed-out visitor cannot see dates', !anonDates.data?.length, anonDates.error?.message || `${anonDates.data?.length} rows`)
+  const anonInvite = await anon.rpc('date_invite', { p_id: crypto.randomUUID(), p_kind: 'lakeside' })
+  check('signed-out visitor cannot send an invitation', Boolean(anonInvite.error), anonInvite.error?.message)
+  const anonGift = await anon.from('keepsakes').select('kind')
+  check('signed-out visitor cannot see keepsakes', !anonGift.data?.length, anonGift.error?.message || `${anonGift.data?.length} rows`)
+  const forgeGift = await owner.c.from('keepsakes').insert({ kind: 'postcard' })
+  check('nobody can give themselves a keepsake', Boolean(forgeGift.error), forgeGift.error?.message)
+  const directDate = await owner.c.from('date_sessions').insert({ id: crypto.randomUUID(), kind: 'lakeside', initiator: owner.id, invitee: tari.id, status: 'active', expires_at: new Date().toISOString() })
+  check('dates can only be made through the invitation flow', Boolean(directDate.error), directDate.error?.message)
+  const anonLights = await anon.from('house').update({ lights_on: false }).eq('id', 1).select('id')
+  check('signed-out visitor cannot switch the lights', Boolean(anonLights.error) || !anonLights.data?.length, anonLights.error?.message)
+  if (outsider) {
+    const outsiderInvite = await outsider.c.rpc('date_invite', { p_id: crypto.randomUUID(), p_kind: 'lakeside' })
+    check('outsider cannot send an invitation', Boolean(outsiderInvite.error), outsiderInvite.error?.message)
+  } else skip('outsider cannot send an invitation')
+
+  if (datesTable.data.length) {
+    console.log('SKIP  invitation flow  — a real date is open right now; finish it in the game, then run this again')
+  } else {
+    const id = crypto.randomUUID()
+    const sent = await owner.c.rpc('date_invite', { p_id: id, p_kind: 'lakeside' })
+    check('owner can invite (to Tari, decided by the server)', sent.data?.status === 'pending' && sent.data?.initiator === owner.id && sent.data?.invitee === tari.id, sent.error?.message)
+    const again = await owner.c.rpc('date_invite', { p_id: id, p_kind: 'lakeside' })
+    const openNow = await owner.c.from('date_sessions').select('id').in('status', ['pending', 'accepted', 'preparing', 'active', 'interrupted'])
+    check('sending the same invitation twice makes only one', again.data?.id === id && openNow.data?.length === 1, again.error?.message)
+    const second = await tari.c.rpc('date_invite', { p_id: crypto.randomUUID(), p_kind: 'camping' })
+    check('only one date can be open at a time', Boolean(second.error), second.error?.message)
+    const selfAccept = await owner.c.rpc('date_respond', { p_id: id, p_accept: true })
+    check('the inviter cannot accept for the other person', Boolean(selfAccept.error), selfAccept.error?.message)
+    const forceStatus = await owner.c.from('date_sessions').update({ status: 'active' }).eq('id', id).select('id')
+    check('nobody can set a date\'s status directly', Boolean(forceStatus.error) || !forceStatus.data?.length, forceStatus.error?.message)
+    const accepted = await tari.c.rpc('date_respond', { p_id: id, p_accept: true })
+    check('Tari can accept', accepted.data?.status === 'accepted', accepted.error?.message)
+    const ownerReady = await owner.c.rpc('date_ready', { p_id: id, p_ready: true })
+    check('saying "Siap" only marks yourself', ownerReady.data?.initiator_ready === true && ownerReady.data?.invitee_ready === false && ownerReady.data?.status === 'preparing', ownerReady.error?.message)
+    const tariReady = await tari.c.rpc('date_ready', { p_id: id, p_ready: true })
+    check('the date begins only when both are ready', tariReady.data?.status === 'active' && Boolean(tariReady.data?.started_at), tariReady.error?.message)
+    const early = await owner.c.rpc('date_finish', { p_id: id })
+    check('a date ended right away is not saved as a memory', early.data?.status === 'cancelled' && early.data?.end_reason === 'ended_early' && !early.data?.keepsake, early.error?.message)
+    console.log('      (this leaves one cancelled test date in date_sessions; it never shows in Kenangan Kita)')
+  }
+}
+
 console.log(failures ? `\n${failures} check(s) FAILED — the room is NOT private yet.` : '\nAll checks passed: the room only lets the two of you in.')
 process.exit(failures ? 1 : 0)

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useSeat } from '../../lib/actions'
 import { addCollider, BRIDGE, pathDistance, seeded, SPREAD, standHeight, walkable, WATER_LEVEL, ZONES } from '../../lib/terrain'
 import { littleSpots } from '../../lib/layout'
 import { tier } from '../../lib/device'
@@ -200,7 +201,24 @@ function ViewBenches() {
     [],
   )
   useEffect(() => spots.forEach((s) => addCollider(s.p.x, s.p.z, 0.45)), [spots])
-  return spots.map((s, i) => <Bench key={i} position={s.p} rotation={[0, s.r, 0]} scale={0.85} />)
+  return spots.map((s, i) => (
+    <group key={i}>
+      <Bench position={s.p} rotation={[0, s.r, 0]} scale={0.85} />
+      {[-0.3, 0.3].map((x, k) => (
+        <BenchSeat key={k} id={`bench:${i}:${k}`} bench={s} x={x} group={`bench:${i}`} />
+      ))}
+    </group>
+  ))
+}
+
+/** One place to sit on a view bench (she gets up to the side of it). */
+function BenchSeat({ id, bench, x, group }) {
+  const c = Math.cos(bench.r)
+  const s = Math.sin(bench.r)
+  const at = (lx, lz) => [bench.p.x + lx * c + lz * s, bench.p.z - lx * s + lz * c]
+  const [wx, wz] = at(x, 0.02)
+  useSeat(id, { x: wx, z: wz, y: bench.p.y + 0.41, yaw: bench.r, exit: at(Math.sign(x) * 1.05, 0.1), group, label: 'Duduk di bangku' })
+  return null
 }
 
 /** The little wooden bridge across Reflection Lake (the one she walks over to reach the bottle). */

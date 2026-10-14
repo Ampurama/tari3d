@@ -31,10 +31,23 @@ export const partner = {
   session: null,
   /** the house item they're moving right now (so nobody grabs it at the same time) */
   editing: null,
+  /** where they're sitting { id, seat, at } and the gesture they're making { id, kind, at } */
+  seat: null,
+  emote: null,
 }
 
 /** What I'm doing that the other person should know about (sent with my character). */
-export const presence = { editing: null }
+export const presence = { editing: null, seat: null, emote: null }
+
+const ID = /^[\w:-]{1,80}$/
+/** Only well-formed little objects get through: { id, seat?, kind?, at } (strings and a number). */
+function cleanAct(a) {
+  if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !ID.test(a.id)) return null
+  const out = { id: a.id, at: Number.isFinite(a.at) ? a.at : 0 }
+  if (typeof a.seat === 'string' && ID.test(a.seat)) out.seat = a.seat
+  if (typeof a.kind === 'string' && /^[a-z_]{1,20}$/.test(a.kind)) out.kind = a.kind
+  return out
+}
 
 /**
  * Other features (Our Little Home) listen on the same private room channel.
@@ -136,6 +149,11 @@ async function joinRoom(myId, mateId) {
       partner.avatarId = typeof payload.avatarId === 'string' ? payload.avatarId : null
       partner.view = typeof payload.view === 'string' ? payload.view : null
       partner.editing = typeof payload.editing === 'string' ? payload.editing : null
+      partner.seat = cleanAct(payload.seat)
+      const emote = cleanAct(payload.emote)
+      // a new call or invitation to sit: tell the UI once
+      if (emote && emote.id !== partner.emote?.id && emote.kind === 'call') window.dispatchEvent(new CustomEvent('couple:call', { detail: emote }))
+      partner.emote = emote
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
@@ -166,6 +184,8 @@ async function joinRoom(myId, mateId) {
       avatarId: s.avatarId || null,
       view: s.phase === 'world' ? s.view : null,
       editing: presence.editing,
+      seat: presence.seat,
+      emote: presence.emote,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -194,6 +214,8 @@ async function leaveRoom() {
   partner.lastSeen = 0
   partner.session = null
   partner.editing = null
+  partner.seat = null
+  partner.emote = null
   set({ mateOnline: false })
   roomHooks.forEach((h) => h.left?.())
   const old = channels

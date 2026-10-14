@@ -23,6 +23,8 @@ export const useHome = create(() => ({
   status: 'off',
   stage: 1,
   memory: { title: '', date: null, note: '' },
+  /** the house lights and the fairy lights on the roof (shared) */
+  lights: { on: true, fairy: true },
   items: {},
   error: null,
   /** decorating mode is on */
@@ -45,7 +47,12 @@ const clean = (row) => ({ id: row.id, kind: row.kind, area: row.area, x: +row.x,
 
 function applyHouse(row) {
   if (!row) return
-  set({ stage: row.stage | 0, memory: { title: row.memory_title || '', date: row.memory_date || null, note: row.memory_note || '' } })
+  set({
+    stage: row.stage | 0,
+    memory: { title: row.memory_title || '', date: row.memory_date || null, note: row.memory_note || '' },
+    // (older databases without 003_dates.sql have no light switches: they stay on)
+    lights: { on: row.lights_on ?? true, fairy: row.fairy_on ?? true },
+  })
   obstacles.version++
 }
 
@@ -71,7 +78,7 @@ export async function loadHome() {
   if (!supabase || useCouple.getState().status !== 'connected') return
   if (get().status !== 'ready') set({ status: 'loading', error: null })
   const [house, items] = await Promise.all([
-    supabase.from('house').select('stage, memory_title, memory_date, memory_note').eq('id', 1).maybeSingle(),
+    supabase.from('house').select('*').eq('id', 1).maybeSingle(),
     supabase.from('house_items').select(ITEM_COLUMNS).limit(200),
   ])
   if (house.error || items.error || !house.data) {
@@ -137,11 +144,22 @@ export async function saveMemory({ title, date, note }, isOwner) {
   const patch = { memory_title: title.trim().slice(0, 60) || null, memory_note: note.trim().slice(0, 200) || null }
   if (isOwner) patch.memory_date = date || null
   set({ saving: true })
-  const { data, error } = await supabase.from('house').update(patch).eq('id', 1).select('stage, memory_title, memory_date, memory_note').maybeSingle()
+  const { data, error } = await supabase.from('house').update(patch).eq('id', 1).select('*').maybeSingle()
   set({ saving: false })
   if (error || !data) return { ok: false, error: 'Belum tersimpan. Coba lagi, ya.' }
   applyHouse(data)
   return { ok: true }
+}
+
+/** Flip the house lights ('on') or the fairy lights ('fairy') for both of you. */
+export async function toggleLights(which) {
+  const cur = get().lights
+  const column = which === 'fairy' ? 'fairy_on' : 'lights_on'
+  const next = !(which === 'fairy' ? cur.fairy : cur.on)
+  set({ lights: { ...cur, [which === 'fairy' ? 'fairy' : 'on']: next } }) // feels instant; the server has the last word
+  const { data, error } = await supabase.from('house').update({ [column]: next }).eq('id', 1).select('*').maybeSingle()
+  if (error || !data) set({ lights: cur })
+  else applyHouse(data)
 }
 
 /* ───────── decorating ───────── */

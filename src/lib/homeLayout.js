@@ -71,6 +71,11 @@ export const CATALOG = {
   heart_lamp: { label: 'Lampu hati', icon: '💗', area: 'inside', w: 0.4, d: 0.4 },
   teddy: { label: 'Boneka beruang', icon: '🧸', area: 'inside', w: 0.45, d: 0.4 },
   vase: { label: 'Vas bunga', icon: '💐', area: 'inside', w: 0.4, d: 0.4 },
+  // keepsakes: unlocked once by finishing a date (see supabase/migrations/003_dates.sql)
+  picnic_basket: { label: 'Keranjang piknik', icon: '🧺', area: 'inside', w: 0.5, d: 0.4, keepsake: 'sunset_picnic' },
+  candles: { label: 'Lilin makan malam', icon: '🕯️', area: 'inside', w: 0.4, d: 0.4, keepsake: 'dinner_home' },
+  camp_lantern: { label: 'Lentera kemah', icon: '🏮', area: 'inside', w: 0.4, d: 0.4, keepsake: 'camping' },
+  postcard: { label: 'Kartu pos danau', icon: '💌', area: 'inside', w: 0.5, d: 0.05, layer: 'wall', keepsake: 'lakeside' },
   flowers: { label: 'Petak bunga', icon: '🌷', area: 'garden', w: 1.0, d: 0.6 },
   bush: { label: 'Semak bulat', icon: '🌳', area: 'garden', w: 0.8, d: 0.8 },
   lantern: { label: 'Lentera taman', icon: '🏮', area: 'garden', w: 0.4, d: 0.4 },
@@ -105,6 +110,8 @@ const KEEP_FREE = [
   MEMORY_CORNER,
 ]
 const PARTITION_RECT = { x0: PARTITION.x - 0.09, x1: PARTITION.x + 0.09, z0: IN.z0, z1: PARTITION.z1 }
+/** The campsite for "Kemah di Bawah Bintang", west of the house (kept free of garden things). */
+export const CAMP = { fire: [-5.0, 1.7], tent: [-5.3, 0.15], zone: { x0: -6.6, x1: -3.75, z0: -0.75, z1: 2.85 } }
 /** The house, its porch and a little margin: no garden things here. */
 const HOUSE_ZONE = { x0: -OUTER.hw - 0.45, x1: OUTER.hw + 0.45, z0: -OUTER.hd - 0.45, z1: PORCH.z1 + 0.3 }
 
@@ -179,6 +186,7 @@ export function checkPlacement(kind, x, z, rot, others, ignoreId = null) {
     const corners = [[r.x0, r.z0], [r.x1, r.z0], [r.x0, r.z1], [r.x1, r.z1]]
     if (corners.some(([cx, cz]) => homeDistance(...toWorld(cx, cz)) > 0.78)) return { ok: false, reason: 'Terlalu dekat tepi pulau.' }
     if (overlaps(r, HOUSE_ZONE)) return { ok: false, reason: 'Terlalu dekat rumah.' }
+    if (overlaps(r, CAMP.zone)) return { ok: false, reason: 'Tempat ini disimpan untuk kemah, ya.' }
     if ([[x, z], ...corners].some(([px, pz]) => segDist(px, pz, GARDEN_PATH[0], GARDEN_PATH[1]) < 0.6)) return { ok: false, reason: 'Jangan halangi jalan setapak.' }
     if (Math.hypot(x - LANDING.x, z - LANDING.z) < 1.8) return { ok: false, reason: 'Ujung jembatan biarkan lega, ya.' }
   }

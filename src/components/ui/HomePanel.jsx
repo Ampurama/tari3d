@@ -18,6 +18,8 @@ import {
 } from '../../lib/home'
 import { CATALOG, KINDS, STAGES } from '../../lib/homeLayout'
 import { useStore } from '../../store'
+import { useDate } from '../../lib/date'
+import { dates } from '../../content/config'
 import { audio } from '../../audio/engine'
 
 /*
@@ -201,6 +203,7 @@ function HomeButtons() {
 /** The decorating bar: the catalog, then Putar / Tempatkan / Batalkan for what she's holding. */
 function EditBar() {
   const { editing, draft, saving, notice, stage } = useHome()
+  const keepsakes = useDate((s) => s.keepsakes)
   const [tab, setTab] = useState('inside')
   if (!editing) return null
   const kinds = KINDS.filter((k) => CATALOG[k].area === tab)
@@ -253,7 +256,8 @@ function EditBar() {
               <button
                 key={k}
                 type="button"
-                disabled={tab === 'garden' && stage < 3}
+                title={CATALOG[k].keepsake && !keepsakes[k] ? `Didapat dari kencan ${dates[CATALOG[k].keepsake]?.title}` : undefined}
+                disabled={(tab === 'garden' && stage < 3) || (CATALOG[k].keepsake && !keepsakes[k])}
                 onClick={() => {
                   audio.sparkle()
                   pickKind(k)
@@ -261,6 +265,7 @@ function EditBar() {
               >
                 <span aria-hidden="true">{CATALOG[k].icon}</span>
                 {CATALOG[k].label}
+                {CATALOG[k].keepsake && !keepsakes[k] && ' 🔒'}
               </button>
             ))}
           </div>

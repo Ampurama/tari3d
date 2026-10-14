@@ -7,7 +7,8 @@ import { player, walkTo } from '../../lib/player'
 import { useInteractable } from '../../lib/interactions'
 import { withPaint } from '../../lib/paint'
 import { coupleAvailable, partner, useCouple } from '../../lib/couple'
-import { cancelDraft, moveDraft, nudgeDraft, pickItem, placeDraft, playerInHouse, removeDraft, rotateDraft, stopEditing, useHome } from '../../lib/home'
+import { cancelDraft, moveDraft, nudgeDraft, pickItem, placeDraft, playerInHouse, removeDraft, rotateDraft, stopEditing, toggleLights, useHome } from '../../lib/home'
+import { useSeat } from '../../lib/actions'
 import {
   CATALOG,
   DOOR,
@@ -296,7 +297,8 @@ function wallPieces(side) {
 
 function Wall({ side, stage, innerRef, decorRef, children }) {
   const w = WALLS[side]
-  const glass = stage >= 3 ? ['#ffe3b0', 0.55] : ['#cfeaff', 0]
+  const lit = useHome((s) => s.lights.on)
+  const glass = stage >= 3 && lit ? ['#ffe3b0', 0.55] : ['#cfeaff', 0]
   return (
     <group position={w.pos} rotation={[0, w.rot, 0]}>
       <group ref={innerRef}>
@@ -386,7 +388,8 @@ function Roof({ stage }) {
     heart.current.position.y = WALL_H + rise + 0.6 + t * 1.2
     heart.current.scale.setScalar(0.12 * Math.sin(Math.PI * t) + 0.01)
   })
-  const lights = stage >= 5 ? Array.from({ length: 15 }, (_, i) => -width / 2 + 0.2 + (i * (width - 0.4)) / 14) : []
+  const fairy = useHome((s) => s.lights.fairy)
+  const lights = stage >= 5 && fairy ? Array.from({ length: 15 }, (_, i) => -width / 2 + 0.2 + (i * (width - 0.4)) / 14) : []
   return (
     <group>
       {[1, -1].map((side) => (
@@ -519,6 +522,7 @@ function MemoryFrame() {
 function Cottage({ stage }) {
   const camera = useThree((s) => s.camera)
   const editing = useHome((s) => s.editing)
+  const lit = useHome((s) => s.lights.on)
   const wallRefs = { front: useRef(), back: useRef(), left: useRef(), right: useRef() }
   const decorRefs = { front: useRef(), back: useRef(), left: useRef(), right: useRef() }
   const partition = useRef()
@@ -563,7 +567,7 @@ function Cottage({ stage }) {
         <B p={[0, WALL_H / 2, 0]} s={[0.12, WALL_H, PARTITION.z1 - PARTITION.z0]} c="#fde6ef" />
       </group>
       {stage >= 4 && <MemoryShelf stage={stage} />}
-      {stage >= 3 && (
+      {stage >= 3 && lit && (
         <>
           <Glow position={[-1.2, 1.6, -0.3]} color="#ffd9a0" size={2.6} opacity={0.32} />
           <Glow position={[2.0, 1.6, -0.6]} color="#ffc2dd" size={2.0} opacity={0.3} />
@@ -572,6 +576,8 @@ function Cottage({ stage }) {
       <group ref={roof}>
         <Roof stage={stage} />
       </group>
+      <PorchSeats />
+      <LightSwitches stage={stage} />
     </group>
   )
 }
@@ -615,6 +621,77 @@ function GardenDressing() {
   )
 }
 
+/* ───────── sitting down, and the light switches ───────── */
+
+/** Where you can sit on each kind of furniture (item-local; the seat faces the item's front). */
+const SEATS = {
+  sofa: { h: 0.44, spots: [[-0.38, 0.08], [0.38, 0.08]], out: 0.75, label: 'Duduk di sofa' },
+  chair: { h: 0.47, spots: [[0, 0.02]], out: 0.6, label: 'Duduk' },
+  bed: { h: 0.52, spots: [[-0.3, 0.6], [0.3, 0.6]], out: 0.8, label: 'Bersantai' },
+  garden_bench: { h: 0.45, spots: [[-0.35, 0.02], [0.35, 0.02]], out: 0.65, label: 'Duduk di bangku' },
+}
+
+/** One seat, given in house-local coordinates. */
+function HouseSeat({ id, x, z, y, yaw, out, group, label }) {
+  const [wx, wz] = toWorld(x, z)
+  const [ex, ez] = toWorld(x + Math.sin(yaw) * out, z + Math.cos(yaw) * out)
+  useSeat(id, { x: wx, z: wz, y: HOUSE.y + y, yaw, exit: [ex, ez], group, label, enabled: () => !useHome.getState().editing })
+  return null
+}
+
+function ItemSeats({ item }) {
+  const def = SEATS[item.kind]
+  const a = (item.rot * Math.PI) / 2
+  const base = item.area === 'inside' ? FLOOR_Y : 0
+  return def.spots.map(([sx, sz], i) => (
+    <HouseSeat
+      key={i}
+      id={`item:${item.id}:${i}`}
+      x={item.x + sx * Math.cos(a) + sz * Math.sin(a)}
+      z={item.z - sx * Math.sin(a) + sz * Math.cos(a)}
+      y={base + def.h}
+      yaw={a}
+      out={def.out}
+      group={item.id}
+      label={def.label}
+    />
+  ))
+}
+
+/** Sit on the edge of the porch and look at the garden. */
+function PorchSeats() {
+  return [PORCH.x0 + 0.35, PORCH.x1 - 0.45].map((x, i) => (
+    <HouseSeat key={i} id={`porch:${i}`} x={x} z={PORCH.z1 - 0.12} y={0.13} yaw={0} out={0.7} group="porch" label="Duduk di teras" />
+  ))
+}
+
+/** The light switch by the door (from stage 3) and the fairy lights' switch on the porch (stage 5). */
+function LightSwitches({ stage }) {
+  const switchAt = useMemo(() => at(DOOR.x0 - 0.55, OUTER.hd - 0.55), [])
+  const fairyAt = useMemo(() => at(PORCH.x1 - 0.2, PORCH.z0 + 0.45), [])
+  useInteractable('home-lights', {
+    position: switchAt,
+    radius: 0.95,
+    enabled: () => stage >= 3 && useHome.getState().status === 'ready' && !useHome.getState().editing,
+    label: () => (useHome.getState().lights.on ? 'Matikan lampu' : 'Nyalakan lampu'),
+    onInteract: () => toggleLights('on'),
+  })
+  useInteractable('home-fairy', {
+    position: fairyAt,
+    radius: 0.9,
+    priority: -0.2,
+    enabled: () => stage >= 5 && useHome.getState().status === 'ready' && !useHome.getState().editing,
+    label: () => (useHome.getState().lights.fairy ? 'Matikan lampu hias' : 'Nyalakan lampu hias'),
+    onInteract: () => toggleLights('fairy'),
+  })
+  return stage >= 3 ? (
+    <group position={[DOOR.x0 - 0.55, 1.05, OUTER.hd - WALL_T / 2 - 0.02]}>
+      <B p={[0, 0, 0]} s={[0.12, 0.18, 0.02]} c="#ffffff" />
+      <B p={[0, 0, -0.012]} s={[0.04, 0.07, 0.02]} c="#f29bb3" />
+    </group>
+  ) : null
+}
+
 /* ───────── furniture, and decorating ───────── */
 
 function Footprint({ kind, ok }) {
@@ -646,6 +723,7 @@ function PlacedItem({ item, editing, held }) {
       }
     >
       <Furniture kind={item.kind} />
+      {!editing && SEATS[item.kind] && <ItemSeats item={item} />}
       {held && <Glow position={[0, 0.9, 0]} color="#ffe2a8" size={1.4} opacity={0.6} />}
     </group>
   )

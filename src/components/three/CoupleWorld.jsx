@@ -12,6 +12,8 @@ import { audio } from '../../audio/engine'
 import Avatar from './Avatar'
 import Tappable from './Interact'
 import { Glow } from './Bits'
+import EmoteFx from './EmoteFx'
+import { partnerEmote } from '../../lib/actions'
 
 /*
  * PLAYING TOGETHER, in the world: the other person's character walking around the island
@@ -29,7 +31,7 @@ function Partner() {
   const mate = useCouple((s) => s.mate)
   const online = useCouple((s) => s.mateOnline)
   const [avatarId, setAvatarId] = useState(null)
-  const motion = useRef({ speed: 0, cheer: 0 })
+  const motion = useRef({ speed: 0, cheer: 0, sit: false, emote: null })
 
   useFrame((_, delta) => {
     const g = group.current
@@ -52,6 +54,8 @@ function Partner() {
     dy = Math.atan2(Math.sin(dy), Math.cos(dy))
     g.rotation.y += dy * Math.min(1, delta * 10)
     motion.current.speed = damp(motion.current.speed, t.speed, 8, delta)
+    motion.current.sit = Boolean(partner.seat)
+    motion.current.emote = partnerEmote()
     if (partner.avatarId !== avatarId) setAvatarId(partner.avatarId)
   })
 
@@ -60,6 +64,7 @@ function Partner() {
   return (
     <group ref={group} visible={false}>
       <Avatar config={config} getMotion={() => motion.current} />
+      <EmoteFx get={partnerEmote} />
       {online && (
         <Html position={[0, 1.75, 0]} center zIndexRange={[13, 0]} className="mochi-anchor">
           <span className="partner-tag">♡ {nameFor(mate.role)}</span>
