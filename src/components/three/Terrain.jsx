@@ -20,8 +20,10 @@ import {
 import { player, walkTo } from '../../lib/player'
 import { tier } from '../../lib/device'
 import { CINE, cineTime, windowAt } from '../../lib/cinematic'
+import { atmosphere } from '../../lib/atmosphere'
 import { journeyProgress } from '../../lib/story'
 import { placeNames } from '../../content/config'
+import { withPaint } from '../../lib/paint'
 import { useChapterUnlocked, useStore } from '../../store'
 import { IslandBody } from './Island'
 import { Glow } from './Bits'
@@ -55,13 +57,27 @@ groundMaterial.onBeforeCompile = (shader) => {
         vec2 q = vGround.xz;
         float patches = gNoise(q * 0.55) * 0.6 + gNoise(q * 1.7) * 0.4;
         float grain = gNoise(q * 9.0);
-        float fleck = step(0.93, gHash(floor(q * 26.0)));
-        diffuseColor.rgb *= 0.86 + patches * 0.22 + (grain - 0.5) * 0.08;
-        diffuseColor.rgb += vec3(0.05, 0.06, 0.03) * fleck;
+        // painterly patches: sunny yellow-green in some places, deeper green in others
+        diffuseColor.rgb = mix(diffuseColor.rgb * 0.9, diffuseColor.rgb * vec3(1.1, 1.08, 0.82), smoothstep(0.3, 0.75, patches));
+        diffuseColor.rgb *= 0.97 + (grain - 0.5) * 0.05;
+        // soft brush strokes running across the grass
+        float stroke = gNoise(vec2(q.x * 7.0 + q.y * 2.0, q.y * 1.6 - q.x * 0.5));
+        float grassy = smoothstep(0.02, 0.12, diffuseColor.g - diffuseColor.r);
+        diffuseColor.rgb *= 1.0 + (stroke - 0.5) * 0.12 * grassy;
+        // tiny painted flowers dotted through the green (pink, butter yellow, white)
+        vec2 cell = floor(q * 9.0);
+        float pick = gHash(cell);
+        vec2 inCell = fract(q * 9.0) - 0.5;
+        float dotMask = (1.0 - smoothstep(0.08, 0.14, length(inCell))) * step(0.955, pick) * grassy;
+        vec3 flowerCol = pick > 0.985 ? vec3(1.0, 0.95, 0.95) : pick > 0.97 ? vec3(1.0, 0.86, 0.45) : vec3(1.0, 0.6, 0.75);
+        diffuseColor.rgb = mix(diffuseColor.rgb, flowerCol, dotMask * 0.85);
       }`,
     )
 }
 groundMaterial.customProgramCacheKey = () => 'island-ground'
+
+/** The soil and stone under the island, in soft strata. */
+const EARTH = withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.02, flatShading: true }), 'earth')
 
 /** Names of the places, written softly on the map (only while exploring). */
 const PLACE_SPOTS = {
@@ -113,9 +129,7 @@ export function IslandGround() {
       >
         <primitive object={groundMaterial} attach="material" />
       </mesh>
-      <mesh geometry={under} castShadow>
-        <meshStandardMaterial vertexColors roughness={0.75} metalness={0.05} flatShading />
-      </mesh>
+      <mesh geometry={under} castShadow material={EARTH} />
     </group>
   )
 }
@@ -151,7 +165,10 @@ const waterFragment = /* glsl */ `
     float fres = pow(1.0 - max(viewDir.y, 0.0), 3.0);
     col = mix(col, uSky, fres * 0.55 + ripple * 0.05);
     float glint = smoothstep(0.82, 1.0, ripple) * 0.6;
-    col += vec3(1.0, 0.92, 0.98) * glint;
+    col += vec3(1.0, 0.97, 0.92) * glint;
+    // soft foam where the water meets the shore
+    float foam = smoothstep(0.86, 0.97, d) * (0.6 + 0.4 * sin(atan(vWorld.z - uCenter.y, vWorld.x - uCenter.x) * 9.0 + uTime * 0.8));
+    col = mix(col, vec3(0.96, 1.0, 1.0), foam * 0.55);
     float alpha = 0.82 + fres * 0.12;
     gl_FragColor = vec4(col, alpha);
   }
@@ -164,9 +181,9 @@ export function Lake() {
       new THREE.ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
-          uDeep: { value: new THREE.Color('#2b2f6e') },
-          uShallow: { value: new THREE.Color('#6f8fd0') },
-          uSky: { value: new THREE.Color('#d7c4ff') },
+          uDeep: { value: new THREE.Color('#1aa3b5') },
+          uShallow: { value: new THREE.Color('#72e2d6') },
+          uSky: { value: new THREE.Color('#dff6ff') },
           uCenter: { value: new THREE.Vector2(ZONES.lake.x, ZONES.lake.z) },
           uRadius: { value: 3.6 },
         },
@@ -201,10 +218,10 @@ const fallFragment = /* glsl */ `
     float streak = 0.6 + 0.4 * sin(vUv.x * 40.0 + sin(vUv.x * 7.0) * 2.0);
     float flow = fract(vUv.y * 3.0 - uTime * 0.8);
     float foam = smoothstep(0.0, 0.25, flow) * smoothstep(1.0, 0.6, flow);
-    vec3 col = mix(vec3(0.62, 0.72, 1.0), vec3(1.0, 0.95, 1.0), foam * streak);
+    vec3 col = mix(vec3(0.55, 0.86, 0.95), vec3(1.0, 1.0, 1.0), foam * streak);
     float edge = smoothstep(0.0, 0.15, vUv.x) * smoothstep(1.0, 0.85, vUv.x);
     float fade = smoothstep(0.0, 0.25, vUv.y);
-    gl_FragColor = vec4(col * 1.25, edge * fade * (0.45 + 0.4 * streak));
+    gl_FragColor = vec4(col, edge * fade * (0.5 + 0.4 * streak));
   }
 `
 
@@ -280,15 +297,16 @@ export function Waterfall() {
   )
 }
 
-/** Glowing stepping stones along the main paths. The cliff path lights up when Chapter 1 is done. */
+/** While Chapter 3 is waiting, a trail of glowing pebbles leads up the path to Starfall Cliff. */
 export function LuminousPaths() {
   const ref = useRef()
   const chapter2 = useChapterUnlocked('miles')
+  const crossed = useStore((s) => s.connectionsDone.length >= 5)
   const reducedMotion = useStore((s) => s.reducedMotion)
   const stones = useMemo(() => {
     const list = []
     PATHS.forEach((pts, pathIndex) => {
-      if (pathIndex === 5) return // the cove path stays a secret
+      if (pathIndex !== 4) return // only the path up to the cliff
       const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)))
       const n = Math.round(curve.getLength() / 0.7)
       for (let i = 0; i <= n; i++) {
@@ -300,28 +318,32 @@ export function LuminousPaths() {
   }, [])
 
   useLayoutEffect(() => {
+    if (!ref.current) return
     const m = new THREE.Matrix4()
     stones.forEach((s, i) => {
-      m.compose(new THREE.Vector3(s.x, s.y, s.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, i * 1.7, 0)), new THREE.Vector3(s.s * 1.25, 0.03, s.s))
+      m.compose(new THREE.Vector3(s.x, s.y, s.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, i * 1.7, 0)), new THREE.Vector3(s.s, 0.03, s.s * 0.8))
       ref.current.setMatrixAt(i, m)
     })
     ref.current.instanceMatrix.needsUpdate = true
-  }, [stones])
+  }, [stones, chapter2, crossed])
 
   const color = useMemo(() => new THREE.Color(), [])
   useFrame(({ clock }) => {
+    if (!ref.current) return
     const t = clock.elapsedTime
     stones.forEach((s, i) => {
       // after Chapter 1 the path to Starfall Cliff glows and flows toward the telescope
       const lit = chapter2 && s.path === 4
       const wave = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(s.t * 9 - t * (lit ? 3 : 1.4) + s.path)
-      const k = lit ? 1.6 + wave * 0.9 : 0.55 + 0.35 * wave
-      color.setRGB(1.25 * k, 0.88 * k, 0.66 * k)
+      // warm golden pebbles flowing up toward the telescope
+      const k = lit ? 0.75 + wave * 0.6 : 0.86
+      color.setRGB(1.5 * k, 1.15 * k, 0.7 * k)
       ref.current.setColorAt(i, color)
     })
     ref.current.instanceColor.needsUpdate = true
   })
 
+  if (!chapter2 || crossed) return null
   return (
     <instancedMesh ref={ref} args={[null, null, stones.length]} receiveShadow>
       <cylinderGeometry args={[1, 1, 1, 12]} />
@@ -369,7 +391,7 @@ export function PathLanterns() {
     PATHS.forEach((pts, pathIndex) => {
       if (pathIndex === 5) return // the cove path stays a secret
       const curve = new THREE.CatmullRomCurve3(pts.map(([x, z]) => new THREE.Vector3(x, 0, z)))
-      const n = Math.max(1, Math.round(curve.getLength() / 2.4))
+      const n = Math.max(1, Math.round(curve.getLength() / 4.2))
       for (let i = 0; i <= n; i++) {
         const t = Math.min(0.98, 0.04 + (i / n) * 0.94)
         const p = curve.getPointAt(t)
@@ -377,7 +399,7 @@ export function PathLanterns() {
         const side = i % 2 ? 1 : -1
         const x = p.x - tan.z * 0.72 * side
         const z = p.z + tan.x * 0.72 * side
-        if (!walkable(x, z) || list.some((l) => Math.hypot(l.x - x, l.z - z) < 1.4)) continue
+        if (!walkable(x, z) || list.some((l) => Math.hypot(l.x - x, l.z - z) < 2.6)) continue
         list.push({ x, z, y: standHeight(x, z), phase: list.length * 1.7 })
       }
     })
@@ -404,7 +426,9 @@ export function PathLanterns() {
     items.forEach((l, i) => {
       const on = (i + 0.5) / items.length <= lit
       const flicker = reducedMotion ? 1 : 0.88 + 0.12 * Math.sin(t * 3 + l.phase) * Math.sin(t * 1.7 + l.phase * 0.5)
-      const k = on ? flicker : 0.18
+      // by day a soft warm bulb, glowing more as evening comes, and a little brighter when she walks by
+      const near = Math.max(0, 1 - Math.hypot(l.x - player.position.x, l.z - player.position.z) / 3.5)
+      const k = on ? flicker * (0.45 + 0.55 * atmosphere.sunset + near * 0.25) : 0.3
       lights.current.setColorAt(i, color.setRGB(2.8 * k, 1.9 * k, 1.05 * k))
     })
     lights.current.instanceColor.needsUpdate = true
@@ -413,7 +437,7 @@ export function PathLanterns() {
     <group>
       <instancedMesh ref={posts} args={[null, null, items.length]} castShadow>
         <cylinderGeometry args={[0.035, 0.05, 0.9, 6]} />
-        <meshStandardMaterial color="#5c4a78" roughness={0.6} metalness={0.3} />
+        <meshStandardMaterial color="#c49a72" roughness={0.7} metalness={0.05} />
       </instancedMesh>
       <instancedMesh ref={lights} args={[null, null, items.length]}>
         <sphereGeometry args={[0.1, 12, 10]} />
@@ -439,12 +463,12 @@ export function ShoreGlow() {
   }, [])
   useEffect(() => () => geometry.dispose(), [geometry])
   useFrame(({ clock }) => {
-    const k = reducedMotion ? 1 : 0.8 + 0.2 * Math.sin(clock.elapsedTime * 0.8)
-    ref.current.material.color.setRGB(1.9 * k, 1.15 * k, 1.7 * k)
+    const k = reducedMotion ? 1 : 0.92 + 0.06 * Math.sin(clock.elapsedTime * 0.8)
+    ref.current.material.color.setRGB(1.0 * k, 0.99 * k, 0.94 * k)
   })
   return (
     <mesh ref={ref} geometry={geometry}>
-      <meshBasicMaterial toneMapped={false} transparent opacity={0.85} depthWrite={false} />
+      <meshBasicMaterial toneMapped={false} transparent opacity={0.6} depthWrite={false} />
     </mesh>
   )
 }

@@ -6,9 +6,15 @@ import { cloudTexture, glowTexture, moonTexture } from '../../lib/textures'
 import { moonPosition } from '../../lib/layout'
 import { seeded } from '../../lib/island'
 import { count } from '../../lib/device'
-import { CINE, cineTime, windowAt } from '../../lib/cinematic'
-import { journeyProgress } from '../../lib/story'
+import { atmosphere, atmosphereTarget } from '../../lib/atmosphere'
 import { StarDome } from './Particles'
+
+/*
+ * THE SKY — a bright pastel day by default (blue overhead, light cyan at the horizon, a warm sun),
+ * warming into peach and pink as the story goes on, and a golden dusk for the finale.
+ * The star-gazing places (the constellation, the old heart finale, the secret room) are at night.
+ * It also eases the shared time of day (lib/atmosphere.js) that the lights read.
+ */
 
 const skyVertex = /* glsl */ `
   varying vec3 vDir;
@@ -19,53 +25,72 @@ const skyVertex = /* glsl */ `
 `
 const skyFragment = /* glsl */ `
   varying vec3 vDir;
-  uniform vec3 uTop;
-  uniform vec3 uHorizon;
-  uniform vec3 uBottom;
-  uniform vec3 uPink;
-  uniform vec3 uViolet;
+  uniform float uDay;
+  uniform float uSunset;
   uniform float uDim;
   uniform float uTime;
-  uniform float uSunset;
+  uniform vec3 uSunDir;
+  uniform vec3 uDayHorizon;
+  uniform vec3 uDayMid;
+  uniform vec3 uDayTop;
+  uniform vec3 uDayBelow;
   void main() {
     vec3 d = normalize(vDir);
     float h = d.y;
-    vec3 col = mix(uHorizon, uTop, smoothstep(0.0, 0.65, h));
-    col = mix(col, uBottom, smoothstep(0.0, -0.6, h));
-    // two soft nebula clouds
+    // day: pastel blue overhead, light cyan near the horizon, soft white-blue below
+    vec3 dayCol = mix(uDayHorizon, uDayMid, smoothstep(0.02, 0.32, h));
+    dayCol = mix(dayCol, uDayTop, smoothstep(0.32, 0.85, h));
+    dayCol = mix(dayCol, uDayBelow, smoothstep(0.0, -0.5, h));
+    // afternoon → sunset: peach and pink low down, a lavender-blue overhead
+    float low = smoothstep(0.55, -0.1, h);
+    vec3 dusk = mix(vec3(0.58, 0.66, 0.95), vec3(1.0, 0.74, 0.62), low);
+    dusk = mix(dusk, vec3(1.0, 0.66, 0.72), low * low * 0.6);
+    dayCol = mix(dayCol, dusk, uSunset * 0.85);
+    // night: deep blue with two soft nebulae (only for the star-gazing places)
+    vec3 night = mix(vec3(0.15, 0.11, 0.33), vec3(0.02, 0.02, 0.1), smoothstep(0.0, 0.65, h));
+    night = mix(night, vec3(0.04, 0.03, 0.13), smoothstep(0.0, -0.6, h));
     float n1 = pow(max(dot(d, normalize(vec3(-0.5, 0.35, -0.8))), 0.0), 6.0);
     float n2 = pow(max(dot(d, normalize(vec3(0.75, 0.1, -0.4))), 0.0), 9.0);
-    float n3 = pow(max(dot(d, normalize(vec3(0.2, -0.3, 0.9))), 0.0), 7.0);
-    col += uPink * n1 * 0.55 + uViolet * n2 * 0.6 + uViolet * n3 * 0.35;
-    // the evening: pink, purple and gold, warmest low in the north where the camera looks
-    float low = smoothstep(0.6, -0.05, h);
-    col = mix(col, mix(vec3(0.36, 0.2, 0.5), vec3(1.0, 0.56, 0.5), low), uSunset * 0.7 * smoothstep(-0.35, 0.05, h));
-    col += vec3(1.0, 0.72, 0.38) * pow(max(dot(d, normalize(vec3(0.15, 0.06, -1.0))), 0.0), 10.0) * uSunset * 0.7;
-    // a soft, slowly moving aurora ribbon low over the northern horizon (pure math: almost free)
-    float az = atan(d.x, -d.z);
-    float ribbon = d.y - 0.16 - 0.07 * sin(az * 2.0 + uTime * 0.05) - 0.03 * sin(az * 5.0 - uTime * 0.08);
-    float band = exp(-ribbon * ribbon * 140.0) * smoothstep(-0.05, 0.6, -d.z);
-    float curtain = 0.55 + 0.45 * sin(az * 14.0 + uTime * 0.12 + sin(az * 3.0) * 2.0);
-    col += mix(vec3(0.25, 0.75, 0.65), vec3(0.75, 0.45, 1.0), 0.5 + 0.5 * sin(az * 1.5 + uTime * 0.03)) * band * curtain * 0.32;
+    night += vec3(1.0, 0.56, 0.76) * n1 * 0.5 + vec3(0.55, 0.42, 1.0) * n2 * 0.55;
+    vec3 col = mix(night, dayCol, uDay);
+    // the sun: a soft warm glow (and a golden halo low in the sky at sunset)
+    float sun = max(dot(d, uSunDir), 0.0);
+    col += vec3(1.0, 0.93, 0.78) * pow(sun, 260.0) * uDay;
+    col += vec3(1.0, 0.72, 0.4) * pow(max(dot(d, normalize(vec3(0.15, 0.05, -1.0))), 0.0), 8.0) * uSunset * 0.55 * uDay;
     gl_FragColor = vec4(col * uDim, 1.0);
   }
 `
 
+/**
+ * The daytime sky colours (tweak these to make the sky lighter or deeper).
+ * horizon → mid → top going up; below = under the horizon (seen past the island's edge).
+ */
+const DAY_SKY = {
+  // one clear, even blue (barely any gradient) so the white clouds stand out
+  horizon: new THREE.Color(0.2, 0.44, 0.8),
+  mid: new THREE.Color(0.18, 0.41, 0.78),
+  top: new THREE.Color(0.15, 0.37, 0.75),
+  below: new THREE.Color(0.19, 0.42, 0.79),
+}
+
+/** Direction toward the sun (it lights the island from the upper right, behind the camera's shoulder). */
+export const SUN_DIR = new THREE.Vector3(0.55, 0.62, 0.56).normalize()
+
 function SkyGradient() {
   const ref = useRef()
-  const view = useStore((s) => s.view)
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
         uniforms: {
-          uTop: { value: new THREE.Color('#05051a') },
-          uHorizon: { value: new THREE.Color('#251b55') },
-          uBottom: { value: new THREE.Color('#0a0822') },
-          uPink: { value: new THREE.Color('#ff8ec1') },
-          uViolet: { value: new THREE.Color('#8b6cff') },
+          uDay: { value: 1 },
+          uSunset: { value: 0 },
           uDim: { value: 1 },
           uTime: { value: 0 },
-          uSunset: { value: 0 },
+          uSunDir: { value: SUN_DIR },
+          uDayHorizon: { value: DAY_SKY.horizon },
+          uDayMid: { value: DAY_SKY.mid },
+          uDayTop: { value: DAY_SKY.top },
+          uDayBelow: { value: DAY_SKY.below },
         },
         vertexShader: skyVertex,
         fragmentShader: skyFragment,
@@ -76,16 +101,17 @@ function SkyGradient() {
   )
   useFrame((state, delta) => {
     ref.current.position.copy(state.camera.position)
-    // the finale happens in a darker, quieter corner of the universe
-    // the finale is dark and quiet; the secret ending's final moment is the brightest the sky ever gets
-    const target = view === 'finale' ? 0.35 : view === 'intro' ? 0.75 : view === 'epilogue' ? 1.35 : 1
-    material.uniforms.uDim.value = THREE.MathUtils.damp(material.uniforms.uDim.value, target, 1.5, delta)
-    material.uniforms.uTime.value += delta
-    // the sky follows the story: a little warmer with every chapter, a full sunset for the finale
     const s = useStore.getState()
-    const sunset =
-      s.view === 'cinematic' ? windowAt(CINE.sunset, cineTime(state.clock.elapsedTime)) : s.view === 'ending' ? 1 : s.view === 'picnic' && s.picnicStage === 'sunset' ? 0.9 : s.mainEndingSeen ? 0.6 : journeyProgress(s) * 0.45
-    material.uniforms.uSunset.value = THREE.MathUtils.damp(material.uniforms.uSunset.value, sunset, 0.8, delta)
+    // ease the shared time of day toward where the story wants it
+    const goal = atmosphereTarget(s, state.clock.elapsedTime)
+    atmosphere.day = THREE.MathUtils.damp(atmosphere.day, goal.day, 1.2, delta)
+    atmosphere.sunset = THREE.MathUtils.damp(atmosphere.sunset, goal.sunset, 0.8, delta)
+    const u = material.uniforms
+    u.uDay.value = atmosphere.day
+    u.uSunset.value = atmosphere.sunset
+    u.uTime.value += delta
+    // the old heart finale is dark and quiet; the secret ending's last moment is the brightest
+    u.uDim.value = THREE.MathUtils.damp(u.uDim.value, s.view === 'finale' ? 0.45 : s.view === 'epilogue' ? 1.1 : 1, 1.5, delta)
   })
   return (
     <mesh ref={ref} material={material} renderOrder={-20} frustumCulled={false}>
@@ -107,77 +133,94 @@ function Moon() {
         <meshBasicMaterial map={moonTexture()} color={[1.55, 1.45, 1.35]} toneMapped={false} />
       </mesh>
       <sprite scale={[70, 70, 1]}>
-        <spriteMaterial
-          map={glowTexture()}
-          color="#ffe6c7"
-          opacity={0.32}
-          transparent
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </sprite>
-      <sprite scale={[140, 140, 1]}>
-        <spriteMaterial
-          map={glowTexture()}
-          color="#c9a8ff"
-          opacity={0.14}
-          transparent
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
+        <spriteMaterial map={glowTexture()} color="#ffe6c7" opacity={0.32} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
       </sprite>
     </group>
   )
 }
 
+/**
+ * Clouds: a soft sea of white clouds below the island, and a few slow ones drifting across the sky
+ * (they turn peach and pink at sunset).
+ */
 function Clouds() {
-  const ref = useRef()
+  const below = useRef()
+  const above = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const clouds = useMemo(() => {
+  const sea = useMemo(() => {
     const rand = seeded(21)
-    const tints = ['#c9a8f0', '#e7a9cc', '#a99ae6', '#d9c8f5']
-    // a sea of clouds around (and below) the island
-    return Array.from({ length: count(24, 13) }, (_, i) => {
-      const a = (i / 24) * Math.PI * 2 + rand() * 0.4
-      const r = 16 + rand() * 18
-      const s = 12 + rand() * 12
-      return {
-        position: [Math.cos(a) * r, -4 - rand() * 6, Math.sin(a) * r],
-        scale: [s * 1.6, s * 0.7, 1],
-        tint: tints[i % tints.length],
-        opacity: 0.09 + rand() * 0.1,
-        seed: (i % 4) + 1,
-      }
+    // a thick, bright sea of clouds under the island (big soft heaps, like a painted background)
+    return Array.from({ length: count(26, 14) }, (_, i) => {
+      const a = (i / 26) * Math.PI * 2 + rand() * 0.4
+      const r = 16 + rand() * 20
+      const s = 16 + rand() * 14
+      return { position: [Math.cos(a) * r, -5 - rand() * 5, Math.sin(a) * r], scale: [s * 1.5, s * 0.8, 1], opacity: 0.85 + rand() * 0.15, seed: (i % 4) + 1, pink: i % 6 === 0 }
     })
   }, [])
+  const sky = useMemo(() => {
+    const rand = seeded(57)
+    // big cumulus clouds around the horizon, each one a few overlapping puffs
+    const out = []
+    for (let i = 0; i < count(9, 6); i++) {
+      const a = (i / 9) * Math.PI * 2 + rand() * 0.5
+      const r = 46 + rand() * 22
+      const base = [Math.cos(a) * r, 3 + rand() * 9, Math.sin(a) * r]
+      const s = 11 + rand() * 9
+      ;[
+        [0, 0, s * 1.6, s * 0.9],
+        [-s * 0.55, -s * 0.12, s * 1.1, s * 0.7],
+        [s * 0.6, -s * 0.15, s * 1.2, s * 0.7],
+        [s * 0.1, s * 0.35, s * 0.9, s * 0.65],
+      ].forEach(([dx, dy, w, h], k) =>
+        out.push({ position: [base[0] - Math.sin(a) * dx, base[1] + dy, base[2] + Math.cos(a) * dx], scale: [w, h, 1], opacity: 0.95, seed: ((i + k) % 4) + 1, pink: i % 4 === 1 && k === 0 }),
+      )
+    }
+    return out
+  }, [])
+  const tint = useMemo(() => new THREE.Color(), [])
+  const white = useMemo(() => new THREE.Color('#ffffff'), [])
+  const cream = useMemo(() => new THREE.Color('#fff4e6'), [])
+  const blush = useMemo(() => new THREE.Color('#ffd9e4'), [])
+  const gold = useMemo(() => new THREE.Color('#ffc9a8'), [])
   useFrame((_, delta) => {
-    if (!reducedMotion) ref.current.rotation.y += delta * 0.008
+    if (!reducedMotion) {
+      below.current.rotation.y += delta * 0.006
+      above.current.rotation.y -= delta * 0.004
+    }
+    // white by day, warming at sunset, dim at night
+    const k = 0.35 + 0.65 * atmosphere.day
+    ;[below.current, above.current].forEach((g) =>
+      g.children.forEach((sp, i) => {
+        tint.copy(sp.userData.pink ? blush : i % 3 ? white : cream).lerp(gold, atmosphere.sunset * 0.55).multiplyScalar(k)
+        sp.material.color.copy(tint)
+      }),
+    )
   })
+  const draw = (list) =>
+    list.map((c, i) => (
+      <sprite key={i} position={c.position} scale={c.scale} userData={{ pink: c.pink }}>
+        <spriteMaterial map={cloudTexture(c.seed)} opacity={c.opacity} transparent depthWrite={false} />
+      </sprite>
+    ))
   return (
-    <group ref={ref}>
-      {clouds.map((c, i) => (
-        <sprite key={i} position={c.position} scale={c.scale}>
-          <spriteMaterial
-            map={cloudTexture(c.seed)}
-            color={c.tint}
-            opacity={c.opacity}
-            transparent
-            depthWrite={false}
-          />
-        </sprite>
-      ))}
-    </group>
+    <>
+      <group ref={below}>{draw(sea)}</group>
+      <group ref={above}>{draw(sky)}</group>
+    </>
   )
 }
 
 export default function Sky() {
   const view = useStore((s) => s.view)
+  const night = view === 'constellation' || view === 'finale' || view === 'finalRoom'
+  // a few stars in the pastel twilight of the intro and the character selection, too
+  const stars = night || view === 'intro' || view === 'avatar'
   return (
     <>
       <SkyGradient />
-      <StarDome count={count(2600, 1300)} />
+      {stars && <StarDome count={count(2600, 1300)} />}
       <group visible={view !== 'finale' && view !== 'finalRoom'}>
-        <Moon />
+        {night && <Moon />}
         <Clouds />
       </group>
     </>

@@ -7,6 +7,7 @@ import { envelopeSpot, glowFlowerSpots, littleSpots, loveTree, mochiHome, noteSp
 import { blocksView } from '../../lib/iso'
 import { tier } from '../../lib/device'
 import { wind, windMaterial } from '../../lib/wind'
+import { withPaint } from '../../lib/paint'
 import { useStore } from '../../store'
 import { Fireflies } from './Particles'
 
@@ -83,21 +84,39 @@ function useInstances(ref, items, apply) {
 
 /* ───────── grass ───────── */
 
+/** A soft tuft: five wide, slightly curved blades fanned out (reads as lush grass, not as lines). */
 function bladeGeometry() {
-  const w = 0.035
-  const pos = [-w, 0, 0, w, 0, 0, -w * 0.7, 0.33, 0, w * 0.7, 0.33, 0, -w * 0.35, 0.66, 0, w * 0.35, 0.66, 0, 0, 1, 0]
+  const pos = []
   const col = []
-  // light, soft blades: from above they read as texture, not as dark spikes
-  const base = new THREE.Color('#7fae92')
-  const tip = new THREE.Color('#e2f4d2')
-  for (let i = 0; i < pos.length; i += 3) {
-    const c = base.clone().lerp(tip, pos[i + 1])
-    col.push(c.r, c.g, c.b)
+  const idx = []
+  const base = new THREE.Color('#5f9e45')
+  const tip = new THREE.Color('#c4e27c')
+  for (let b = 0; b < 5; b++) {
+    const a = (b / 5) * Math.PI * 2 + 0.3
+    const lean = 0.35 + (b % 2) * 0.15
+    const w = 0.075
+    const start = pos.length / 3
+    // three rows: base, middle, tip — each blade leans outward
+    ;[0, 0.55, 1].forEach((t, row) => {
+      const out = lean * t * t
+      const half = w * (1 - t * 0.85)
+      const cx = Math.cos(a) * out
+      const cz = Math.sin(a) * out
+      const px = -Math.sin(a) * half
+      const pz = Math.cos(a) * half
+      pos.push(cx - px, t, cz - pz, cx + px, t, cz + pz)
+      const c = base.clone().lerp(tip, t)
+      col.push(c.r, c.g, c.b, c.r, c.g, c.b)
+      if (row < 2) {
+        const i = start + row * 2
+        idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2)
+      }
+    })
   }
   const g = new THREE.BufferGeometry()
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
-  g.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4, 4, 5, 6])
+  g.setIndex(idx)
   g.computeVertexNormals()
   return g
 }
@@ -105,11 +124,11 @@ function bladeGeometry() {
 function Grass() {
   const ref = useRef()
   const geometry = useMemo(bladeGeometry, [])
-  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.9, vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 }), [])
+  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.6, vertexColors: true, side: THREE.DoubleSide, roughness: 0.95 }), [])
   const items = useMemo(() => {
     const rand = seeded(1201)
-    const stepSize = HIGH ? 0.26 : 0.36
-    const max = HIGH ? 5000 : 2000
+    const stepSize = HIGH ? 0.36 : 0.5
+    const max = HIGH ? 2600 : 1200
     const tints = ['#ffffff', '#f0fff0', '#e9f7ff', '#fff0f6', '#f4ffe6']
     const list = []
     const R = MAIN_RADIUS + 0.5
@@ -122,7 +141,7 @@ function Grass() {
         const density =
           zoneDistance(px, pz, 'meadow') < 4.4 ? 0.7 : zoneDistance(px, pz, 'forest') < 4.2 ? 0.25 : zoneDistance(px, pz, 'cove') < 2.6 ? 0.2 : zoneDistance(px, pz, 'tree') < 3.2 ? 0.1 : 0.4
         if (rand() > density) continue
-        list.push({ x: px, z: pz, y: worldHeight(px, pz), h: 0.16 + rand() * 0.2, r: rand() * Math.PI, color: tints[Math.floor(rand() * tints.length)] })
+        list.push({ x: px, z: pz, y: worldHeight(px, pz), h: 0.2 + rand() * 0.16, r: rand() * Math.PI, color: tints[Math.floor(rand() * tints.length)] })
         if (list.length >= max) break
       }
       if (list.length >= max) break
@@ -137,10 +156,10 @@ function Grass() {
 /* ───────── flowers ───────── */
 
 const FLOWER_SETS = {
-  meadow: ['#ffd1e3', '#ffffff', '#e2d4ff', '#ffb3cf', '#fff1c9', '#f6a8c8', '#b9d8ff'],
-  garden: ['#ff7aa8', '#ff5c8a', '#ffc4dc', '#ffffff', '#ffe2ef'],
-  forest: ['#b9a8ff', '#9fb4ff', '#e2d4ff'],
-  cliff: ['#fff1c9', '#ffe2a8', '#c9a8ff'],
+  meadow: ['#ff9cc4', '#fff0a6', '#ffffff', '#d9c2ff', '#ff9f8a', '#ffcf9e', '#ffd1e3'],
+  garden: ['#ff8fb8', '#ffc4dc', '#e6cfff', '#ffffff', '#fff1a8', '#ffb59e'],
+  forest: ['#c9b5ff', '#fff0a6', '#ffffff', '#ffc4dc'],
+  cliff: ['#ffe2a8', '#ffd1e3', '#c9e8ff', '#ffffff'],
 }
 
 function Flowers() {
@@ -150,20 +169,28 @@ function Flowers() {
   const centreMat = useMemo(() => windMaterial({ bendFrom: -0.5, amount: 0.05, color: '#ffd36e', emissive: '#ffc04d', emissiveIntensity: 0.9 }), [])
   const items = useMemo(() => {
     const rand = seeded(733)
-    const max = HIGH ? 560 : 260
     const list = []
-    let guard = 0
-    while (list.length < max && guard++ < max * 30) {
-      const x = (rand() - 0.5) * MAIN_RADIUS * 2.1
-      const z = (rand() - 0.5) * MAIN_RADIUS * 2.1
-      if (!onLand(x, z, 0.9) || slope(x, z) > 0.8 || pathDistance(x, z) < 0.4 || !clearOf(x, z, -0.6)) continue
+    // a few dozen flower patches, each one or two colours, denser in the garden and the meadow
+    const patches = []
+    for (let i = 0; i < 200 && patches.length < (HIGH ? 34 : 22); i++) {
+      const x = (rand() - 0.5) * MAIN_RADIUS * 2
+      const z = (rand() - 0.5) * MAIN_RADIUS * 2
+      if (!onLand(x, z, 0.86) || slope(x, z) > 0.6 || pathDistance(x, z) < 0.8 || !clearOf(x, z, -0.3)) continue
       const zone = zoneDistance(x, z, 'garden') < 3.8 ? 'garden' : zoneDistance(x, z, 'meadow') < 4.6 ? 'meadow' : zoneDistance(x, z, 'forest') < 4.2 ? 'forest' : zoneDistance(x, z, 'cliff') < 2.6 ? 'cliff' : null
-      // flowers gather in beds (garden, meadow) instead of covering everything
-      const chance = zone === 'garden' ? 0.8 : zone === 'meadow' ? 0.4 : zone === 'forest' ? 0.08 : zone === 'cliff' ? 0.25 : 0.02
-      if (rand() > chance) continue
+      if (!zone && rand() > 0.35) continue
       const set = FLOWER_SETS[zone || 'meadow']
-      const s = (zone === 'garden' ? 0.05 : 0.032) + rand() * 0.03
-      list.push({ x, z, y: worldHeight(x, z), s, color: set[Math.floor(rand() * set.length)], rot: rand() * Math.PI, glow: zone === 'cliff' })
+      patches.push({ x, z, zone, r: 0.45 + rand() * 0.6, a: set[Math.floor(rand() * set.length)], b: set[Math.floor(rand() * set.length)], n: zone === 'garden' ? 18 : 11 })
+    }
+    for (const p of patches) {
+      for (let k = 0; k < p.n; k++) {
+        const ang = rand() * Math.PI * 2
+        const rr = Math.sqrt(rand()) * p.r
+        const x = p.x + Math.cos(ang) * rr
+        const z = p.z + Math.sin(ang) * rr
+        if (!onLand(x, z, 0.9) || pathDistance(x, z) < 0.4) continue
+        const s = (p.zone === 'garden' ? 0.05 : 0.04) + rand() * 0.025
+        list.push({ x, z, y: worldHeight(x, z), s, color: rand() > 0.35 ? p.a : p.b, rot: rand() * Math.PI })
+      }
     }
     return list
   }, [])
@@ -191,27 +218,69 @@ function Flowers() {
 
 /* ───────── trees ───────── */
 
+/** Canopy blobs coloured from a shaded underside to a sunlit top (and lighter toward the sun). */
+const SUN = new THREE.Vector3(0.55, 0.62, 0.56).normalize()
+function canopy(blobs, dark, light) {
+  const lo = Math.min(...blobs.map(([, y, , s]) => y - s))
+  const hi = Math.max(...blobs.map(([, y, , s]) => y + s))
+  const cx = blobs.reduce((a, b) => a + b[0], 0) / blobs.length
+  const cy = (lo + hi) / 2
+  const cz = blobs.reduce((a, b) => a + b[2], 0) / blobs.length
+  const d = new THREE.Color(dark)
+  const l = new THREE.Color(light)
+  return blobs.map(([x, y, z, s, sy = 1]) => {
+    const g = new THREE.IcosahedronGeometry(1, 2).toNonIndexed()
+    g.applyMatrix4(M(x, y, z, s, s * sy, s))
+    g.deleteAttribute('uv')
+    const p = g.attributes.position
+    const arr = new Float32Array(p.count * 3)
+    const c = new THREE.Color()
+    const v = new THREE.Vector3()
+    for (let i = 0; i < p.count; i++) {
+      v.set(p.getX(i) - cx, p.getY(i) - cy, p.getZ(i) - cz).normalize()
+      const t = THREE.MathUtils.clamp(((p.getY(i) - lo) / (hi - lo)) * 0.7 + v.dot(SUN) * 0.3 + 0.1, 0, 1)
+      c.copy(d).lerp(l, t)
+      arr.set([c.r, c.g, c.b], i * 3)
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(arr, 3))
+    return g
+  })
+}
+
 function treeGeometry(kind) {
   const parts = []
-  const trunkColor = kind === 'blossom' ? '#8f6e9e' : '#7a5a6e'
+  const trunkColor = kind === 'blossom' ? '#9a6e58' : '#8a6248'
   const trunkH = kind === 'tall' ? 2.6 : 1.5
   parts.push(tint(new THREE.CylinderGeometry(0.11, 0.2, trunkH, 8, 3), trunkColor, M(0, trunkH / 2, 0)))
   if (kind === 'tall') {
-    const greens = ['#4d8a75', '#5c9c84', '#6aa78e', '#4a7f72']
-    ;[
-      [0, 2.5, 0, 1.15, 0.95],
-      [0.25, 3.15, 0.1, 0.95, 0.85],
-      [-0.2, 3.7, -0.1, 0.75, 0.75],
-      [0.1, 4.15, 0.05, 0.5, 0.6],
-    ].forEach(([x, y, z, s, sy], i) => parts.push(tint(new THREE.IcosahedronGeometry(1, 1), greens[i % greens.length], M(x, y, z, s, s * sy, s))))
+    parts.push(
+      ...canopy(
+        [
+          [0, 2.45, 0, 1.15, 0.9],
+          [0.55, 2.75, 0.2, 0.8, 0.85],
+          [-0.5, 2.8, -0.15, 0.85, 0.85],
+          [0.1, 3.3, -0.35, 0.8, 0.85],
+          [-0.1, 3.55, 0.25, 0.75, 0.8],
+          [0.05, 4.05, 0, 0.55, 0.8],
+        ],
+        '#2f6f40',
+        '#a6d466',
+      ),
+    )
   } else if (kind === 'round') {
-    const greens = ['#7fb98f', '#8fc79a', '#6fae86']
-    ;[
-      [0, 1.85, 0, 0.85],
-      [0.45, 1.6, 0.15, 0.6],
-      [-0.4, 1.65, -0.1, 0.62],
-      [0.05, 2.25, 0.1, 0.55],
-    ].forEach(([x, y, z, s], i) => parts.push(tint(new THREE.IcosahedronGeometry(1, 1), greens[i % greens.length], M(x, y, z, s))))
+    parts.push(
+      ...canopy(
+        [
+          [0, 1.85, 0, 0.85],
+          [0.5, 1.65, 0.15, 0.62],
+          [-0.45, 1.7, -0.1, 0.64],
+          [0.1, 1.75, -0.48, 0.6],
+          [0.05, 2.3, 0.1, 0.58],
+        ],
+        '#3a7d45',
+        '#b8de74',
+      ),
+    )
   } else {
     const pinks = ['#f7a8c8', '#fbc4da', '#f490bb', '#ffd6e7']
     ;[
@@ -266,7 +335,7 @@ function placeTrees() {
 function TreeKind({ kind, items }) {
   const ref = useRef()
   const geometry = useMemo(() => treeGeometry(kind), [kind])
-  const material = useMemo(() => windMaterial({ bendFrom: kind === 'tall' ? 2.0 : 1.2, amount: 0.018, vertexColors: true, roughness: 0.8, flatShading: false }), [kind])
+  const material = useMemo(() => withPaint(windMaterial({ bendFrom: kind === 'tall' ? 2.0 : 1.2, amount: 0.018, vertexColors: true, roughness: 0.8, flatShading: false }), 'foliage'), [kind])
   useInstances(ref, items, (m, t) => m.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, t.r, 0)), new THREE.Vector3(t.s, t.s, t.s)))
   useEffect(() => () => geometry.dispose(), [geometry])
   if (!items.length) return null
@@ -278,7 +347,7 @@ function TreeKind({ kind, items }) {
 function placeRocks() {
   const rand = seeded(919)
   const list = []
-  const add = (x, z, s, color = '#9d8fb8', sink = 0.35, collide = true) => {
+  const add = (x, z, s, color = '#d6cfc0', sink = 0.35, collide = true) => {
     list.push({ x, z, y: worldHeight(x, z) - s * sink, s, r: rand() * 6, color })
     if (collide && s > 0.35) addCollider(x, z, s * 0.85)
   }
@@ -299,14 +368,14 @@ function placeRocks() {
     const r = forest ? rand() * (c.r + 0.8) : c.r + 0.9 + rand() * 0.8
     const x = c.x + Math.cos(a) * r
     const z = c.z + Math.sin(a) * r
-    if (onLand(x, z) && pathDistance(x, z) > 0.8 && clearOf(x, z)) add(x, z, 0.18 + rand() * 0.3, forest ? '#7f9a86' : '#b3a6cf', 0.4, false)
+    if (onLand(x, z) && pathDistance(x, z) > 0.8 && clearOf(x, z)) add(x, z, 0.18 + rand() * 0.3, forest ? '#8fcf7e' : '#ddd6ca', 0.4, false)
   }
   return list
 }
 
 function Rocks({ items }) {
   const ref = useRef()
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true }), [])
+  const material = useMemo(() => withPaint(new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true }), 'rock'), [])
   useInstances(ref, items, (m, r) => m.compose(new THREE.Vector3(r.x, r.y, r.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(r.r * 0.3, r.r, r.r * 0.2)), new THREE.Vector3(r.s * (r.sx || 1), r.s * (r.sy || 0.8), r.s)))
   return (
     <instancedMesh ref={ref} args={[null, material, items.length]} castShadow receiveShadow frustumCulled={false}>
@@ -317,7 +386,7 @@ function Rocks({ items }) {
 
 function Ferns() {
   const ref = useRef()
-  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.25, color: '#5f9c7d', roughness: 0.8, side: THREE.DoubleSide }), [])
+  const material = useMemo(() => withPaint(windMaterial({ bendFrom: 0, amount: 0.25, color: '#7cc684', roughness: 0.8, side: THREE.DoubleSide }), 'foliage'), [])
   const items = useMemo(() => {
     const rand = seeded(57)
     const list = []
@@ -340,11 +409,11 @@ function Ferns() {
 
 function Bushes() {
   const ref = useRef()
-  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.04, roughness: 0.8 }), [])
+  const material = useMemo(() => withPaint(windMaterial({ bendFrom: 0, amount: 0.04, roughness: 0.8 }), 'foliage'), [])
   const items = useMemo(() => {
     const rand = seeded(88)
     const list = []
-    const greens = ['#6fae86', '#7fb98f', '#d98fb4', '#8fc79a']
+    const greens = ['#80c684', '#9cd48c', '#f4b6cc', '#b2dc96']
     const centres = [ZONES.garden, ZONES.meadow, ZONES.cove]
     for (let i = 0; i < (HIGH ? 26 : 14); i++) {
       const c = centres[i % centres.length]

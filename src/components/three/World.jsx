@@ -22,6 +22,8 @@ import LittleThings from './LittleThings'
 import Discoveries from './Discoveries'
 import Companion from './Companion'
 import Picnic from './Picnic'
+import Decor from './Decor'
+import Wildlife from './Wildlife'
 import { BonusHeart, Envelope, GlowFlowers } from './StoryObjects'
 
 
@@ -72,6 +74,8 @@ export default function World() {
       {/* the story */}
       <LittleThings />
       <Companion />
+      <Decor />
+      <Wildlife />
       <GlowFlowers />
       <Picnic />
       <Envelope />
@@ -117,10 +121,10 @@ export default function World() {
       <HiddenHearts group="island" />
       <HiddenHearts group="sky" />
 
-      <Fireflies count={count(30, 16)} area={[20, 4, 20]} center={[0, 0.5, 0]} seed={8} />
       {/* the finale's fireflies around the Love Tree (a few, not a swarm) */}
       {(view === 'cinematic' || ended) && <Fireflies count={count(34, 16)} area={[7, 3.5, 7]} center={[0, 1.4, 0]} seed={77} colors={['#ffe2a8', '#ffd6ea']} />}
-      <DriftParticles position={[0, 4, 0]} count={count(36, 18)} area={[26, 10, 26]} size={0.16} speed={0.16} seed={12} intensity={1.1} />
+      {/* a few petals drifting over the island */}
+      <DriftParticles position={[0, 3, 0]} count={count(30, 14)} area={[24, 8, 24]} size={0.14} speed={0.16} direction={-1} texture="petal" seed={12} intensity={0.9} />
     </group>
   )
 }

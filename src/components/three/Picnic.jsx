@@ -394,9 +394,19 @@ function FixGame() {
 
 /* ───────── the picnic hill ───────── */
 
+/** Two round cushions on the blanket — one for her, one for the little friend. */
+function Cushions() {
+  return [PICNIC.seatHer, PICNIC.seatPet].map((p, i) => (
+    <mesh key={i} position={[p.x, standHeight(p.x, p.z) + 0.05, p.z]} scale={[0.22, 0.06, 0.22]}>
+      <sphereGeometry args={[1, 14, 10]} />
+      <meshStandardMaterial color={i ? '#ffd98a' : '#ffb3cf'} roughness={0.8} />
+    </mesh>
+  ))
+}
+
 /** The picnic laid out properly. */
 function SetPicnic() {
-  return ITEMS.map((id) => {
+  const items = ITEMS.map((id) => {
     const Mesh = MESH[id]
     const p = PICNIC.slots[id]
     return (
@@ -405,6 +415,12 @@ function SetPicnic() {
       </group>
     )
   })
+  return (
+    <>
+      {items}
+      <Cushions />
+    </>
+  )
 }
 
 /** After the thief: the wind has blown everything about (until "Fix the Picnic"). */

@@ -95,6 +95,8 @@ again or stay. Optional extras: a **tiny secret heart** behind the big blossom t
 (`secretHeart`), and the older secret ending (the little star by the Love Tree after the finale).
 “Start the story over…” in the Story book is the only way to reset (it asks first).
 
+**Look and time of day.** The island is a bright pastel day (blue sky, warm sun, fresh greens, turquoise water), with butterflies, bees, birds, falling leaves, mushrooms, lily pads, benches by the lake and on the cliff, a flower arch into the Memory Garden and a tiny mailbox. It warms toward a peach afternoon as the story goes on, turns golden at the picnic sunset and is a golden dusk for the finale; only the star-gazing places (constellation, the old heart finale, the secret room) are at night. Colours and timing: `src/lib/atmosphere.js`, `src/components/three/Sky.jsx`, `Atmosphere.jsx`.
+
 The island reflects her progress: more path lanterns burn, the sky grows warmer, the Love Tree blooms,
 and the three glowing flowers are replanted at its foot.
 

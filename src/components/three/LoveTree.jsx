@@ -11,6 +11,7 @@ import { glowTexture } from '../../lib/textures'
 import { CINE, cineTime, windowAt } from '../../lib/cinematic'
 import { tier } from '../../lib/device'
 import { FACE_CAMERA } from '../../lib/iso'
+import { withPaint } from '../../lib/paint'
 import { useStore } from '../../store'
 import { Glow } from './Bits'
 import { DriftParticles } from './Particles'
@@ -88,7 +89,16 @@ function buildTree() {
     }
   })
   blossoms.sort((x, y) => x.order - y.order)
-  return { wood, tips, blossoms }
+  // soft green leaf clouds around every tip (they fill out as the journey goes on)
+  const leaves = []
+  tips.forEach((tip) => {
+    for (let j = 0; j < 4; j++) {
+      const a = rand() * Math.PI * 2
+      const r = 0.15 + rand() * 0.35
+      leaves.push({ p: tip.clone().add(new THREE.Vector3(Math.cos(a) * r, -0.05 + rand() * 0.35, Math.sin(a) * r)), s: 0.32 + rand() * 0.24, shade: rand() })
+    }
+  })
+  return { wood, tips, blossoms, leaves }
 }
 
 /**
@@ -146,11 +156,14 @@ function TreeConstellation({ tips }) {
   return <points geometry={geometry} material={material} frustumCulled={false} />
 }
 
+const GREENS = ['#7cc683', '#90d18d', '#6db97a', '#a3d995'].map((c) => new THREE.Color(c))
 const PINKS = ['#ffb3d6', '#ffd6ea', '#f490bb', '#fff0f6', '#e9b3f0'].map((c) => new THREE.Color(c))
 
 export default function LoveTree() {
-  const { wood, tips, blossoms } = useMemo(buildTree, [])
+  const { wood, tips, blossoms, leaves } = useMemo(buildTree, [])
   const bloomRef = useRef()
+  const leafRef = useRef()
+  const leafLevel = useRef(-1)
   const lanterns = useRef([])
   const halo = useRef()
   const light = useRef()
@@ -161,8 +174,9 @@ export default function LoveTree() {
   const reducedMotion = useStore((s) => s.reducedMotion)
   const baseLevel = ending ? 1 : progress
   const maxBloom = blossoms.length
-  const woodMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#a585b8', roughness: 0.75, emissive: '#5b3a7a', emissiveIntensity: 0.18 }), [])
+  const woodMat = useMemo(() => withPaint(new THREE.MeshStandardMaterial({ color: '#9b6b4f', roughness: 0.8, emissive: '#5a3520', emissiveIntensity: 0.08 }), 'rock'), [])
   const bloomMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.55, emissive: '#ff7fb2', emissiveIntensity: 0.2 }), [])
+  const leafMat = useMemo(() => withPaint(new THREE.MeshStandardMaterial({ roughness: 0.8, flatShading: true }), 'foliage'), [])
   const lanternSpots = useMemo(() => tips.filter((_, i) => i % 2 === 0).map((p) => p.clone().add(new THREE.Vector3(0, -0.35, 0))), [tips])
 
   useEffect(() => {
@@ -173,8 +187,9 @@ export default function LoveTree() {
     () => () => {
       woodMat.dispose()
       bloomMat.dispose()
+      leafMat.dispose()
     },
-    [woodMat, bloomMat],
+    [woodMat, bloomMat, leafMat],
   )
 
   // place every blossom once; growth is done by scaling them in
@@ -182,7 +197,9 @@ export default function LoveTree() {
     const color = new THREE.Color()
     blossoms.forEach((b, i) => bloomRef.current.setColorAt(i, color.copy(PINKS[i % PINKS.length])))
     bloomRef.current.instanceColor.needsUpdate = true
-  }, [blossoms])
+    leaves.forEach((l, i) => leafRef.current.setColorAt(i, color.copy(GREENS[Math.floor(l.shade * GREENS.length)])))
+    leafRef.current.instanceColor.needsUpdate = true
+  }, [blossoms, leaves])
 
   const m = useMemo(() => new THREE.Matrix4(), [])
   const scales = useMemo(() => new Float32Array(blossoms.length), [blossoms])
@@ -206,6 +223,16 @@ export default function LoveTree() {
       }
     }
     if (dirty) bloomRef.current.instanceMatrix.needsUpdate = true
+    // the leaves fill out with the journey (only re-laid when that changes)
+    if (Math.abs(level - leafLevel.current) > 0.01) {
+      leafLevel.current = level
+      const k = 0.62 + 0.38 * level
+      leaves.forEach((l, i) => {
+        m.compose(l.p, new THREE.Quaternion(), new THREE.Vector3(l.s, l.s * 0.8, l.s).multiplyScalar(k))
+        leafRef.current.setMatrixAt(i, m)
+      })
+      leafRef.current.instanceMatrix.needsUpdate = true
+    }
     shown.current = target
     bloomRef.current.material.emissiveIntensity = 0.15 + level * 0.9 + (ending ? 0.3 * (0.5 + 0.5 * Math.sin(t * 1.2)) : 0)
     lanterns.current.forEach((l, i) => {
@@ -214,13 +241,16 @@ export default function LoveTree() {
       l.material.color.setScalar(THREE.MathUtils.damp(l.material.color.r, on ? 2.6 : 0.35, 2, delta))
       l.position.y = lanternSpots[i].y + (reducedMotion ? 0 : Math.sin(t * 1.4 + i) * 0.04)
     })
-    halo.current.material.opacity = 0.12 + level * 0.45
-    light.current.intensity = 2 + level * 14
+    halo.current.material.opacity = 0.05 + level * 0.25
+    light.current.intensity = 1.5 + level * 7
   })
 
   return (
     <group position={loveTree} scale={TREE_SCALE}>
       <mesh geometry={wood} material={woodMat} castShadow receiveShadow />
+      <instancedMesh ref={leafRef} args={[null, leafMat, leaves.length]} castShadow receiveShadow frustumCulled={false}>
+        <icosahedronGeometry args={[1, 1]} />
+      </instancedMesh>
       <instancedMesh ref={bloomRef} args={[null, bloomMat, maxBloom]} castShadow frustumCulled={false}>
         <icosahedronGeometry args={[1, 1]} />
       </instancedMesh>

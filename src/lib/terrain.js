@@ -181,15 +181,15 @@ export const zoneDistance = (x, z, name) => dist(x, z, ZONES[name])
 /* ───────── ground colour ───────── */
 
 const C = {
-  grass: new THREE.Color('#86b59f'),
-  grassLight: new THREE.Color('#a9cf9a'),
-  lilac: new THREE.Color('#a593d8'),
-  pink: new THREE.Color('#d98fb4'),
-  moss: new THREE.Color('#5f8f78'),
-  soil: new THREE.Color('#c9a98f'),
-  sand: new THREE.Color('#e8d3b4'),
-  stone: new THREE.Color('#9d8fb8'),
-  lakebed: new THREE.Color('#6f7fb0'),
+  grass: new THREE.Color('#78b955'),
+  grassLight: new THREE.Color('#a6d264'),
+  lilac: new THREE.Color('#8fc06c'), // a soft sage, for variety
+  pink: new THREE.Color('#f6b3cc'),
+  moss: new THREE.Color('#4c9250'),
+  soil: new THREE.Color('#d9bf8f'),
+  sand: new THREE.Color('#ecdcb2'),
+  stone: new THREE.Color('#c9bfae'),
+  lakebed: new THREE.Color('#62cfc8'),
 }
 
 /** Colour of the ground at a point (written into vertex colours). */
@@ -269,9 +269,10 @@ export function buildUndersideGeometry({ segments = 64 } = {}) {
     [0.1, -10.2],
     [0.0001, -11.2],
   ]
-  const top = new THREE.Color('#9d88cf')
-  const mid = new THREE.Color('#5f4b98')
-  const bottom = new THREE.Color('#2a2056')
+  // layered earth under the miniature island: a grassy lip, warm soil, then darker stone
+  const top = new THREE.Color('#c99b6c')
+  const mid = new THREE.Color('#a77856')
+  const bottom = new THREE.Color('#7a5c4b')
   const positions = []
   const colors = []
   const indices = []

@@ -63,7 +63,7 @@ export function BlossomTree(props) {
   return (
     <group {...props}>
       <mesh geometry={trunk} castShadow receiveShadow>
-        <meshStandardMaterial color="#8f6e9e" roughness={0.85} />
+        <meshStandardMaterial color="#9a6e58" roughness={0.85} />
       </mesh>
       {[
         [0.35, 2.1, 0.1, 0.0, 0.0, -0.9, 1.1],
@@ -72,7 +72,7 @@ export function BlossomTree(props) {
       ].map(([x, y, z, rx, ry, rz, len], i) => (
         <mesh key={i} position={[x, y, z]} rotation={[rx, ry, rz]} castShadow>
           <cylinderGeometry args={[0.05, 0.1, len, 8]} />
-          <meshStandardMaterial color="#8f6e9e" roughness={0.85} />
+          <meshStandardMaterial color="#9a6e58" roughness={0.85} />
         </mesh>
       ))}
       <group ref={canopy}>

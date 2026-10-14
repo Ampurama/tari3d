@@ -74,8 +74,8 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
       sparkle.current.visible = near
     }
     if (labelRef.current) {
-      // in the diorama view every place keeps its name
-      const visible = showHints
+      // labels appear as she comes closer, so the island isn't covered in text
+      const visible = showHints && near
       labelRef.current.style.opacity = visible ? 1 : 0
       labelRef.current.style.pointerEvents = visible ? 'auto' : 'none'
     }

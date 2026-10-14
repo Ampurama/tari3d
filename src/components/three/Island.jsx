@@ -6,7 +6,7 @@ import { count } from '../../lib/device'
 import { useStore } from '../../store'
 import { Glow } from './Bits'
 
-/** The floating landmass itself: meadow on top, faceted lavender rock beneath. */
+/** The floating landmass itself: meadow on top, layered warm earth beneath. */
 export function IslandBody({ radius = ISLAND_RADIUS, seed = 1, crystals = true }) {
   const grass = useMemo(() => grassGeometry({ radius, seed, segments: radius > 3 ? 96 : 48 }), [radius, seed])
   const rock = useMemo(() => rockGeometry({ radius, seed, segments: radius > 3 ? 40 : 24 }), [radius, seed])
@@ -36,7 +36,7 @@ export function IslandBody({ radius = ISLAND_RADIUS, seed = 1, crystals = true }
         <group key={i} position={c.position}>
           <mesh scale={[c.scale, c.scale * 2.4, c.scale]}>
             <octahedronGeometry args={[1, 0]} />
-            <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={1.6} roughness={0.2} />
+            <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={0.5} roughness={0.2} />
           </mesh>
           <Glow color={c.color} size={c.scale * 9} opacity={0.5} />
         </group>
@@ -120,11 +120,11 @@ export function FloatingRocks({ amount = 7 }) {
         <group key={i} position={[Math.cos(r.a) * r.r, r.y, Math.sin(r.a) * r.r]}>
           <mesh scale={r.s} rotation={[i, i * 2, 0]} castShadow>
             <dodecahedronGeometry args={[1, 0]} />
-            <meshStandardMaterial color="#a690d6" roughness={0.7} flatShading />
+            <meshStandardMaterial color="#d6cdbd" roughness={0.75} flatShading />
           </mesh>
           <mesh scale={[r.s * 1.05, r.s * 0.35, r.s * 1.05]} position={[0, r.s * 0.55, 0]}>
             <sphereGeometry args={[1, 12, 8]} />
-            <meshStandardMaterial color="#b9dcc6" roughness={0.9} />
+            <meshStandardMaterial color="#8fd47a" roughness={0.9} />
           </mesh>
         </group>
       ))}

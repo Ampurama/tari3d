@@ -56,9 +56,9 @@ function polarSurface({ rows, segments, radius, seed, yAt, jitter = () => 0, col
   return geometry
 }
 
-const grassA = new THREE.Color('#86b59f')
-const grassB = new THREE.Color('#d98fb4')
-const grassC = new THREE.Color('#a593d8')
+const grassA = new THREE.Color('#7cc66a')
+const grassB = new THREE.Color('#f6b3cc')
+const grassC = new THREE.Color('#b8e27c')
 
 export function grassGeometry({ radius = ISLAND_RADIUS, seed = 1, segments = 96 } = {}) {
   const rows = []
@@ -77,9 +77,9 @@ export function grassGeometry({ radius = ISLAND_RADIUS, seed = 1, segments = 96 
   })
 }
 
-const rockTop = new THREE.Color('#9d88cf')
-const rockMid = new THREE.Color('#5f4b98')
-const rockBottom = new THREE.Color('#2a2056')
+const rockTop = new THREE.Color('#c99b6c')
+const rockMid = new THREE.Color('#a77856')
+const rockBottom = new THREE.Color('#7a5c4b')
 
 export function rockGeometry({ radius = ISLAND_RADIUS, seed = 1, segments = 48 } = {}) {
   const k = radius / ISLAND_RADIUS
