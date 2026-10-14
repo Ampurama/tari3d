@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { EAST_BRIDGE, HOP_PLATFORMS, SKY, skyIslandHeight } from './terrain'
+import { HOP_PLATFORMS, SKY, skyIslandHeight } from './terrain'
 
 /*
  * SKY ISLAND — where everything is. Positions are written relative to the island's centre
@@ -22,8 +22,20 @@ export const AREAS = [
   { id: 'moment', name: 'Our Little Moment', at: [-5.6, 5.4], r: 2.0 },
 ]
 
-/** The dock where the east bridge arrives. */
-export const DOCK = { at: [EAST_BRIDGE.bx - SKY.x + 0.9, EAST_BRIDGE.bz - SKY.z] }
+/** Where the hot air balloon lands (lib/balloon.js). */
+export const BALLOON_PAD = [-3.2, -1.4]
+
+/** Stepping-stone paths from the balloon pad to every place (polylines, island-local). */
+export const SKY_PATHS = [
+  [BALLOON_PAD, [-5.2, -0.6], [-6.6, 0]],
+  [BALLOON_PAD, [-2.4, -2.9], [-1.8, -4.2]],
+  [BALLOON_PAD, [0.8, -1.2], [4.6, -1.5]],
+  [BALLOON_PAD, [-0.6, 1.4], [1.4, 4.6], [2.4, 6.8]],
+  [BALLOON_PAD, [-2.2, 1.0], [-2.6, 3.4], [-3.2, 5.9]],
+]
+
+/** A little lookout on the west edge, facing back toward the main island. */
+export const DOCK = { at: [-7.1, 0] }
 
 /** The gazebo in the Cloud Garden, and the bench at the sunset spot (looking west to the main island). */
 export const GAZEBO = { at: [-1.8, -6.0], r: 1.7 }

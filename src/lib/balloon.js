@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import { onRoom, supabase, useCouple } from './couple'
 import { player } from './player'
 import { blockers, obstacles, standHeight, walkable } from './terrain'
-import { skyPoint } from './skyLayout'
+import { BALLOON_PAD, skyPoint } from './skyLayout'
 import { useStore } from '../store'
 
 /*
@@ -16,7 +16,8 @@ import { useStore } from '../store'
  * you see the same balloon at the same place. The two characters ride in fixed spots in the basket.
  */
 
-export const FLIGHT_MS = 40000
+/** A long, slow flight (keep in step with balloon_tidy() in supabase/migrations/007_balloon_longer.sql). */
+export const FLIGHT_MS = 75000
 
 /* ───────── the docks and the route ───────── */
 
@@ -25,25 +26,28 @@ const mainPad = (() => {
   const z = -1.0
   return new THREE.Vector3(x, standHeight(x, z), z)
 })()
-const skyPad = skyPoint(-3.2, -1.4)
+const skyPad = skyPoint(...BALLOON_PAD)
 export const PADS = { main: mainPad, sky: skyPad }
 export const PLACE_NAMES = { main: 'Pulau Utama', sky: 'Sky Island' }
 
-/** Up from the meadow by the Love Tree, east over the clouds (well above the rope bridge), down onto Sky Island. */
-const ROUTE = new THREE.CatmullRomCurve3(
-  [
-    mainPad.clone(),
-    mainPad.clone().add(new THREE.Vector3(0, 2.6, 0)),
-    mainPad.clone().add(new THREE.Vector3(2.4, 6.4, -0.3)),
-    new THREE.Vector3(14, 9.4, -1.8),
-    new THREE.Vector3(23, 10.4, -3.4),
-    new THREE.Vector3(skyPad.x - 4.5, skyPad.y + 7.2, skyPad.z - 0.6),
-    skyPad.clone().add(new THREE.Vector3(0, 3.2, 0)),
-    skyPad.clone(),
-  ],
-  false,
-  'centripetal',
-)
+/**
+ * Up from the lawn by the Love Tree, high above the clouds in a long gentle S over the sea of clouds,
+ * past the little floating islands, then down onto Sky Island far to the east.
+ */
+export const ROUTE_POINTS = [
+  mainPad.clone(),
+  mainPad.clone().add(new THREE.Vector3(0, 3.0, 0)),
+  mainPad.clone().add(new THREE.Vector3(2.5, 8.5, -0.4)),
+  new THREE.Vector3(14, 15.5, 2.5),
+  new THREE.Vector3(26, 20.5, 5.5),
+  new THREE.Vector3(38, 22.0, -1.5),
+  new THREE.Vector3(48, 21.0, -10.5),
+  new THREE.Vector3(skyPad.x - 7, skyPad.y + 11, skyPad.z - 3),
+  skyPad.clone().add(new THREE.Vector3(-1.2, 5.5, -0.6)),
+  skyPad.clone().add(new THREE.Vector3(0, 2.0, 0)),
+  skyPad.clone(),
+]
+const ROUTE = new THREE.CatmullRomCurve3(ROUTE_POINTS, false, 'centripetal')
 /** The basket always faces the way the trip goes (steady: nobody gets dizzy). */
 const YAW_TO_SKY = Math.atan2(skyPad.x - mainPad.x, skyPad.z - mainPad.z)
 

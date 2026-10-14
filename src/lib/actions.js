@@ -6,6 +6,7 @@ import { useInteractable } from './interactions'
 import { partner, presence } from './couple'
 import { mateName } from './home'
 import { releaseHand } from './hand'
+import { uid } from './uid'
 
 /*
  * LIFE TOGETHER — sitting down and little gestures, shared with the other person.
@@ -29,7 +30,6 @@ export const EMOTES = {
   call: { label: 'Panggil', icon: '📣', seconds: 2.4 },
 }
 
-const uid = () => crypto.randomUUID()
 
 /* ───────── seats ───────── */
 

@@ -2348,3 +2348,144 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
+
+/* ───────── phones: the couple features, laid out so nothing covers anything ───────── */
+
+@media (max-width: 600px) {
+  /* cards at the top: full width, compact, scroll if there are several */
+  .top-stack {
+    top: calc(58px + var(--safe-top));
+    width: calc(100vw - 20px);
+    max-height: 44vh;
+    gap: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .date-float {
+    gap: 4px;
+    padding: 9px 11px;
+    border-radius: 14px;
+  }
+
+  .date-float p,
+  .date-who,
+  .date-float small {
+    font-size: 0.8rem !important;
+  }
+
+  .date-prompt {
+    font-size: 1rem !important;
+  }
+
+  .date-float .couple-actions {
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .date-float .couple-actions button {
+    padding: 7px 11px;
+    font-size: 0.8rem;
+  }
+
+  /* "Aktivitas" / "Virtual Date" on the right, the pet's buttons on the left, both mid-screen
+     (the joystick and the ✦ button own the bottom corners) */
+  .couple-bar {
+    top: 36vh;
+    right: calc(10px + env(safe-area-inset-right, 0px));
+  }
+
+  .couple-bar button,
+  .pet-bar button,
+  .home-buttons button {
+    padding: 7px 10px;
+    font-size: 0.78rem;
+  }
+
+  .pet-bar {
+    top: 36vh;
+    right: auto;
+    left: calc(10px + env(safe-area-inset-left, 0px));
+    justify-items: start;
+  }
+
+  .home-buttons {
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    bottom: calc(176px + var(--safe-bottom));
+  }
+
+  .jump-btn {
+    right: calc(90px + env(safe-area-inset-right, 0px));
+    bottom: calc(100px + var(--safe-bottom));
+    width: 56px;
+    height: 56px;
+  }
+
+  /* decorating bar */
+  .home-edit {
+    bottom: calc(8px + var(--safe-bottom));
+    width: calc(100vw - 16px);
+    padding: 8px;
+  }
+
+  .home-edit button {
+    padding: 7px 10px;
+    font-size: 0.78rem;
+  }
+
+  .home-edit-top p {
+    font-size: 0.78rem;
+  }
+
+  /* menus */
+  .date-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .date-panel,
+  .home-panel {
+    max-height: calc(100dvh - 90px);
+  }
+
+  .date-emotes button {
+    padding: 7px 11px;
+    font-size: 0.8rem;
+  }
+
+  .emote-bubble {
+    font-size: 1rem;
+  }
+}
+
+/* phones held sideways: very little height, so the cards move to the right and the buttons sit low */
+@media (max-height: 520px) and (orientation: landscape) {
+  .top-stack {
+    top: calc(52px + var(--safe-top));
+    left: auto;
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    translate: none;
+    width: min(360px, 44vw);
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
+  }
+
+  .couple-bar {
+    top: auto;
+    bottom: calc(96px + var(--safe-bottom));
+    right: auto;
+    left: 50%;
+    translate: -50% 0;
+    display: flex;
+  }
+
+  .pet-bar {
+    top: calc(52px + var(--safe-top));
+    right: auto;
+    left: calc(12px + env(safe-area-inset-left, 0px));
+    justify-items: start;
+  }
+
+  .home-buttons {
+    bottom: calc(96px + var(--safe-bottom));
+  }
+}

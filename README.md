@@ -248,10 +248,10 @@ Needs `supabase/migrations/005_sky_island.sql` (run once, after 004; it only add
 rollback section at the bottom), then the verify script again.
 
 A higher island east of the main one, over the sea of clouds, in golden-hour light. It's part of the same world
-(no loading screen, same characters, same private room): cross the lake bridge, follow the path to the east shore
-and walk up the rope bridge (signpost and lanterns show the way). Five places, named as you walk in:
+(no loading screen, same characters, same private room), and the only way up is the **hot air balloon** (below)
+from its pad east of the Love Tree. Five places, named as you walk in:
 
-- **Sky Dock**: where the bridge arrives, under an arch of clouds.
+- **Sky Dock**: a little lookout on the west edge, under an arch of clouds, facing back toward the main island.
 - **Cloud Garden**: a gazebo with a bench, a sunset bench looking back at the main island, flowers and lanterns.
   Sitting and gestures (Aktivitas) work here like everywhere else.
 - **Star Observatory**: **Amati langit** at the telescope turns the sky to night for a moment and makes the hidden
@@ -274,10 +274,10 @@ own game (positions aren't stored), so the server can't prove you actually jumpe
 
 ### Hot air balloon
 
-Needs `supabase/migrations/006_balloon.sql` (run once, after 005; rollback at the bottom), then the verify script again.
+Needs `supabase/migrations/006_balloon.sql` and then `007_balloon_longer.sql` (run once each, in that order), then the verify script again.
 
 One shared balloon flies between a pad on the main island (the open lawn east of the Love Tree) and a pad on Sky
-Island, in 40 seconds, up over the clouds and well above the rope bridge.
+Island far to the east, in a slow 75-second flight that climbs about 20 m above the clouds, past little floating islands. It's the only way to Sky Island and back.
 
 - **Naik Balon Udara** (E / ✦ at the basket, while it's on the ground): you glide into one of the two spots in the
   basket. Your own movement rests while you're aboard; the camera stays with the basket.

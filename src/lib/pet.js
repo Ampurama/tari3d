@@ -4,6 +4,7 @@ import { onRoom, presence, supabase, useCouple } from './couple'
 import { useHome } from './home'
 import { PET_SPOT, toWorld } from './homeLayout'
 import { HOME_ISLAND } from './terrain'
+import { uid } from './uid'
 
 /*
  * ADOPT A PET — one shared pet, kept in Supabase (table `pets`, supabase/migrations/004_pet.sql).
@@ -78,7 +79,7 @@ export const setAccessory = (accessory) => run(supabase.from('pets').update({ ac
 let actTimer = null
 export function petAct(kind) {
   clearTimeout(actTimer)
-  presence.pet = { id: crypto.randomUUID(), kind, at: Date.now() }
+  presence.pet = { id: uid(), kind, at: Date.now() }
   actTimer = setTimeout(() => (presence.pet = null), kind === 'sit' ? 7000 : 3000)
 }
 

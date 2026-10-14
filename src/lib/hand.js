@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { partner, presence, useCouple } from './couple'
 import { player } from './player'
 import { walkable } from './terrain'
+import { uid } from './uid'
 import { useStore } from '../store'
 import { mateName } from './home'
 
@@ -21,7 +22,6 @@ import { mateName } from './home'
 export const HAND_OFFSET = 0.55
 const INVITE_MS = 30000
 const MAX_GAP = 5
-const uid = () => crypto.randomUUID()
 
 /**
  * state: 'none' | 'inviting' (I asked) | 'joining' (I said yes, waiting for them) | 'holding'

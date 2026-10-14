@@ -1,7 +1,9 @@
-import { useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { attach, balloonPose, board, callBalloon, detach, leaveBalloon, mySeat, PADS, trackDock, useBalloon } from '../../lib/balloon'
+import { attach, balloonPose, board, callBalloon, detach, leaveBalloon, mySeat, PADS, ROUTE_POINTS, trackDock, useBalloon } from '../../lib/balloon'
+import { seeded } from '../../lib/terrain'
+import { count } from '../../lib/device'
 import { coupleAvailable, useCouple } from '../../lib/couple'
 import { player } from '../../lib/player'
 import { useInteractable } from '../../lib/interactions'
@@ -102,26 +104,63 @@ function Pad({ at, name }) {
   )
 }
 
-/** A few clouds along the way, so you fly past (and through) them. */
+/**
+ * Clouds along the way: some at the balloon's height to drift past (never right on the path),
+ * and a soft layer far below, so the flight feels high above everything.
+ */
 function RouteClouds() {
-  const clouds = useMemo(
-    () => [
-      [10, 8.6, 1.5, 1.4],
-      [15, 10.6, -4.2, 1.8],
-      [19, 9.0, 0.5, 1.2],
-      [26, 11.4, -6.5, 1.6],
-      [29, 9.2, -1.0, 1.3],
-    ],
-    [],
-  )
-  return clouds.map(([x, y, z, s], i) => (
-    <group key={i} position={[x, y, z]} scale={s}>
-      <S p={[0, 0, 0]} s={[1.1, 0.45, 0.8]} c="#ffffff" />
-      <S p={[0.8, 0.12, 0.1]} s={[0.7, 0.38, 0.6]} c="#f4f7ff" />
-      <S p={[-0.75, 0.05, -0.1]} s={[0.65, 0.32, 0.55]} c="#f4f7ff" />
+  const ref = useRef()
+  const clouds = useMemo(() => {
+    const list = []
+    const rand = seeded(919)
+    const near = count(26, 16)
+    for (let i = 0; i < near; i++) {
+      const t = 0.12 + (i / (near - 1)) * 0.76
+      const p = ROUTE_CURVE.getPointAt(t)
+      const side = i % 2 ? 1 : -1
+      // beside the route (3–7 m off it), a little above or below
+      list.push([p.x + side * (3 + rand() * 4), p.y + (rand() - 0.5) * 5, p.z + (rand() - 0.5) * 6, 1.2 + rand() * 1.4])
+    }
+    const below = count(22, 12)
+    for (let i = 0; i < below; i++) {
+      const t = i / (below - 1)
+      const p = ROUTE_CURVE.getPointAt(0.15 + t * 0.7)
+      list.push([p.x + (rand() - 0.5) * 16, 1.5 + rand() * 3, p.z + (rand() - 0.5) * 16, 2.2 + rand() * 2])
+    }
+    return list
+  }, [])
+  // every puff of every cloud in one instanced draw (light on phones)
+  const puffsRef = useRef()
+  const PUFFS = [
+    [0, 0, 0, 1.1, 0.45, 0.8],
+    [0.8, 0.12, 0.1, 0.7, 0.38, 0.6],
+    [-0.75, 0.05, -0.1, 0.65, 0.32, 0.55],
+  ]
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    let i = 0
+    clouds.forEach(([x, y, z, s]) =>
+      PUFFS.forEach(([px, py, pz, sx, sy, sz]) => {
+        m.compose(new THREE.Vector3(x + px * s, y + py * s, z + pz * s), q, new THREE.Vector3(sx * s, sy * s, sz * s))
+        puffsRef.current.setMatrixAt(i++, m)
+      }),
+    )
+    puffsRef.current.instanceMatrix.needsUpdate = true
+    puffsRef.current.computeBoundingSphere()
+  }, [clouds]) // eslint-disable-line react-hooks/exhaustive-deps
+  useFrame(({ clock }) => {
+    if (ref.current) ref.current.position.x = Math.sin(clock.elapsedTime * 0.05) * 0.8
+  })
+  return (
+    <group ref={ref}>
+      <instancedMesh ref={puffsRef} args={[undefined, undefined, clouds.length * PUFFS.length]} material={mat('#ffffff', 0.06, 1)}>
+        <icosahedronGeometry args={[1, 1]} />
+      </instancedMesh>
     </group>
-  ))
+  )
 }
+const ROUTE_CURVE = new THREE.CatmullRomCurve3(ROUTE_POINTS, false, 'centripetal')
 
 /** Keeps her in (or out of) the basket exactly as the server says, flies the balloon, lights the sky. */
 function BalloonActor() {

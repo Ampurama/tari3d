@@ -119,8 +119,6 @@ export const PATHS = [
   [[-0.3, 7.6], [-1.9, 7.5], [-3.1, 7.2]],
   // tree → the sky bridge to Our Little Home (north coast)
   [[0.3, -2.0], [0.15, -5.0], [0.0, -8.0], [0.0, -11.1]],
-  // across the lake bridge → the east shore, where the bridge up to Sky Island starts
-  [[7.6, -5.0], [8.9, -3.95], [10.1, -3.2]],
 ].map((path) => path.map(([x, z]) => [x * SPREAD, z * SPREAD]))
 
 const segDist = (px, pz, ax, az, bx, bz) => {
@@ -165,40 +163,14 @@ export function skyBridgeHeight(z) {
   return skyStart + (HOME_ISLAND.level - skyStart) * t - 0.3 * Math.sin(Math.PI * t) + 0.04
 }
 
-/* ───────── Sky Island: a higher island to the east, over the sea of clouds ───────── */
+/* ───────── Sky Island: a higher island to the east, over the sea of clouds (reached by hot air balloon) ───────── */
 
-export const SKY = { x: 40, z: -4, r: 10, level: 3.0 }
+export const SKY = { x: 64, z: -6, r: 10, level: 7.5 }
 const skyOutline = (theta) => 1 + 0.05 * Math.sin(3 * theta + 0.4) + 0.03 * Math.sin(7 * theta - 1.0)
 /** 0 at Sky Island's centre, 1 at its edge. */
 export const skyDistance = (x, z) => Math.hypot(x - SKY.x, z - SKY.z) / (SKY.r * skyOutline(Math.atan2(z - SKY.z, x - SKY.x)))
 export const onSkyIsland = (x, z) => skyDistance(x, z) < 1
 export const skyIslandHeight = (x, z) => SKY.level - 0.5 * smooth(0.84, 1.0, skyDistance(x, z))
-
-/** The rope bridge from the main island's east shore (past the lake) up to Sky Island's dock. */
-export const EAST_BRIDGE = { ax: 12.3, az: -3.9, bx: SKY.x - SKY.r * 0.8, bz: SKY.z, halfWidth: 0.6 }
-const EB = (() => {
-  const dx = EAST_BRIDGE.bx - EAST_BRIDGE.ax
-  const dz = EAST_BRIDGE.bz - EAST_BRIDGE.az
-  const len = Math.hypot(dx, dz)
-  return { dx: dx / len, dz: dz / len, len }
-})()
-/** How far along the east bridge (0 → 1) the point is, and how far off its centre line. */
-export function eastBridgeAt(x, z) {
-  const px = x - EAST_BRIDGE.ax
-  const pz = z - EAST_BRIDGE.az
-  return { t: (px * EB.dx + pz * EB.dz) / EB.len, off: Math.abs(-px * EB.dz + pz * EB.dx) }
-}
-export const onEastBridge = (x, z) => {
-  const { t, off } = eastBridgeAt(x, z)
-  return t > 0 && t < 1 && off < EAST_BRIDGE.halfWidth
-}
-let eastStart = null
-export function eastBridgeHeight(t) {
-  eastStart ??= worldHeight(EAST_BRIDGE.ax, EAST_BRIDGE.az)
-  const k = Math.min(1, Math.max(0, t))
-  // it climbs gently toward the higher island, sagging a little in the middle
-  return eastStart + (SKY.level - eastStart) * (k * k * (3 - 2 * k)) - 0.25 * Math.sin(Math.PI * k) + 0.04
-}
 
 /**
  * Cloud Hop: little cloud platforms off Sky Island's south-east edge, for jumping along together.
@@ -225,11 +197,6 @@ function otherGround(x, z) {
   if (onSkyBridge(x, z)) {
     const deck = skyBridgeHeight(z)
     if (onHomeIsland(x, z)) return Math.max(deck, homeHeight(x, z))
-    return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
-  }
-  if (onEastBridge(x, z)) {
-    const deck = eastBridgeHeight(eastBridgeAt(x, z).t)
-    if (onSkyIsland(x, z)) return Math.max(deck, skyIslandHeight(x, z))
     return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
   }
   const cloud = platformAt(x, z)
@@ -274,7 +241,7 @@ export function addCollider(x, z, r) {
  * Blocks the island edge, deep water, steep cliff faces and solid objects.
  */
 export function walkable(x, z, fromY) {
-  if (onSkyBridge(x, z) || onEastBridge(x, z) || platformAt(x, z, 0.92)) {
+  if (onSkyBridge(x, z) || platformAt(x, z, 0.92)) {
     // a bridge deck or a cloud platform
   } else if (onHomeIsland(x, z)) {
     if (homeDistance(x, z) > 0.86) return false

@@ -4,6 +4,7 @@ import { player } from './player'
 import { platformAt, skyDistance } from './terrain'
 import { checkpointPos, GOAL_CP } from './skyLayout'
 import { useStore } from '../store'
+import { uid } from './uid'
 
 /*
  * SKY ISLAND — shared progress, kept in Supabase (supabase/migrations/005_sky_island.sql):
@@ -124,7 +125,7 @@ export async function findStar(id) {
 let startId = null
 export async function startHop() {
   if (get().round || get().busy) return
-  startId ||= crypto.randomUUID() // the same id if the request is repeated: never two rounds
+  startId ||= uid() // the same id if the request is repeated: never two rounds
   set({ busy: true })
   const r = await call('hop_start', { p_id: startId }, applyRound)
   set({ busy: false })

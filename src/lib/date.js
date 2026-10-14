@@ -9,6 +9,7 @@ import { CAMP, CATALOG, toWorld } from './homeLayout'
 import { atmosphere } from './atmosphere'
 import { useStore } from '../store'
 import { dates } from '../content/config'
+import { uid } from './uid'
 
 /*
  * VIRTUAL DATE — invitations and date sessions, kept in Supabase (table `date_sessions`,
@@ -202,7 +203,7 @@ export async function invite(kind) {
     set({ error: msg })
     return { ok: false, error: msg }
   }
-  pendingInvite = pendingInvite?.kind === kind ? pendingInvite : { kind, id: crypto.randomUUID() }
+  pendingInvite = pendingInvite?.kind === kind ? pendingInvite : { kind, id: uid() }
   const r = await call('date_invite', { p_id: pendingInvite.id, p_kind: kind })
   if (r.ok) pendingInvite = null
   return r

@@ -3,6 +3,7 @@ import { onRoom, partner, presence, supabase, useCouple } from './couple'
 import { blockers, obstacles } from './terrain'
 import { player } from './player'
 import { couple } from '../content/config'
+import { uid } from './uid'
 import { CATALOG, checkPlacement, HOUSE, hitsItem, hitsWall, inHouse, layerOf, snapPlacement, startSpot, toLocal } from './homeLayout'
 
 /*
@@ -186,7 +187,7 @@ export function pickKind(kind) {
   if (c.area === 'garden' && get().stage < 3) return set({ notice: { text: 'Dekorasi taman terbuka di tahap 3.', bad: true } })
   presence.editing = null
   // the id is made now and kept, so pressing "Tempatkan" twice (or a retry) can never place two
-  set({ draft: withCheck({ id: crypto.randomUUID(), isNew: true, kind, ...startSpot(kind), version: 0 }), notice: null })
+  set({ draft: withCheck({ id: uid(), isNew: true, kind, ...startSpot(kind), version: 0 }), notice: null })
 }
 
 /** Pick up an item that's already in the house. */

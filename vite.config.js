@@ -8,5 +8,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 1600,
+    // older phones too: iPhones that stay on iOS 15, and Android browsers from 2022 on
+    target: ['es2020', 'safari15', 'chrome100', 'firefox100', 'edge100'],
   },
 })

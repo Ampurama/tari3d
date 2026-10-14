@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { currentAvatar, useStore } from '../../store'
 import { input, player, readMove } from '../../lib/player'
-import { eastBridgeAt, groundAt, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
+import { groundAt, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
@@ -45,8 +45,6 @@ const islandCenter = () => {
   // riding the balloon: the camera stays with the basket all the way
   if (player.balloon) return center.set(x, y - 0.6, z)
   if (skyDistance(x, z) < 1.6) return center.copy(SKY_CENTER)
-  const e = eastBridgeAt(x, z)
-  if (e.t > 0 && e.t < 1 && e.off < 3) return center.lerpVectors(MAIN_CENTER, SKY_CENTER, THREE.MathUtils.smoothstep(e.t, 0.15, 0.85))
   return center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
 }
 
