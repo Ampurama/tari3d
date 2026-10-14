@@ -160,7 +160,7 @@ export default function Fallback() {
       <DistanceOverlay flat />
       <FinaleOverlay flat />
       <FlatHiddenHearts />
-      <Hud />
+      <Hud flat />
       <Curtain />
       <LoadingScreen trackAssets={false} />
     </div>

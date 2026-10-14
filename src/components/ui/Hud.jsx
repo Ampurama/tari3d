@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BookHeart, House, LayoutGrid, Music, Settings, UserRound, VolumeX, Wind, X } from 'lucide-react'
+import { ArrowLeft, BookHeart, House, LayoutGrid, Lightbulb, Music, Settings, UserRound, VolumeX, Wind, X } from 'lucide-react'
 import { couple, hints } from '../../content/config'
 import { daysSince, isTouch } from '../../lib/device'
+import { input } from '../../lib/player'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
 import { DialogBox, ObjectivePill, PlacesSheet, StoryDirector, StoryPanel } from './Story'
 import { DiscoveryCard, InteractButton, Joystick } from './TouchControls'
+import { GuideChip, HintCard, useHintDirector } from './HintCard'
 
 function useAudioState() {
   const [state, setState] = useState({ musicOn: audio.musicOn, ambientOn: audio.ambientOn, sfxOn: audio.sfxOn, volume: audio.volume })
@@ -111,8 +113,8 @@ function SettingsPanel() {
             )}
             <p className="settings-help">
               {isTouch
-                ? 'Move with the joystick, drag the screen to look around, tap things to walk to them.'
-                : 'Move with WASD / arrow keys (Shift to run), drag to look around, E to interact — or just click where you want to go.'}
+                ? 'Move with the joystick or tap where you want to go. Drag the island with one finger to turn it, pinch to zoom.'
+                : 'Move with WASD / arrow keys (Shift to run), E to interact — or just click where you want to go. Drag to turn the island, scroll to zoom.'}
             </p>
           </motion.div>
         </motion.div>
@@ -150,16 +152,27 @@ function Brand() {
   )
 }
 
-function Dock() {
+function Dock({ flat }) {
   const setPanel = useStore((s) => s.setPanel)
   const openAvatarSelect = useStore((s) => s.openAvatarSelect)
+  const nudge = useStore((s) => Boolean(s.hintNudge))
   const recenter = () => useStore.setState((s) => ({ camNonce: s.camNonce + 1 }))
   const items = [
-    { key: 'explore', label: 'Island', icon: House, action: recenter, aria: 'Bring the camera back behind your character' },
+    !flat && {
+      key: 'hint',
+      label: 'Hint',
+      icon: Lightbulb,
+      action: () => {
+        useStore.setState({ hintNudge: false })
+        setPanel('hint')
+      },
+      aria: 'Get a hint: what to do next and where',
+    },
+    !flat && { key: 'explore', label: 'Island', icon: House, action: recenter, aria: 'Bring the camera back to your character' },
     { key: 'story', label: 'Story', icon: BookHeart, action: () => setPanel('story') },
     { key: 'places', label: 'Places', icon: LayoutGrid, action: () => setPanel('places') },
     { key: 'avatar', label: 'Character', icon: UserRound, action: openAvatarSelect },
-  ]
+  ].filter(Boolean)
   return (
     <motion.nav
       className="dock"
@@ -173,7 +186,7 @@ function Dock() {
         <button
           key={key}
           type="button"
-          className="dock-item"
+          className={`dock-item${key === 'hint' ? ' is-hint' : ''}${key === 'hint' && nudge ? ' is-nudging' : ''}`}
           onClick={() => {
             audio.sparkle()
             action()
@@ -204,8 +217,11 @@ export function Toast() {
 }
 
 /** Everything 2D that floats over the world. */
-export default function Hud() {
+/** `flat`: the 2D (no-WebGL) version, where there is no avatar to steer. */
+export default function Hud({ flat = false }) {
   const phase = useStore((s) => s.phase)
+  const talking = useStore((s) => Boolean(s.dialog))
+  useHintDirector(!flat)
   const view = useStore((s) => s.view)
   const back = useStore((s) => s.back)
   const unlockPending = useStore((s) => s.unlockPending)
@@ -213,6 +229,11 @@ export default function Hud() {
   const showToast = useStore((s) => s.showToast)
   const secretStage = useStore((s) => s.secretStage)
   const inWorld = phase === 'world'
+
+  // a dialog covers the bottom of the screen: let go of anything held under it
+  useEffect(() => {
+    if (talking) input.interactHeld = false
+  }, [talking])
 
   // the old heart arch wakes up once the letter on the table has been read
   useEffect(() => {
@@ -255,7 +276,7 @@ export default function Hud() {
   return (
     <>
       <StoryDirector />
-      <header className={`hud-top${cinematic ? ' is-hidden' : ''}`}>
+      <header className={`hud-top${cinematic ? ' is-hidden' : quiet ? ' is-raised' : ''}`}>
         <AnimatePresence mode="wait">
           {focused ? (
             <motion.button key="back" type="button" className="back-btn" onClick={back} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
@@ -278,9 +299,10 @@ export default function Hud() {
           <AudioControls />
         </div>
       </header>
-      <AnimatePresence>{exploring && <Dock key="dock" />}</AnimatePresence>
-      {exploring && isTouch && <Joystick />}
-      {exploring && <InteractButton />}
+      <AnimatePresence>{exploring && <Dock key="dock" flat={flat} />}</AnimatePresence>
+      {/* the touch controls step aside while a dialog is open (it sits right where they are) */}
+      {exploring && !flat && !talking && isTouch && <Joystick />}
+      {exploring && !flat && !talking && <InteractButton />}
       <DiscoveryCard />
       <Toast />
       <CountdownPanel />
@@ -288,6 +310,8 @@ export default function Hud() {
       <StoryPanel />
       <PlacesSheet />
       <SettingsPanel />
+      {!flat && <HintCard />}
+      {!flat && <GuideChip />}
       {inWorld && !quiet && <DialogBox />}
     </>
   )

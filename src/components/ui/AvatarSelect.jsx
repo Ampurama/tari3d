@@ -19,12 +19,25 @@ export default function AvatarSelect({ flat = false }) {
   const reducedMotion = useStore((s) => s.reducedMotion)
   const [confirmed, setConfirmed] = useState(false)
   const drag = useRef(null)
+  const startId = useRef(null)
   const open = view === 'avatar'
+  const fromWorld = phase === 'world'
   const index = avatars.findIndex((a) => a.id === avatar.id)
 
   useEffect(() => {
-    if (open) setConfirmed(false)
+    if (open) {
+      setConfirmed(false)
+      startId.current = useStore.getState().avatarId
+    }
   }, [open])
+
+  /** Changing character from the world can be cancelled: the old one comes back, nothing else changes. */
+  const cancel = () => {
+    if (confirmed || !fromWorld) return
+    setConfirmed(true)
+    if (startId.current) choose(startId.current)
+    useStore.getState().throughCurtain(() => useStore.setState((s) => ({ view: 'explore', camNonce: s.camNonce + 1 })), 1000)
+  }
 
   const step = (d) => {
     const next = avatars[(index + d + avatars.length) % avatars.length]
@@ -48,6 +61,7 @@ export default function AvatarSelect({ flat = false }) {
       if (confirmed) return
       if (e.key === 'ArrowLeft') step(-1)
       if (e.key === 'ArrowRight') step(1)
+      if (e.key === 'Escape') cancel()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -124,8 +138,13 @@ export default function AvatarSelect({ flat = false }) {
               </div>
               {!flat && <small className="avatar-hint">{avatarSelect.rotateHint}</small>}
               <button type="button" className="btn-glow" onClick={confirm}>
-                {avatarSelect.button}
+                {fromWorld ? 'Continue with this little soul ♡' : avatarSelect.button}
               </button>
+              {fromWorld && (
+                <button type="button" className="btn-ghost" onClick={cancel}>
+                  Keep my current character
+                </button>
+              )}
             </motion.div>
           )}
         </motion.section>

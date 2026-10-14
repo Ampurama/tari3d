@@ -49,7 +49,7 @@ const tmp = new THREE.Vector3()
 
 /**
  * Makes children clickable + adds a gentle sparkle and a label so people discover them.
- * On the island, the sparkle and label only appear when the avatar is nearby.
+ * On the island the label always shows; the sparkle only appears when the avatar is nearby.
  */
 export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], children, active = true, hint = true, sparkleColor = '#ffe3a3', hideBehind = true, ...props }) {
   const group = useRef()
@@ -74,7 +74,8 @@ export function Interactive({ label, onSelect, sparkleOffset = [0, 1.2, 0], chil
       sparkle.current.visible = near
     }
     if (labelRef.current) {
-      const visible = showHints && near
+      // in the diorama view every place keeps its name
+      const visible = showHints
       labelRef.current.style.opacity = visible ? 1 : 0
       labelRef.current.style.pointerEvents = visible ? 'auto' : 'none'
     }

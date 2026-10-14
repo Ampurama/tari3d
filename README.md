@@ -88,8 +88,17 @@ greeting, body, `personalNote`, photo, optional `voice`), and — touching the l
 Tree afterwards — the optional **secret ending** (`secretEnding`). Both can be replayed from the Story
 book; “Start the story over…” there is the only way to reset (it asks first).
 
-Controls: **WASD / arrow keys** (Shift to run), drag to look, scroll/pinch to zoom, **E** to interact,
+Controls: **WASD / arrow keys** (Shift to run), scroll/pinch to zoom, **E** to interact,
 or click/tap something to walk to it. On phones: joystick + the ✦ button.
+
+**Camera — a miniature you can spin.** By default the whole island is in view (about 40° above the
+ground, gentle perspective). Drag to turn it all the way around, scroll / pinch to zoom — the closer
+you zoom, the more tightly the camera follows the avatar; the **Island** button flies back to the
+whole-island view. Arriving on the island sweeps once around it, and after ~16 s without input the
+island slowly turns by itself. Chapter 2 can be turned and zoomed a little too. Tune it in
+`src/lib/iso.js` (`ISO.elevation`, `ISO.fov`, `ISO.follow`, `ISO.zoomIn`, `ISO.idleSpin`). Place names
+on the map come from `placeNames` in `config.js`. Tapping somewhere (or **Take me there** in a hint)
+walks around trees, water and cliffs (`src/lib/path.js`).
 
 | Edit in `config.js` | Key |
 |---|---|

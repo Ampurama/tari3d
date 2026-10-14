@@ -96,6 +96,13 @@ export function EndingLetter() {
   const [zoom, setZoom] = useState(false)
   const [photoOk, setPhotoOk] = useState(true)
   const open = view === 'ending'
+  // Escape closes the enlarged photo
+  useEffect(() => {
+    if (!zoom) return
+    const onKey = (e) => e.key === 'Escape' && setZoom(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoom])
   const paragraphs = useMemo(
     () => [loveLetter.opening, ...loveLetter.body, ...(loveLetter.personalNote ? [loveLetter.personalNote] : []), ...loveLetter.ending].filter(Boolean),
     [],
@@ -193,7 +200,10 @@ export function EndingLetter() {
           </AnimatePresence>
           <AnimatePresence>
             {zoom && (
-              <motion.div className="lightbox" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoom(false)}>
+              <motion.div className="lightbox" role="dialog" aria-modal="true" aria-label="Photo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoom(false)}>
+                <button type="button" className="icon-btn lightbox-close" autoFocus onClick={() => setZoom(false)} aria-label="Close photo">
+                  <X size={16} />
+                </button>
                 <motion.img className="letter-photo-big" src={loveLetter.photo} alt="Us" initial={{ scale: 0.9 }} animate={{ scale: 1 }} />
               </motion.div>
             )}

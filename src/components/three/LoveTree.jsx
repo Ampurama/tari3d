@@ -10,6 +10,7 @@ import { heartPoint } from '../../lib/heart'
 import { glowTexture } from '../../lib/textures'
 import { cineTime } from '../../lib/cinematic'
 import { tier } from '../../lib/device'
+import { FACE_CAMERA } from '../../lib/iso'
 import { useStore } from '../../store'
 import { Glow } from './Bits'
 import { DriftParticles } from './Particles'
@@ -22,6 +23,8 @@ import { DriftParticles } from './Particles'
  */
 
 const BRANCHES = 9
+/** The Love Tree is the island's landmark: a little larger than life. */
+const TREE_SCALE = 1.15
 
 function buildTree() {
   const rand = seeded(777)
@@ -105,7 +108,10 @@ function TreeConstellation({ tips }) {
       starts.set([tip.x + (rand() - 0.5) * 0.6, tip.y + (rand() - 0.5) * 0.6, tip.z + (rand() - 0.5) * 0.6], i * 3)
       const [hx, hy] = heartPoint((i / N) * Math.PI * 2)
       const r = i % 4 === 0 ? 0.55 + rand() * 0.4 : 1
-      targets.set([hx * 3.2 * r, 9 + hy * 3.2 * r, (rand() - 0.5) * 0.6], i * 3)
+      // the heart of stars faces the 2.5D camera
+      const x = hx * 3.2 * r
+      const z = (rand() - 0.5) * 0.6
+      targets.set([x * Math.cos(FACE_CAMERA) + z * Math.sin(FACE_CAMERA), 9 + hy * 3.2 * r, -x * Math.sin(FACE_CAMERA) + z * Math.cos(FACE_CAMERA)], i * 3)
     }
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(starts.slice(), 3))
@@ -154,12 +160,21 @@ export default function LoveTree() {
   const reducedMotion = useStore((s) => s.reducedMotion)
   const level = ending ? 1 : progress
   const maxBloom = blossoms.length
+  const woodMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#a585b8', roughness: 0.75, emissive: '#5b3a7a', emissiveIntensity: 0.18 }), [])
+  const bloomMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.55, emissive: '#ff7fb2', emissiveIntensity: 0.2 }), [])
   const lanternSpots = useMemo(() => tips.filter((_, i) => i % 2 === 0).map((p) => p.clone().add(new THREE.Vector3(0, -0.35, 0))), [tips])
 
   useEffect(() => {
-    addCollider(loveTree.x, loveTree.z, 0.75)
+    addCollider(loveTree.x, loveTree.z, 0.75 * TREE_SCALE)
   }, [])
   useEffect(() => () => wood.dispose(), [wood])
+  useEffect(
+    () => () => {
+      woodMat.dispose()
+      bloomMat.dispose()
+    },
+    [woodMat, bloomMat],
+  )
 
   // place every blossom once; growth is done by scaling them in
   useLayoutEffect(() => {
@@ -172,8 +187,8 @@ export default function LoveTree() {
   const scales = useMemo(() => new Float32Array(blossoms.length), [blossoms])
   useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime
-    // at the start the tree is peaceful but already a little magical (25% bloom)
-    const target = Math.round(maxBloom * (0.25 + 0.75 * level))
+    // at the start the tree is peaceful but already in leaf-and-blossom (so it reads as a tree from above)
+    const target = Math.round(maxBloom * (0.45 + 0.55 * level))
     let dirty = false
     for (let i = 0; i < maxBloom; i++) {
       const goal = i < target ? 1 : 0
@@ -201,13 +216,10 @@ export default function LoveTree() {
   })
 
   return (
-    <group position={loveTree}>
-      <mesh geometry={wood} castShadow receiveShadow>
-        <meshStandardMaterial color="#a585b8" roughness={0.75} emissive="#5b3a7a" emissiveIntensity={0.18} />
-      </mesh>
-      <instancedMesh ref={bloomRef} args={[null, null, maxBloom]} castShadow frustumCulled={false}>
+    <group position={loveTree} scale={TREE_SCALE}>
+      <mesh geometry={wood} material={woodMat} castShadow receiveShadow />
+      <instancedMesh ref={bloomRef} args={[null, bloomMat, maxBloom]} castShadow frustumCulled={false}>
         <icosahedronGeometry args={[1, 1]} />
-        <meshStandardMaterial roughness={0.55} emissive="#ff7fb2" emissiveIntensity={0.2} />
       </instancedMesh>
       {lanternSpots.map((p, i) => (
         <mesh key={i} ref={(el) => (lanterns.current[i] = el)} position={p}>

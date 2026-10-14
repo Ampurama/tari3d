@@ -1,23 +1,41 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { currentAvatar, useStore } from '../../store'
 import { input, player, readMove } from '../../lib/player'
 import { slope, standHeight, walkable } from '../../lib/terrain'
-import { holdState, interactNearest, nearestInteractable } from '../../lib/interactions'
+import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
+import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
 import Avatar from './Avatar'
-import { Glow } from './Bits'
+import { Glow, HeartMesh } from './Bits'
+
+/** The silhouette: additive, drawn in the opaque pass, only where it's behind something. */
+const GHOST = new THREE.MeshBasicMaterial({
+  color: new THREE.Color(0.55, 0.32, 0.5),
+  transparent: false,
+  blending: THREE.AdditiveBlending,
+  depthFunc: THREE.GreaterDepth,
+  depthWrite: false,
+  toneMapped: false,
+})
 
 const WALK = 2.5
 const RUN = 4.8
 const tmpDir = new THREE.Vector3()
 const follow = new THREE.Vector3()
 
-/** Where the follow camera should look (just above the avatar's head). */
-export const followTarget = () => follow.set(player.position.x, player.position.y + 0.95, player.position.z)
+/** The middle of the island diorama (slightly south, so the far shore isn't cut). */
+const ISLAND_CENTER = new THREE.Vector3(0, 0.4, 0.8)
+
+/**
+ * Where the camera looks: between the island's centre and the avatar.
+ * `weight` 1 = right on her; the fully zoomed-out diorama view uses ISO.follow.
+ */
+export const followTarget = (weight = 1) =>
+  follow.set(player.position.x, player.position.y + 0.6, player.position.z).sub(ISLAND_CENTER).multiplyScalar(weight).add(ISLAND_CENTER)
 
 /** Try to move from (x, z) by (dx, dz); slides along obstacles. Returns the new [x, z] or null. */
 function step(x, z, dx, dz) {
@@ -42,14 +60,15 @@ export function PlayerController() {
   const controls = useThree((s) => s.controls)
   const camera = useThree((s) => s.camera)
   const lastPresses = useRef(input.interactPresses)
-  const smoothFollow = useRef(new THREE.Vector3().copy(followTarget()))
+  const smoothFollow = useRef(new THREE.Vector3().copy(followTarget(ISO.follow)))
   const wasExploring = useRef(false)
   const inViewpoint = useRef(false)
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05)
     const s = useStore.getState()
-    const exploring = s.phase === 'world' && s.view === 'explore' && !s.curtain && !player.frozen
+    // a panel or a dialog on screen has her attention: the avatar waits
+    const exploring = s.phase === 'world' && s.view === 'explore' && !s.curtain && !player.frozen && !s.panel && !s.dialog
     if (!exploring) {
       wasExploring.current = false
       player.speed = THREE.MathUtils.damp(player.speed, 0, 8, delta)
@@ -57,8 +76,11 @@ export function PlayerController() {
       if (s.prompt) s.setPrompt(null)
       return
     }
+    // the closer she zooms in, the more tightly the camera follows the avatar
+    const zoom = controls ? THREE.MathUtils.clamp((controls.distance - rig.minDist) / Math.max(1, rig.baseDist - rig.minDist), 0, 1) : 1
+    const weight = THREE.MathUtils.lerp(1, ISO.follow, zoom)
     if (!wasExploring.current) {
-      smoothFollow.current.copy(followTarget())
+      smoothFollow.current.copy(followTarget(weight))
       wasExploring.current = true
     }
 
@@ -83,10 +105,14 @@ export function PlayerController() {
       targetSpeed = (move.run ? RUN : WALK) * Math.max(0.35, move.mag)
     } else if (player.walkTarget) {
       const wt = player.walkTarget
-      const dx = wt.x - player.position.x
-      const dz = wt.z - player.position.z
+      // follow the path's waypoints; the last one is the target (or as close as she can stand)
+      const path = wt.path || [[wt.x, wt.z]]
+      while (path.length > 1 && Math.hypot(path[0][0] - player.position.x, path[0][1] - player.position.z) < 0.3) path.shift()
+      const dx = path[0][0] - player.position.x
+      const dz = path[0][1] - player.position.z
       const d = Math.hypot(dx, dz)
-      if (d <= (wt.stopAt ?? 0.25)) {
+      const toTarget = Math.hypot(wt.x - player.position.x, wt.z - player.position.z)
+      if (toTarget <= (wt.stopAt ?? 0.25) || (path.length === 1 && d < 0.12)) {
         const arrive = player.onArrive
         player.walkTarget = null
         player.onArrive = null
@@ -94,7 +120,7 @@ export function PlayerController() {
       } else {
         dirX = dx / d
         dirZ = dz / d
-        targetSpeed = d > 6 ? RUN : WALK
+        targetSpeed = toTarget > 6 ? RUN : WALK
       }
     }
 
@@ -120,8 +146,12 @@ export function PlayerController() {
     player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
     player.cheer = Math.max(0, player.cheer - delta)
 
+    // ── left alone for a while, the island slowly turns by itself (any touch stops it)
+    if (move.mag > 0.05 || player.walkTarget) input.lastActive = performance.now()
+    if (controls && !s.reducedMotion && performance.now() - input.lastActive > ISO.idleSpin * 1000) controls.rotate(delta * 0.07, 0, false)
+
     // ── camera follows (the camera-controls orbit stays hers to change)
-    smoothFollow.current.lerp(followTarget(), 1 - Math.exp(-delta * 8))
+    smoothFollow.current.lerp(followTarget(weight), 1 - Math.exp(-delta * 4))
     const f = smoothFollow.current
     controls?.moveTo(f.x, f.y, f.z, false)
 
@@ -158,8 +188,12 @@ export function PlayerController() {
     if (inView && !inViewpoint.current && !s.viewpointSeen) {
       s.markViewpoint()
       s.showDiscovery({ kind: 'view', title: viewpoint.title, text: viewpoint.text }, 6000)
-      controls?.dollyTo(12, true)
-      controls?.rotatePolarTo(1.15, true)
+      // the view opens up a little: further back and lower, still the same 2.5D angle
+      if (controls) {
+        controls.smoothTime = 1.6
+        controls.dollyTo(Math.min(rig.baseDist, controls.distance * 1.3), true)
+        controls.rotatePolarTo(polarFor(24), true)
+      }
     }
     inViewpoint.current = inView
   })
@@ -171,17 +205,55 @@ export function PlayerAvatar() {
   const group = useRef()
   const carry = useRef()
   const marker = useRef()
+  const ghost = useRef()
+  const focus = useRef()
+  const beacon = useRef()
+  const beaconHeart = useRef()
+  const camera = useThree((s) => s.camera)
   const avatar = useStore(currentAvatar)
   const phase = useStore((s) => s.phase)
   const carrying = useStore((s) => s.carrying)
   const hasWater = useStore((s) => s.hasWater)
   const reducedMotion = useStore((s) => s.reducedMotion)
 
-  useFrame(({ clock }) => {
+  // the avatar draws after the scenery, so the silhouette below only shows where something hides her
+  useLayoutEffect(() => {
+    group.current?.traverse((o) => {
+      if (o.isMesh) o.renderOrder = 6
+    })
+  })
+
+  useFrame(({ clock }, delta) => {
     const g = group.current
     if (!g) return // not mounted until she's in the world
     g.position.copy(player.position)
     g.rotation.y = player.yaw
+    const t = clock.elapsedTime
+    ghost.current.position.copy(player.position)
+    GHOST.opacity = reducedMotion ? 0.5 : 0.42 + Math.sin(t * 3) * 0.08
+    // a soft ring and a little diamond over whatever she can use right now
+    const prompt = useStore.getState().prompt
+    const it = prompt && interactables.get(prompt.id)
+    const f = focus.current
+    f.visible = Boolean(it)
+    if (it) {
+      const p = it.position
+      f.position.set(p.x, standHeight(p.x, p.z) + 0.04, p.z)
+      const pulse = reducedMotion ? 1 : 1 + Math.sin(t * 3.2) * 0.08
+      f.children[0].scale.setScalar(THREE.MathUtils.damp(f.children[0].scale.x, pulse, 8, delta))
+      f.children[1].position.y = 1.9 + (reducedMotion ? 0 : Math.sin(t * 2.4) * 0.08)
+      f.children[1].rotation.y = t * 1.5
+    }
+    // from far away (the diorama view) a little heart floats over her head and a soft ring sits at her feet
+    const far = THREE.MathUtils.clamp((camera.position.distanceTo(player.position) - 45) / 60, 0, 1)
+    const b = beacon.current
+    b.position.copy(player.position)
+    b.children[0].material.opacity = 0.35 + far * 0.4
+    b.children[0].scale.setScalar(1 + far * 0.6)
+    const h = beaconHeart.current
+    h.visible = far > 0.05
+    h.scale.setScalar(0.16 + far * 0.2)
+    h.position.y = 1.75 + far * 0.5 + (reducedMotion ? 0 : Math.sin(t * 2.2) * 0.08)
     if (carry.current) carry.current.position.y = 1.55 + (reducedMotion ? 0 : Math.sin(clock.elapsedTime * 2.4) * 0.06)
     if (marker.current) {
       const wt = player.walkTarget
@@ -204,6 +276,34 @@ export function PlayerAvatar() {
             <Glow color={carrying ? '#ffe2a8' : '#a8d8ff'} size={0.7} opacity={0.75} />
           </group>
         )}
+      </group>
+      {/* her silhouette, visible only where scenery hides her (depth test reversed, drawn before the avatar) */}
+      <group ref={ghost}>
+        <mesh position={[0, 0.72, 0]} renderOrder={5} material={GHOST}>
+          <capsuleGeometry args={[0.21, 0.4, 4, 12]} />
+        </mesh>
+        <mesh position={[0, 1.08, 0]} renderOrder={5} material={GHOST}>
+          <sphereGeometry args={[0.3, 16, 12]} />
+        </mesh>
+      </group>
+      {/* where she is, even from far away */}
+      <group ref={beacon}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} renderOrder={3}>
+          <ringGeometry args={[0.32, 0.46, 32]} />
+          <meshBasicMaterial color={[2.4, 1.3, 1.9]} transparent opacity={0.4} toneMapped={false} depthWrite={false} />
+        </mesh>
+        <HeartMesh ref={beaconHeart} position={[0, 2, 0]} scale={0.2} color="#ff9cc8" emissive="#ff5fa2" glow={1.2} />
+      </group>
+      {/* what she can interact with right now */}
+      <group ref={focus} visible={false}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+          <ringGeometry args={[0.55, 0.66, 40]} />
+          <meshBasicMaterial color={[2.2, 1.5, 1.9]} transparent opacity={0.75} toneMapped={false} depthWrite={false} />
+        </mesh>
+        <mesh scale={[0.09, 0.14, 0.09]}>
+          <octahedronGeometry args={[1, 0]} />
+          <meshBasicMaterial color={[2.6, 1.9, 2.3]} toneMapped={false} />
+        </mesh>
       </group>
       {/* where tap-to-walk is heading */}
       <mesh ref={marker} rotation={[-Math.PI / 2, 0, 0]} visible={false}>

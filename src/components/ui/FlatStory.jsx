@@ -114,7 +114,7 @@ export function FlatSeeds({ onClose }) {
           else if (s === 'carried')
             action =
               sd.id === 'honesty' ? (
-                <HoldButton seconds={1.3} label="Hold to plant" onDone={() => st().plantSeed('honesty') && setTimeout(() => st().growSeed('honesty'), 600)} />
+                <HoldButton seconds={1.3} label="Hold to plant" onDone={() => st().plantSeed('honesty') && audio.sfx('bloom')} />
               ) : (
                 <button type="button" className="btn-glow small" onClick={() => st().plantSeed(sd.id) && audio.sfx('plant')}>
                   Plant it
@@ -141,7 +141,6 @@ export function FlatSeeds({ onClose }) {
                       className={`flat-star-btn${stones.includes(n) ? ' is-lit' : ''}`}
                       onClick={() => {
                         st().lightStone(n)
-                        if (useStore.getState().stonesLit.length >= 2) st().growSeed('adventures')
                       }}
                       aria-label={`Guiding stone ${n + 1}`}
                     >

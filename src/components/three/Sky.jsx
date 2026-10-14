@@ -23,6 +23,7 @@ const skyFragment = /* glsl */ `
   uniform vec3 uPink;
   uniform vec3 uViolet;
   uniform float uDim;
+  uniform float uTime;
   void main() {
     vec3 d = normalize(vDir);
     float h = d.y;
@@ -33,6 +34,12 @@ const skyFragment = /* glsl */ `
     float n2 = pow(max(dot(d, normalize(vec3(0.75, 0.1, -0.4))), 0.0), 9.0);
     float n3 = pow(max(dot(d, normalize(vec3(0.2, -0.3, 0.9))), 0.0), 7.0);
     col += uPink * n1 * 0.55 + uViolet * n2 * 0.6 + uViolet * n3 * 0.35;
+    // a soft, slowly moving aurora ribbon low over the northern horizon (pure math: almost free)
+    float az = atan(d.x, -d.z);
+    float ribbon = d.y - 0.16 - 0.07 * sin(az * 2.0 + uTime * 0.05) - 0.03 * sin(az * 5.0 - uTime * 0.08);
+    float band = exp(-ribbon * ribbon * 140.0) * smoothstep(-0.05, 0.6, -d.z);
+    float curtain = 0.55 + 0.45 * sin(az * 14.0 + uTime * 0.12 + sin(az * 3.0) * 2.0);
+    col += mix(vec3(0.25, 0.75, 0.65), vec3(0.75, 0.45, 1.0), 0.5 + 0.5 * sin(az * 1.5 + uTime * 0.03)) * band * curtain * 0.32;
     gl_FragColor = vec4(col * uDim, 1.0);
   }
 `
@@ -50,6 +57,7 @@ function SkyGradient() {
           uPink: { value: new THREE.Color('#ff8ec1') },
           uViolet: { value: new THREE.Color('#8b6cff') },
           uDim: { value: 1 },
+          uTime: { value: 0 },
         },
         vertexShader: skyVertex,
         fragmentShader: skyFragment,
@@ -64,6 +72,7 @@ function SkyGradient() {
     // the finale is dark and quiet; the secret ending's final moment is the brightest the sky ever gets
     const target = view === 'finale' ? 0.35 : view === 'intro' ? 0.75 : view === 'epilogue' ? 1.35 : 1
     material.uniforms.uDim.value = THREE.MathUtils.damp(material.uniforms.uDim.value, target, 1.5, delta)
+    material.uniforms.uTime.value += delta
   })
   return (
     <mesh ref={ref} material={material} renderOrder={-20} frustumCulled={false}>

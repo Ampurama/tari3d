@@ -8,6 +8,7 @@ import { player } from '../../lib/player'
 import { standHeight } from '../../lib/terrain'
 import { connections } from '../../content/config'
 import { isTouch } from '../../lib/device'
+import { fovFor, ISO, isoBack, isoDir, isoRight, polarFor, rig } from '../../lib/iso'
 import { useStore } from '../../store'
 import { followTarget } from './Player'
 
@@ -18,16 +19,22 @@ function unlock(c) {
   c.maxDistance = Infinity
   c.minPolarAngle = 0
   c.maxPolarAngle = Math.PI
+  c.minAzimuthAngle = -Infinity
+  c.maxAzimuthAngle = Infinity
 }
 
 const v = (x, y, z) => new THREE.Vector3(x, y, z)
 const pose = (target, dir, fitW, fitH, minDist) => ({ target, dir: dir.normalize(), fitW, fitH, minDist })
 
-/** Third-person camera behind the avatar. */
-const followPose = () => pose(followTarget().clone(), v(-Math.sin(player.yaw), 0.5, -Math.cos(player.yaw)), 4, 4, 7.2)
+/**
+ * The island camera: the whole island in one frame (on a phone in portrait: most of its width),
+ * leaning a little toward the avatar.
+ */
+const followPose = (aspect = 1.6) =>
+  aspect < 0.8 ? pose(followTarget(ISO.follow).clone(), isoDir(), 16.5, 20, 0) : pose(followTarget(ISO.follow).clone(), isoDir(), 28, 20, 0)
 
 /** Once the bridge is whole, Chapter 2 is seen from further back. */
-const distanceWide = pose(areas.distance.clone().add(v(0, 1.2, 0)), v(0, 0.42, 1), 28, 14, 24)
+const distanceWide = pose(areas.distance.clone().add(v(0, 1.6, 0)), isoDir(30), 30, 12, 0)
 
 /**
  * One place that decides where the camera is. Every view has a pose; transitions are smooth,
@@ -55,19 +62,37 @@ export default function CameraDirector() {
     if (vw === 'future') return futurePose(futureIndex)
     if (vw === 'finalRoom' && secretStage && secretStage !== 'found') return poses.secretClose
     if (vw === 'distance' && bridgeWhole) return distanceWide
-    if (vw === 'explore') return followPose()
+    if (vw === 'explore') return followPose(size.width / size.height)
     return poses[vw]
   }
 
+  /** the lens this view is seen through */
+  const lens = () => fovFor(useStore.getState().view)
   const fly = (p, smooth = true) => {
-    const { position, target, dist } = resolvePose(p, camera.fov, size.width / size.height)
+    const { position, target, dist } = resolvePose(p, lens(), size.width / size.height)
     ref.current.setLookAt(position.x, position.y, position.z, target.x, target.y, target.z, smooth)
     return dist
+  }
+
+  /** While exploring: spin all the way round, tilt (never under the ground) and zoom. */
+  const exploreLimits = (dist) => {
+    const c = ref.current
+    c.normalizeRotations()
+    rig.baseDist = dist
+    rig.minDist = Math.max(5.5, dist * ISO.zoomIn)
+    c.minDistance = rig.minDist
+    c.maxDistance = dist * 1.3
+    c.minPolarAngle = polarFor(ISO.maxElevation)
+    c.maxPolarAngle = polarFor(ISO.minElevation)
+    c.minAzimuthAngle = -Infinity
+    c.maxAzimuthAngle = Infinity
   }
 
   // configure input once
   useEffect(() => {
     const c = ref.current
+    // drag turns the island around (a click / tap without dragging still walks), wheel / pinch zooms
+    c.mouseButtons.left = ACTION.ROTATE
     c.mouseButtons.right = ACTION.NONE
     c.mouseButtons.middle = ACTION.NONE
     c.mouseButtons.wheel = ACTION.DOLLY
@@ -75,9 +100,9 @@ export default function CameraDirector() {
     c.touches.two = ACTION.TOUCH_DOLLY
     c.touches.three = ACTION.NONE
     c.draggingSmoothTime = 0.18
-    c.azimuthRotateSpeed = isTouch ? 0.6 : 0.45
-    c.polarRotateSpeed = isTouch ? 0.45 : 0.35
-    c.dollySpeed = 0.4
+    c.dollySpeed = 0.6
+    c.azimuthRotateSpeed = isTouch ? 0.7 : 0.55
+    c.polarRotateSpeed = isTouch ? 0.5 : 0.4
     unlock(c)
     fly(poses.intro, false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,35 +122,35 @@ export default function CameraDirector() {
       c.smoothTime = reducedMotion ? 0.25 : 1.4
       fly(poses.avatar, prev === 'intro')
     } else if (view === 'explore') {
-      // arriving from far away (selection, cinematic, secret room…): appear behind the avatar
-      if (['intro', 'avatar', 'finale', 'finalRoom', 'cinematic', 'epilogue', 'ending'].includes(prev)) {
-        const { position, target } = resolvePose(followPose(), camera.fov, size.width / size.height)
-        c.setLookAt(position.x, position.y + 4, position.z + 0.01, target.x, target.y, target.z, false)
+      // arriving from far away (selection, cinematic, secret room…): a sweeping flight once around
+      // the island while descending onto it
+      const grand = ['intro', 'avatar', 'finale', 'finalRoom', 'cinematic', 'epilogue', 'ending'].includes(prev)
+      if (grand) {
+        const { target, dist } = resolvePose(followPose(size.width / size.height), lens(), size.width / size.height)
+        c.normalizeRotations()
+        const start = isoDir(62, reducedMotion ? 0 : -2.4).multiplyScalar(dist * 1.9).add(target)
+        c.setLookAt(start.x, start.y + 6, start.z, target.x, target.y, target.z, false)
       }
-      c.smoothTime = reducedMotion ? 0.25 : 1.1
-      fly(followPose())
-      // free third-person orbit around the avatar
-      c.minDistance = 3.2
-      c.maxDistance = 12.5
-      c.minPolarAngle = 0.55
-      c.maxPolarAngle = 1.42
+      c.smoothTime = reducedMotion ? 0.25 : grand ? 2.6 : 1.1
+      exploreLimits(fly(followPose(size.width / size.height)))
       c.enabled = true
     } else if (view === 'cinematic') {
       cine.t0 = null
       cineDone.current = false
-      // the avatar waits at the foot of the Love Tree for the last scenes
-      player.position.set(loveTree.x + 0.4, standHeight(loveTree.x + 0.4, loveTree.z + 2.4), loveTree.z + 2.4)
-      player.yaw = Math.PI
+      // the avatar waits at the foot of the Love Tree for the last scenes, on the camera's side, looking up at it
+      const at = loveTree.clone().addScaledVector(isoBack, 3.35).addScaledVector(isoRight, 0.55)
+      player.position.set(at.x, standHeight(at.x, at.z), at.z)
+      player.yaw = Math.atan2(loveTree.x - at.x, loveTree.z - at.z)
       player.walkTarget = null
     } else if (view === 'finale') {
-      const { position, target } = resolvePose(poses.finale, camera.fov, size.width / size.height)
+      const { position, target } = resolvePose(poses.finale, lens(), size.width / size.height)
       const far = position.clone().sub(target).multiplyScalar(1.9).add(target).add(v(0, -3, 0))
       c.setLookAt(far.x, far.y, far.z, target.x, target.y, target.z, false)
       c.smoothTime = reducedMotion ? 0.25 : 2.6
       fly(poses.finale)
     } else if (view === 'finalRoom') {
       if (prev !== 'finalRoom') {
-        const { position, target } = resolvePose(poses.finalRoom, camera.fov, size.width / size.height)
+        const { position, target } = resolvePose(poses.finalRoom, lens(), size.width / size.height)
         const far = position.clone().sub(target).multiplyScalar(1.6).add(target)
         c.setLookAt(far.x, far.y + 1.5, far.z, target.x, target.y, target.z, false)
       }
@@ -134,7 +159,7 @@ export default function CameraDirector() {
       fly(close ? poses.secretClose : poses.finalRoom)
     } else if (view === 'epilogue') {
       if (prev !== 'epilogue') {
-        const { position, target } = resolvePose(poses.ending, camera.fov, size.width / size.height)
+        const { position, target } = resolvePose(poses.ending, lens(), size.width / size.height)
         c.setLookAt(position.x, position.y, position.z, target.x, target.y, target.z, false)
       }
       c.smoothTime = reducedMotion ? 0.25 : 5
@@ -152,7 +177,18 @@ export default function CameraDirector() {
       const p = poseFor(view)
       if (p) {
         c.smoothTime = reducedMotion ? 0.25 : view === 'distance' ? (bridgeWhole ? 3 : 1.3) : 0.95
-        fly(p)
+        const dist = fly(p)
+        // Chapter 2: she may turn and zoom a little to see (and tap) everything between the islands
+        if (view === 'distance') {
+          c.normalizeRotations()
+          c.minDistance = dist * 0.4
+          c.maxDistance = dist * 1.3
+          c.minPolarAngle = polarFor(75)
+          c.maxPolarAngle = polarFor(5)
+          c.minAzimuthAngle = ISO.azimuth - 0.9
+          c.maxAzimuthAngle = ISO.azimuth + 0.9
+          c.enabled = true
+        }
       }
     }
     prevView.current = view
@@ -172,22 +208,34 @@ export default function CameraDirector() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [riseCue])
 
-  // keep subjects framed when the screen rotates/resizes (except while free-roaming)
+  // keep subjects framed when the screen rotates/resizes
   useEffect(() => {
-    if (['explore', 'intro', 'cinematic'].includes(view)) return
+    if (view === 'explore') {
+      const { dist } = resolvePose(followPose(size.width / size.height), lens(), size.width / size.height)
+      ref.current.dollyTo(dist, true)
+      exploreLimits(dist)
+      return
+    }
+    if (['intro', 'cinematic'].includes(view)) return
     const p = poseFor(view)
     if (p) fly(p)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size.width, size.height])
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     const c = ref.current
     if (!c) return
+    // ease the lens between the flat 2D island and the sky set pieces
+    const fov = fovFor(view)
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov = reducedMotion ? fov : THREE.MathUtils.damp(camera.fov, fov, 2.6, delta)
+      camera.updateProjectionMatrix()
+    }
     // the final cinematic drives the camera itself
     if (view === 'cinematic') {
       if (cine.t0 === null) cine.t0 = clock.elapsedTime
       const t = (clock.elapsedTime - cine.t0) * (reducedMotion ? 4 : 1)
-      const { pos, tgt } = cinematicCamera(Math.min(t, CINE_LENGTH), size.width / size.height, camera.fov)
+      const { pos, tgt } = cinematicCamera(Math.min(t, CINE_LENGTH), size.width / size.height, ISO.fov)
       c.setLookAt(pos.x, pos.y, pos.z, tgt.x, tgt.y, tgt.z, false)
       c.setFocalOffset(0, 0, 0, false)
       if (t >= CINE_LENGTH && !cineDone.current) {

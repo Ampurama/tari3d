@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { areas, littleSpots, loveTree, poses, resolvePose } from './layout'
 import { ISLAND_LIFT } from './layout'
+import { isoBack, isoDir, LENS } from './iso'
 
 /*
  * FINAL CINEMATIC — "You were the meaning all along".
@@ -23,36 +24,39 @@ const v = (x, y, z) => new THREE.Vector3(x, y, z)
 const ease = (t) => t * t * (3 - 2 * t)
 const D = areas.distance
 
-/** Camera position + target at time t (seconds since the cinematic started). */
+/** Camera at `dist` (as framed through a 30° lens) from `target` along the flat 2D direction (elevation in degrees, small azimuth drift). */
+const isoShot = (target, dist, elevation, drift = 0) => ({ pos: target.clone().addScaledVector(isoDir(elevation, drift), dist * LENS), tgt: target })
+
+/**
+ * Camera position + target at time t (seconds since the cinematic started).
+ * The whole cinematic keeps the island's flat 2D angle: it only pans, zooms and lowers a little.
+ */
 export function cinematicCamera(t, aspect, fov) {
   const star = littleSpots[4] || v(0, 0.4, 7)
   const photo = littleSpots[0] || v(-6, 0.3, 1)
+  const portrait = aspect < 0.8 ? 1.45 : 1
   if (t < SCENES[1].from) {
-    // Scene 1 — the meadow and the garden, where the little things were found
+    // Scene 1 — a slow pan from the meadow to the garden, where the little things were found
     const k = ease(t / 9)
-    const pos = v(0.5, 5.5, 15).lerp(v(-2.4, 3.6, 6.2), k)
-    const tgt = star.clone().add(v(0, 1.5, -1)).lerp(photo.clone().add(v(0, 1, 0)), k)
-    return { pos, tgt }
+    const tgt = star.clone().add(v(0, 0.8, 0)).lerp(photo.clone().add(v(0, 0.9, 0)), k)
+    return isoShot(tgt, (17 - k * 5) * portrait, 48 - k * 8)
   }
   if (t < SCENES[2].from) {
     // Scene 2 — along the restored bridge between the two islands
     const k = ease((t - 9) / 9)
-    const pos = D.clone().add(v(-11, ISLAND_LIFT + 3.2, 9).lerp(v(6, ISLAND_LIFT + 3.6, 10), k))
-    const tgt = D.clone().add(v(-6, ISLAND_LIFT + 1.2, 0).lerp(v(5, ISLAND_LIFT + 1.4, 0), k))
-    return { pos, tgt }
+    const tgt = D.clone().add(v(-6, ISLAND_LIFT + 1.0, 0).lerp(v(5, ISLAND_LIFT + 1.2, 0), k))
+    return isoShot(tgt, (19 - k * 3) * portrait, 36)
   }
   if (t < SCENES[3].from) {
-    // Scene 3 — slowly around the Love Tree as it blooms and the stars rise
+    // Scene 3 — closer and lower toward the Love Tree as it blooms and the stars rise; she stands at its foot
     const k = ease((t - 18) / 9)
-    const a = 0.4 + k * 1.4
-    const r = 7.5 - k * 1.8
-    const pos = loveTree.clone().add(v(Math.sin(a) * r, 2.2 + k * 2.4, Math.cos(a) * r))
-    const tgt = loveTree.clone().add(v(0, 2.6 + k * 3, 0))
-    return { pos, tgt }
+    const tgt = loveTree.clone().addScaledVector(isoBack, 1.4 * (1 - k)).add(v(0, 1.6 + k * 4.6, 0))
+    return isoShot(tgt, (15 + k * 6) * portrait, 40 - k * 22)
   }
-  // Scene 4 — pull back until the whole little universe is in view
+  // Scene 4 — pull back until the whole little universe is in view (same angle, just further away)
   const k = ease(Math.min(1, (t - 27) / 8))
   const wide = resolvePose(poses.epilogue, fov, aspect)
-  const start = loveTree.clone().add(v(2.5, 6, 7))
-  return { pos: start.lerp(wide.position, k), tgt: loveTree.clone().add(v(0, 4, 0)).lerp(wide.target, k) }
+  const startTgt = loveTree.clone().add(v(0, 6.2, 0))
+  const start = isoShot(startTgt, 21 * portrait, 18)
+  return { pos: start.pos.lerp(wide.position, k), tgt: startTgt.lerp(wide.target, k) }
 }

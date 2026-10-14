@@ -11,6 +11,11 @@
   pointer-events: none;
 }
 
+/* full-screen endings sit above the HUD: keep the music / settings buttons on top and tappable */
+.hud-top.is-raised {
+  z-index: 48;
+}
+
 .brand-pills {
   display: flex;
   flex-wrap: wrap;

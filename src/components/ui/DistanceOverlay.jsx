@@ -48,7 +48,11 @@ export default function DistanceOverlay({ flat = false }) {
   const [step, setStep] = useState(0)
   // the closing lines and the countdown appear once the bridge is whole
   const whole = useStore((s) => s.connectionsDone.length >= connections.length)
+  // the closing lines wait until the chapter's last words (dialog) are closed, so nothing overlaps
+  const talking = useStore((s) => Boolean(s.dialog))
+  const back = useStore((s) => s.back)
   const open = view === 'distance'
+  const ending = whole && !talking
 
   useEffect(() => {
     if (!open) {
@@ -76,10 +80,18 @@ export default function DistanceOverlay({ flat = false }) {
           <motion.h2 {...show(2)}>{distance.line1}</motion.h2>
           {flat && <FlatIllustration />}
           <ConnectionsUI flat={flat} />
-          {whole && <motion.p {...show(3)}>{distance.line2}</motion.p>}
-          {whole && (
+          {ending && <motion.p {...show(3)}>{distance.line2}</motion.p>}
+          {ending && (
             <motion.div className="distance-countdown" {...show(3)}>
               <CountdownBody compact />
+            </motion.div>
+          )}
+          {ending && (
+            <motion.div className="distance-next" {...show(3)}>
+              <button type="button" className="btn-glow" onClick={back}>
+                Continue to Chapter 3 ✦
+              </button>
+              <small>or tap an island first to read its message ♡</small>
             </motion.div>
           )}
         </motion.section>

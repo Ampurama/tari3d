@@ -75,6 +75,10 @@
   min-width: 140px;
 }
 
+.avatar-name {
+  text-shadow: 0 2px 12px rgba(20, 10, 50, 0.85), 0 0 2px rgba(20, 10, 50, 0.9);
+}
+
 .avatar-name strong {
   font-family: var(--serif);
   font-size: 1.6rem;
@@ -290,7 +294,7 @@
   position: fixed;
   left: 50%;
   top: calc(88px + var(--safe-top));
-  z-index: 47;
+  z-index: 54; /* above chapter sheets (52), below the curtain (60) */
   display: flex;
   gap: 14px;
   align-items: center;
@@ -1006,4 +1010,269 @@
   .interact {
     bottom: calc(20px + var(--safe-bottom));
   }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: calc(16px + var(--safe-top));
+  right: 16px;
+  z-index: 1;
+}
+
+/* ───────── place names on the island map ───────── */
+
+.place-anchor {
+  pointer-events: none;
+}
+
+.place-name {
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.02rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: rgba(255, 244, 250, 0.94);
+  text-shadow:
+    0 1px 2px rgba(20, 10, 50, 0.95),
+    0 0 14px rgba(20, 10, 50, 0.8);
+  user-select: none;
+}
+
+.place-name::before,
+.place-name::after {
+  content: ' ✦ ';
+  font-style: normal;
+  font-size: 0.6em;
+  color: #ffd9ec;
+  vertical-align: middle;
+}
+
+.place-name.is-tree {
+  font-size: 1.15rem;
+  color: #ffe6f2;
+}
+
+@media (max-width: 600px) {
+  .place-name {
+    font-size: 0.8rem;
+  }
+  .place-name.is-tree {
+    font-size: 0.9rem;
+  }
+}
+
+/* object labels are always on in the diorama view: keep them small */
+.world-label {
+  font-size: 0.68rem;
+  padding: 4px 10px;
+}
+
+/* ───────── 💡 hints ───────── */
+
+.hint-card {
+  width: min(440px, calc(100vw - 32px));
+  text-align: left;
+}
+
+.hint-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 214, 120, 0.16);
+  color: #ffe2a8;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hint-card h2 {
+  margin: 10px 0 6px;
+  font-family: var(--serif);
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.hint-text {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.hint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.hint-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dock-item.is-hint svg {
+  color: #ffe2a8;
+}
+
+.dock-item.is-nudging {
+  animation: hint-nudge 1.6s ease-in-out infinite;
+}
+
+@keyframes hint-nudge {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 214, 120, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 214, 120, 0.35);
+    background: rgba(255, 214, 120, 0.18);
+  }
+}
+
+.guide-chip {
+  position: fixed;
+  left: 50%;
+  top: calc(18px + var(--safe-top));
+  transform: translateX(-50%);
+  z-index: 36;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 182, 217, 0.45);
+  background: rgba(40, 20, 70, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffe6f2;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .guide-chip {
+    top: auto;
+    bottom: calc(196px + var(--safe-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-item.is-nudging {
+    animation: none;
+    background: rgba(255, 214, 120, 0.18);
+  }
+}
+
+/* ───────── Chapter 2 layout: keep the middle of the screen free for the islands ───────── */
+
+.distance-ui h2 {
+  font-size: clamp(1.4rem, 3.6vw, 2.2rem);
+}
+
+.distance-ui .connections {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(640px, calc(100vw - 24px));
+  margin: 0;
+  pointer-events: none;
+}
+
+.distance-ui .connections > * {
+  pointer-events: auto;
+}
+
+.distance-ui .thread-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(76px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  max-width: none;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(20, 14, 48, 0.62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+
+.distance-ui .connection-how {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  width: min(300px, 80vw);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(20, 14, 48, 0.85);
+}
+
+.distance-ui .connection {
+  position: relative;
+}
+
+.distance-ui > p {
+  margin-bottom: 150px;
+}
+
+@media (max-width: 600px) {
+  .distance-ui .thread-prompt {
+    bottom: calc(118px + var(--safe-bottom));
+    font-size: 0.78rem;
+  }
+}
+
+/* once the bridge is whole the list steps aside for the closing lines and the countdown */
+.distance-ui .connections.is-whole {
+  display: none;
+}
+
+/* once the bridge is whole: closing words, the countdown and one clear way onward */
+.distance-ui .thread-prompt.is-whole {
+  display: none;
+}
+
+.distance-next {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  pointer-events: auto;
+}
+
+.distance-next small {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.distance-ui > p {
+  margin-bottom: 0;
+}
+
+
+/* a big album in the 3D view: a scrollable sheet at the bottom, the plaza stays visible above */
+.memories-ui:not(.is-flat) .thumb-grid {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(760px, calc(100vw - 24px));
+  max-height: min(42vh, 360px);
+  margin: 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(20, 14, 48, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.memory-count {
+  opacity: 0.75;
 }

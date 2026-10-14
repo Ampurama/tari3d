@@ -110,6 +110,8 @@ export const useStore = create((set, get) => ({
 
   /** the interactable the avatar is standing next to: { id, label } | null */
   prompt: null,
+  /** the 💡 hint guide: a light beam on the next goal and a trail of light from the avatar */
+  guide: false,
   /** a short card shown when something is discovered: { title, text, kind } | null */
   discovery: null,
   /** visual-novel style dialog: { lines, index, key } */
@@ -265,6 +267,8 @@ export const useStore = create((set, get) => ({
 
   setPanel: (panel) => set((s) => ({ panel: s.panel === panel ? null : panel })),
 
+  setGuide: (guide) => set({ guide: Boolean(guide) }),
+
   setPrompt: (prompt) => {
     const cur = get().prompt
     if (cur?.id === prompt?.id && cur?.label === prompt?.label) return
@@ -274,7 +278,8 @@ export const useStore = create((set, get) => ({
   /** A small card announcing a discovery. Closes itself. */
   showDiscovery: (discovery, ms = 6500) => {
     const id = ++toastId
-    set({ discovery: { ...discovery, id } })
+    // a discovery card replaces any toast (they would sit on top of each other)
+    set({ toast: null, discovery: { ...discovery, id } })
     setTimeout(() => {
       if (get().discovery?.id === id) set({ discovery: null })
     }, ms)
@@ -390,6 +395,8 @@ export const useStore = create((set, get) => ({
     save({ seedState, carrying: null })
     set({ seedState, carrying: null })
     const sd = seeds.find((x) => x.id === id)
+    // honesty is planted by hand — that *is* its care, so it grows right away (never left half-done)
+    if (id === 'honesty') return get().growSeed('honesty')
     get().showToast(`Planted ${sd.title}. ${sd.care}`, 5600)
     return true
   },
@@ -425,9 +432,12 @@ export const useStore = create((set, get) => ({
     const stonesLit = addOnce(get().stonesLit, n)
     save({ stonesLit })
     set({ stonesLit })
+    // both guiding stones lit → Shared Adventures grows at once
+    if (stonesLit.length >= 2 && get().seedState.adventures === 'planted') get().growSeed('adventures')
   },
 
   linkFuture: (id) => {
+    if (get().seedState.future !== 'planted') return
     const futureLinks = addOnce(get().futureLinks, id)
     save({ futureLinks })
     set({ futureLinks })

@@ -6,7 +6,7 @@ import * as THREE from 'three'
  * uses this module — rendering, placement, the player controller and the camera.
  */
 
-export const MAIN_RADIUS = 11.5
+export const MAIN_RADIUS = 12.8
 export const WATER_LEVEL = -0.22
 
 /** Zone centres (x, z) and sizes. The start is in the south (+z), the cliff in the east (+x). */
@@ -18,6 +18,8 @@ export const ZONES = {
   lake: { x: 5, z: -5, r: 2.7 },
   cliff: { x: 8.3, z: 2.3, r: 2.3 },
   cove: { x: 6.6, z: 7.6, r: 2.1 },
+  /** Our Memories: a round, flat gallery plaza with the photos standing in a ring */
+  gallery: { x: -5.8, z: 6.9, r: 2.5 },
 }
 
 /** Where the player starts after choosing an avatar. */
@@ -55,6 +57,9 @@ export function worldHeight(x, z) {
   // the meadow is gentle and open
   const m = bump(x, z, ZONES.meadow, 4)
   h = h * (1 - m * 0.75) + 0.32 * m * 0.75
+  // the memories plaza is flat and level, like a little stone courtyard
+  const g = 1 - smooth(ZONES.gallery.r + 0.1, ZONES.gallery.r + 1.4, dist(x, z, ZONES.gallery))
+  h = h * (1 - g * 0.9) + 0.26 * g * 0.9
   // a soft hill under the Love Tree
   h += 0.4 * bump(x, z, ZONES.tree, 3.4)
   // the forest floor rolls a bit more
@@ -89,8 +94,10 @@ export const PATHS = [
   [[1.6, -1.4], [2.4, -3.4], [2.2, -5.0]],
   // tree → cliff ramp → viewpoint
   [[2.2, 0.8], [4.0, 1.5], [5.7, 2.0], [7.3, 2.3], [8.8, 2.5]],
-  // meadow → hidden cove (behind the rock arch)
+  // meadow → the Secret Cove
   [[1.6, 8.4], [3.4, 8.9], [5.0, 8.3], [6.4, 7.7]],
+  // meadow → Our Memories (the gallery plaza)
+  [[-0.3, 7.6], [-1.9, 7.5], [-3.1, 7.2]],
 ]
 
 const segDist = (px, pz, ax, az, bx, bz) => {
@@ -182,6 +189,13 @@ export function groundColor(out, x, z, h) {
   // paths
   const p = pathDistance(x, z)
   out.lerp(C.soil, (1 - smooth(0.32, 0.62, p)) * 0.85)
+  // the memories plaza: pale paving stones in rings
+  const gd = dist(x, z, ZONES.gallery)
+  const paving = 1 - smooth(ZONES.gallery.r - 0.1, ZONES.gallery.r + 0.2, gd)
+  if (paving > 0) {
+    const ring = 0.5 + 0.5 * Math.cos(gd * 7.5)
+    out.lerp(C.stone, paving * 0.35).lerp(C.sand, paving * (0.45 + ring * 0.2))
+  }
   // shore and cove sand
   const shore = 1 - smooth(WATER_LEVEL + 0.05, WATER_LEVEL + 0.45, h)
   out.lerp(C.sand, Math.max(shore * 0.9, bump(x, z, ZONES.cove, 2.4) * 0.6))

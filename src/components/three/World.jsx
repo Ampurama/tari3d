@@ -1,4 +1,5 @@
 import { benchRotation, spots } from '../../lib/layout'
+import { FACE_CAMERA } from '../../lib/iso'
 import { count } from '../../lib/device'
 import { useInteractable } from '../../lib/interactions'
 import { useChapterUnlocked, useStore } from '../../store'
@@ -14,14 +15,13 @@ import LoveCapsule from './LoveCapsule'
 import HiddenHearts from './HiddenHearts'
 import TimeMachine from './TimeMachine'
 import FuturePortal from './FuturePortal'
-import { DistantIslands, IslandGround, Lake, LuminousPaths, Waterfall } from './Terrain'
+import { DistantIslands, IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, ShoreGlow, Waterfall } from './Terrain'
 import Vegetation from './Vegetation'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
 import SeedGarden from './SeedGarden'
 import Discoveries from './Discoveries'
 
-const faceCenter = (p) => Math.atan2(-p.x, -p.z)
 
 /** Lets an older feature also be used with the E key / interact button when the avatar is close. */
 function Station({ id, position, label, radius = 1.8, onUse }) {
@@ -58,6 +58,9 @@ export default function World() {
       <Lake />
       <Waterfall />
       <LuminousPaths />
+      <PlaceNames />
+      <PathLanterns />
+      <ShoreGlow />
       <Vegetation />
       <DistantIslands />
       <FloatingRocks />
@@ -75,7 +78,7 @@ export default function World() {
       <Station id="capsule" position={spots.bench} label="Open the Love Capsule" onUse={open('capsule')} />
 
       <Interactive label="A letter for you" onSelect={open('letter')} position={spots.table} sparkleOffset={[0.05, 1.05, 0.05]}>
-        <LetterTable rotation={[0, faceCenter(spots.table) + Math.PI, 0]} />
+        <LetterTable rotation={[0, FACE_CAMERA + 0.07, 0]} />
       </Interactive>
       <Station id="letter-table" position={spots.table} label="Open the letter on the table" onUse={open('letter')} />
 
@@ -85,13 +88,13 @@ export default function World() {
       <Station id="telescope" position={spots.telescope} label={milesOpen ? 'Look across the sky (Chapter 2)' : 'Look through the telescope'} onUse={toMiles} />
 
       <Interactive label={letterRead ? 'One last thing…' : 'Locked ♡'} onSelect={toFinale} position={spots.arch} sparkleOffset={[0, 2.35, 0]} sparkleColor={letterRead ? '#ff9fd0' : '#8f86b8'}>
-        <SecretArch rotation={[0, faceCenter(spots.arch), 0]} />
+        <SecretArch rotation={[0, FACE_CAMERA + 0.15, 0]} />
       </Interactive>
       <Station id="arch" position={spots.arch} label={letterRead ? 'Step through the heart arch' : 'A sleeping heart arch'} onUse={toFinale} />
 
-      <TimeMachine position={spots.timeMachine} rotation={[0, 0.35, 0]} />
+      <TimeMachine position={spots.timeMachine} rotation={[0, FACE_CAMERA - 0.03, 0]} />
       <Station id="time-machine" position={spots.timeMachine} label="Use the Time Machine" onUse={open('timemachine')} />
-      <FuturePortal position={spots.portal} rotation={[0, faceCenter(spots.portal), 0]} />
+      <FuturePortal position={spots.portal} rotation={[0, FACE_CAMERA + 0.2, 0]} />
       <Station
         id="portal"
         position={spots.portal}
@@ -107,8 +110,8 @@ export default function World() {
       <HiddenHearts group="island" />
       <HiddenHearts group="sky" />
 
-      <Fireflies count={count(60, 28)} area={[20, 4, 20]} center={[0, 0.5, 0]} seed={8} />
-      <DriftParticles position={[0, 4, 0]} count={count(80, 36)} area={[26, 10, 26]} size={0.16} speed={0.16} seed={12} intensity={1.3} />
+      <Fireflies count={count(30, 16)} area={[20, 4, 20]} center={[0, 0.5, 0]} seed={8} />
+      <DriftParticles position={[0, 4, 0]} count={count(36, 18)} area={[26, 10, 26]} size={0.16} speed={0.16} seed={12} intensity={1.1} />
     </group>
   )
 }

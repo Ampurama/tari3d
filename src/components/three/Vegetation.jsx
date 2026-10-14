@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { addCollider, edgeRadius, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
-import { littleSpots, loveTree, noteSpots, plotSpots, seedSpots, spots } from '../../lib/layout'
+import { addCollider, edgeRadius, MAIN_RADIUS, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
+import { littleSpots, loveTree, noteSpots, plotSpots, seedSpots, spots, stoneSpots, viewpointSpot, waterSpot } from '../../lib/layout'
+import { blocksView } from '../../lib/iso'
 import { tier } from '../../lib/device'
 import { wind, windMaterial } from '../../lib/wind'
 import { useStore } from '../../store'
@@ -30,12 +31,32 @@ const M = (x, y, z, sx = 1, sy = sx, sz = sx, rx = 0, ry = 0, rz = 0) =>
 /** Everything that must stay clear of trees and rocks (paths are handled separately). */
 const KEEP_CLEAR = [
   [loveTree.x, loveTree.z, 3.4],
+  [ZONES.gallery.x, ZONES.gallery.z, ZONES.gallery.r + 0.6], // the memories plaza stays open
   ...littleSpots.map((p) => [p.x, p.z, 1.6]),
   ...seedSpots.map((p) => [p.x, p.z, 1.2]),
   ...plotSpots.map((p) => [p.x, p.z, 0.9]),
   ...Object.values(noteSpots).map((p) => [p.x, p.z, 1.0]),
   ...Object.values(spots).map((p) => [p.x, p.z, 1.3]),
 ]
+/**
+ * Everything she has to find or use must stay visible from the 2.5D camera:
+ * nothing tall may stand on the camera's side of it.
+ */
+const MUST_SEE = [
+  ...littleSpots,
+  ...seedSpots,
+  ...plotSpots,
+  ...stoneSpots,
+  ...Object.values(noteSpots),
+  ...Object.values(spots),
+  waterSpot,
+  viewpointSpot,
+]
+/** Would something of this height (world units) at (x, z) hide any of them? */
+const hidesSomething = (x, z, height, half) => {
+  const length = height / Math.tan((36 * Math.PI) / 180) + 0.6
+  return MUST_SEE.some((p) => blocksView(x, z, p.x, p.z, length, half))
+}
 const clearOf = (x, z, extra = 0) => KEEP_CLEAR.every(([cx, cz, r]) => (x - cx) ** 2 + (z - cz) ** 2 > (r + extra) ** 2)
 const onLand = (x, z, margin = 0.88) => Math.hypot(x, z) < edgeRadius(x, z) * margin && !isWater(x, z) && worldHeight(x, z) > WATER_LEVEL + 0.08
 
@@ -63,8 +84,9 @@ function bladeGeometry() {
   const w = 0.035
   const pos = [-w, 0, 0, w, 0, 0, -w * 0.7, 0.33, 0, w * 0.7, 0.33, 0, -w * 0.35, 0.66, 0, w * 0.35, 0.66, 0, 0, 1, 0]
   const col = []
-  const base = new THREE.Color('#4f7f6a')
-  const tip = new THREE.Color('#c9e6b8')
+  // light, soft blades: from above they read as texture, not as dark spikes
+  const base = new THREE.Color('#7fae92')
+  const tip = new THREE.Color('#e2f4d2')
   for (let i = 0; i < pos.length; i += 3) {
     const c = base.clone().lerp(tip, pos[i + 1])
     col.push(c.r, c.g, c.b)
@@ -83,19 +105,21 @@ function Grass() {
   const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.9, vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 }), [])
   const items = useMemo(() => {
     const rand = seeded(1201)
-    const stepSize = HIGH ? 0.2 : 0.32
-    const max = HIGH ? 11000 : 3800
+    const stepSize = HIGH ? 0.26 : 0.36
+    const max = HIGH ? 5000 : 2000
     const tints = ['#ffffff', '#f0fff0', '#e9f7ff', '#fff0f6', '#f4ffe6']
     const list = []
-    for (let x = -12.5; x < 12.5; x += stepSize) {
-      for (let z = -12.5; z < 12.5; z += stepSize) {
+    const R = MAIN_RADIUS + 0.5
+    for (let x = -R; x < R; x += stepSize) {
+      for (let z = -R; z < R; z += stepSize) {
         const px = x + (rand() - 0.5) * stepSize
         const pz = z + (rand() - 0.5) * stepSize
         if (!onLand(px, pz, 0.93) || slope(px, pz) > 0.85 || pathDistance(px, pz) < 0.42) continue
+        if (zoneDistance(px, pz, 'gallery') < ZONES.gallery.r + 0.2) continue // paved
         const density =
-          zoneDistance(px, pz, 'meadow') < 4.4 ? 1 : zoneDistance(px, pz, 'forest') < 4.2 ? 0.35 : zoneDistance(px, pz, 'cove') < 2.6 ? 0.3 : zoneDistance(px, pz, 'tree') < 2.2 ? 0.45 : 0.72
+          zoneDistance(px, pz, 'meadow') < 4.4 ? 0.7 : zoneDistance(px, pz, 'forest') < 4.2 ? 0.25 : zoneDistance(px, pz, 'cove') < 2.6 ? 0.2 : zoneDistance(px, pz, 'tree') < 3.2 ? 0.1 : 0.4
         if (rand() > density) continue
-        list.push({ x: px, z: pz, y: worldHeight(px, pz), h: 0.22 + rand() * 0.3, r: rand() * Math.PI, color: tints[Math.floor(rand() * tints.length)] })
+        list.push({ x: px, z: pz, y: worldHeight(px, pz), h: 0.16 + rand() * 0.2, r: rand() * Math.PI, color: tints[Math.floor(rand() * tints.length)] })
         if (list.length >= max) break
       }
       if (list.length >= max) break
@@ -123,15 +147,16 @@ function Flowers() {
   const centreMat = useMemo(() => windMaterial({ bendFrom: -0.5, amount: 0.05, color: '#ffd36e', emissive: '#ffc04d', emissiveIntensity: 0.9 }), [])
   const items = useMemo(() => {
     const rand = seeded(733)
-    const max = HIGH ? 1300 : 520
+    const max = HIGH ? 560 : 260
     const list = []
     let guard = 0
     while (list.length < max && guard++ < max * 30) {
-      const x = (rand() - 0.5) * 24
-      const z = (rand() - 0.5) * 24
+      const x = (rand() - 0.5) * MAIN_RADIUS * 2.1
+      const z = (rand() - 0.5) * MAIN_RADIUS * 2.1
       if (!onLand(x, z, 0.9) || slope(x, z) > 0.8 || pathDistance(x, z) < 0.4 || !clearOf(x, z, -0.6)) continue
       const zone = zoneDistance(x, z, 'garden') < 3.8 ? 'garden' : zoneDistance(x, z, 'meadow') < 4.6 ? 'meadow' : zoneDistance(x, z, 'forest') < 4.2 ? 'forest' : zoneDistance(x, z, 'cliff') < 2.6 ? 'cliff' : null
-      const chance = zone === 'garden' ? 0.9 : zone === 'meadow' ? 0.85 : zone === 'forest' ? 0.25 : zone === 'cliff' ? 0.6 : 0.12
+      // flowers gather in beds (garden, meadow) instead of covering everything
+      const chance = zone === 'garden' ? 0.8 : zone === 'meadow' ? 0.4 : zone === 'forest' ? 0.08 : zone === 'cliff' ? 0.25 : 0.02
       if (rand() > chance) continue
       const set = FLOWER_SETS[zone || 'meadow']
       const s = (zone === 'garden' ? 0.05 : 0.032) + rand() * 0.03
@@ -206,6 +231,7 @@ function placeTrees() {
   const all = []
   const tryPlace = (kind, x, z, s, minGap) => {
     if (!onLand(x, z, 0.86) || slope(x, z) > 0.7 || pathDistance(x, z) < 0.95 || !clearOf(x, z)) return false
+    if (hidesSomething(x, z, (kind === 'tall' ? 4.6 : 2.6) * s, 1.0 + s * 0.6)) return false
     if (all.some((t) => (t.x - x) ** 2 + (t.z - z) ** 2 < minGap * minGap)) return false
     const t = { x, z, y: worldHeight(x, z) - 0.05, s, r: rand() * Math.PI * 2 }
     out[kind].push(t)
@@ -254,29 +280,18 @@ function placeRocks() {
     if (collide && s > 0.35) addCollider(x, z, s * 0.85)
   }
   // around the foot of Starfall Cliff
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 7; i++) {
     const a = rand() * Math.PI * 2
     const r = ZONES.cliff.r + 1.0 + rand() * 1.2
     const x = ZONES.cliff.x + Math.cos(a) * r
     const z = ZONES.cliff.z + Math.sin(a) * r
-    if (onLand(x, z, 0.92) && pathDistance(x, z) > 1.1 && clearOf(x, z)) add(x, z, 0.35 + rand() * 0.5)
+    const s = 0.3 + rand() * 0.3
+    if (onLand(x, z, 0.92) && pathDistance(x, z) > 1.1 && clearOf(x, z) && !hidesSomething(x, z, s * 1.2, 0.8)) add(x, z, s)
   }
-  // the natural arch that hides the Secret Cove (the path passes underneath)
-  const archC = new THREE.Vector2(4.25, 8.62)
-  const across = new THREE.Vector2(0.31, 0.95)
-  ;[-1, 1].forEach((s) => {
-    const x = archC.x + across.x * 1.05 * s
-    const z = archC.y + across.y * 1.05 * s
-    list.push({ x, z, y: worldHeight(x, z) + 0.6, s: 0.75, sy: 1.6, r: s, color: '#8f80b0' })
-    addCollider(x, z, 0.62)
-  })
-  list.push({ x: archC.x, z: archC.y, y: worldHeight(archC.x, archC.y) + 2.25, s: 1.25, sy: 0.55, sx: 1.6, r: 0.4, color: '#9d8fb8' })
-  // rocks screening the cove from the meadow
-  ;[[5.6, 9.6], [3.0, 10.0], [5.9, 6.6], [3.6, 7.3]].forEach(([x, z]) => onLand(x, z, 0.95) && add(x, z, 0.5 + rand() * 0.35))
   // mossy forest rocks and lake shore stones
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 8; i++) {
     const a = rand() * Math.PI * 2
-    const forest = i < 8
+    const forest = i < 4
     const c = forest ? ZONES.forest : ZONES.lake
     const r = forest ? rand() * (c.r + 0.8) : c.r + 0.9 + rand() * 0.8
     const x = c.x + Math.cos(a) * r
@@ -303,7 +318,7 @@ function Ferns() {
   const items = useMemo(() => {
     const rand = seeded(57)
     const list = []
-    for (let i = 0; i < (HIGH ? 160 : 70); i++) {
+    for (let i = 0; i < (HIGH ? 80 : 40); i++) {
       const a = rand() * Math.PI * 2
       const r = Math.sqrt(rand()) * (ZONES.forest.r + 1)
       const x = ZONES.forest.x + Math.cos(a) * r
@@ -328,13 +343,13 @@ function Bushes() {
     const list = []
     const greens = ['#6fae86', '#7fb98f', '#d98fb4', '#8fc79a']
     const centres = [ZONES.garden, ZONES.meadow, ZONES.cove]
-    for (let i = 0; i < (HIGH ? 70 : 34); i++) {
+    for (let i = 0; i < (HIGH ? 26 : 14); i++) {
       const c = centres[i % centres.length]
       const a = rand() * Math.PI * 2
       const r = c.r * (0.7 + rand() * 0.6)
       const x = c.x + Math.cos(a) * r
       const z = c.z + Math.sin(a) * r
-      if (onLand(x, z, 0.88) && pathDistance(x, z) > 0.75 && clearOf(x, z)) list.push({ x, z, y: worldHeight(x, z), s: 0.25 + rand() * 0.3, r: rand() * 6, color: greens[Math.floor(rand() * greens.length)] })
+      if (onLand(x, z, 0.88) && pathDistance(x, z) > 0.75 && clearOf(x, z) && !hidesSomething(x, z, 0.7, 0.7)) list.push({ x, z, y: worldHeight(x, z), s: 0.25 + rand() * 0.3, r: rand() * 6, color: greens[Math.floor(rand() * greens.length)] })
     }
     return list
   }, [])

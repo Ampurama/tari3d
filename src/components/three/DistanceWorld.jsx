@@ -105,7 +105,7 @@ function Island({ side }) {
         </mesh>
         <Glow color={color} size={2.2} opacity={0.65} />
         <pointLight ref={light} color={color} intensity={3} distance={6} />
-        <HitSphere r={0.6} />
+        <HitSphere r={0.85} />
       </group>
       {view === 'distance' && (
         <Html center position={[side * 0.9, 2.25, -0.9]} zIndexRange={[20, 0]}>
@@ -230,10 +230,16 @@ function Trust() {
     halo.current.scale.setScalar(0.8 + p * 1.6)
   })
   const release = () => (held.current = false)
-  // a finger may slide off the lantern: always release on the window too
+  // a finger may slide off the lantern: always release on the window too (and if the touch is cancelled)
   useEffect(() => {
     window.addEventListener('pointerup', release)
-    return () => window.removeEventListener('pointerup', release)
+    window.addEventListener('pointercancel', release)
+    window.addEventListener('blur', release)
+    return () => {
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+      window.removeEventListener('blur', release)
+    }
   }, [])
   return (
     <group
@@ -248,10 +254,7 @@ function Trust() {
         e.stopPropagation()
         setHover(true)
       }}
-      onPointerOut={() => {
-        setHover(false)
-        release()
-      }}
+      onPointerOut={() => setHover(false)}
     >
       <mesh position={[0, 0.4, 0]}>
         <cylinderGeometry args={[0.03, 0.04, 0.8, 8]} />
@@ -266,7 +269,7 @@ function Trust() {
         <meshBasicMaterial color={[1, 0.7, 0.4]} toneMapped={false} />
       </mesh>
       <Glow ref={halo} position={[0, 0.9, 0]} color="#ffe2a8" size={1} opacity={0.15} />
-      <HitSphere r={0.55} position={[0, 0.7, 0]} />
+      <HitSphere r={0.9} position={[0, 0.7, 0]} />
     </group>
   )
 }
@@ -287,7 +290,7 @@ function Shell({ position, glowing, onTap, live, color }) {
         <meshStandardMaterial color="#fff0f6" emissive={color} emissiveIntensity={0.3} side={THREE.DoubleSide} />
       </mesh>
       <Glow ref={halo} position={[0, 0.25, 0]} color={color} size={1.1} opacity={0.2} />
-      <HitSphere r={0.5} position={[0, 0.2, 0]} />
+      <HitSphere r={0.8} position={[0, 0.25, 0]} />
     </group>
   )
 }
@@ -342,6 +345,9 @@ function Communication() {
 
 /* ───────── 3 · Patience: wait for the drifting light to reach the gap ───────── */
 
+/** How close to the middle counts as "in the gap" (generous: about 1.7 s per pass). */
+const GAP = 1.3
+
 function Patience() {
   const { done, live, complete } = useConnection('patience')
   const orb = useRef()
@@ -350,15 +356,15 @@ function Patience() {
   const reducedMotion = useStore((s) => s.reducedMotion)
   const spot = connectionSpots[idx('patience')]
   useFrame(({ clock }, delta) => {
-    // a slow, steady drift back and forth (about nine seconds each way)
-    x.current = done ? 0 : Math.sin(clock.elapsedTime * (reducedMotion ? 0.25 : 0.35)) * 5.4
+    // a slow, steady drift back and forth (about eleven seconds each way)
+    x.current = done ? 0 : Math.sin(clock.elapsedTime * (reducedMotion ? 0.22 : 0.28)) * 5.4
     orb.current.position.set(x.current, spot.y + 0.4, spot.z)
-    const inGap = Math.abs(x.current) < 0.9
+    const inGap = Math.abs(x.current) < GAP
     gap.current.material.opacity = damp(gap.current.material.opacity, done ? 0.9 : live ? (inGap ? 0.95 : 0.35) : 0.1, 6, delta)
     gap.current.rotation.z += delta * 0.4
   })
   const tap = () => {
-    if (Math.abs(x.current) < 0.9) complete()
+    if (Math.abs(x.current) < GAP) complete()
     else say('Patience… wait until the light reaches the glowing gap ✦', 2600)
   }
   const { handlers } = usePress(tap, live)
@@ -366,12 +372,13 @@ function Patience() {
     <group>
       <group position={[spot.x, spot.y + 0.4, spot.z]} {...handlers}>
         <mesh ref={gap}>
-          <torusGeometry args={[0.5, 0.03, 8, 40]} />
+          <torusGeometry args={[GAP * 0.6, 0.035, 8, 40]} />
           <meshBasicMaterial color={[2.4, 1.9, 1.1]} transparent opacity={0.3} toneMapped={false} depthWrite={false} />
         </mesh>
-        <HitSphere r={0.8} />
+        <HitSphere r={1.2} />
       </group>
       <group ref={orb} {...handlers}>
+        <HitSphere r={0.6} />
         <mesh>
           <sphereGeometry args={[0.12, 14, 10]} />
           <meshBasicMaterial color={[2.6, 2.3, 1.4]} toneMapped={false} />
@@ -400,7 +407,7 @@ function UnderstandingStar({ position, on, live, onTap }) {
         <meshBasicMaterial color={[2.6, 2.4, 2.8]} toneMapped={false} />
       </mesh>
       <Glow ref={halo} color="#d9ccff" size={1} opacity={0.3} />
-      <HitSphere r={0.42} />
+      <HitSphere r={0.58} />
     </group>
   )
 }
@@ -511,7 +518,7 @@ function Effort() {
           <meshBasicMaterial color={[2.4, 1.4, 1.8]} toneMapped={false} />
         </mesh>
       </group>
-      <HitSphere r={0.6} position={[0, 0.6, 0]} />
+      <HitSphere r={0.9} position={[0, 0.6, 0]} />
     </group>
   )
 }
@@ -545,8 +552,9 @@ export default function DistanceWorld() {
   const doneCount = useStore((s) => s.connectionsDone.length)
   const view = useStore((s) => s.view)
   const active = view === 'distance' || view === 'cinematic'
+  // far away from the main island: not drawn (and its lights not counted) unless she's there
   return (
-    <group position={areas.distance}>
+    <group position={areas.distance} visible={active}>
       <Island side={-1} />
       <Island side={1} />
       <Bridge />

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { SPAWN, standHeight } from './terrain'
+import { findPath } from './path'
 
 /*
  * Mutable, per-frame player state shared between the controller, the camera and the
@@ -18,6 +19,20 @@ export const player = {
   cheer: 0,
   /** set while a cinematic or a focused view has control */
   frozen: false,
+}
+
+/**
+ * Walk to (x, z) around obstacles. `stopAt`: how close to the target counts as arrived.
+ * Returns false when there is no way there.
+ */
+export function walkTo(x, z, stopAt = 0.25) {
+  const path = findPath(player.position.x, player.position.z, x, z)
+  if (!path) {
+    player.walkTarget = null
+    return false
+  }
+  player.walkTarget = { x, z, stopAt, path }
+  return true
 }
 
 export function resetPlayer() {
@@ -40,6 +55,8 @@ export const input = {
   interactPresses: 0,
   /** true while the interact key/button is held down (for "hold to…" interactions) */
   interactHeld: false,
+  /** last time (ms) she touched anything — the camera turns by itself after a while */
+  lastActive: 0,
 }
 
 const MOVE_KEYS = {
@@ -56,7 +73,10 @@ const MOVE_KEYS = {
 const typing = (e) => e.target instanceof HTMLElement && (e.target.closest('input, textarea, select') || e.target.isContentEditable)
 
 if (typeof window !== 'undefined') {
+  const active = () => (input.lastActive = performance.now())
+  ;['pointerdown', 'wheel', 'touchstart'].forEach((ev) => window.addEventListener(ev, active, { passive: true }))
   window.addEventListener('keydown', (e) => {
+    active()
     if (typing(e)) return
     const k = MOVE_KEYS[e.code]
     if (k) {

@@ -32,7 +32,8 @@ function Photo({ src, type, alt, className, full = false }) {
       <video src={`${src}#t=0.1`} className={className} muted playsInline preload="metadata" aria-hidden="true" onError={() => setFailed(true)} />
     )
   }
-  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} draggable={false} />
+  // thumbnails load only when scrolled into view, so a big album stays light
+  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} draggable={false} loading={full ? 'eager' : 'lazy'} decoding="async" />
 }
 
 /** Gallery UI: a thumbnail strip + a lightbox that opens when a frame is chosen. */
@@ -87,9 +88,12 @@ export default function MemoriesOverlay({ flat = false }) {
           >
             <div className="section-heading">
               <h2>Our memories</h2>
-              <p>{flat ? 'Tap a photo to look closer' : 'Tap a floating frame — or a little photo below'}</p>
+              <p>
+                {flat ? 'Tap a photo to look closer' : 'Tap a photo in the ring — or any photo below'}
+                {memories.length > 1 && <span className="memory-count"> · {memories.length} memories</span>}
+              </p>
             </div>
-            <div className={flat ? 'thumb-grid' : 'thumb-strip'} role="list">
+            <div className={flat || memories.length > 12 ? 'thumb-grid' : 'thumb-strip'} role="list">
               {memories.map((m, i) => (
                 <button
                   key={i}

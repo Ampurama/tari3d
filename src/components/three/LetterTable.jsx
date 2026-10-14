@@ -79,7 +79,6 @@ export default function LetterTable(props) {
           <meshBasicMaterial color={[3, 2.1, 1.1]} toneMapped={false} />
         </mesh>
         <Glow position={[0, 0.22, 0]} color="#ffcf87" size={0.5} opacity={0.8} />
-        <pointLight position={[0, 0.3, 0]} color="#ffc78a" intensity={2.2} distance={3} decay={2} />
       </group>
 
       {/* envelope */}

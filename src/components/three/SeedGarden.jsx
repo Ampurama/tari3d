@@ -195,19 +195,21 @@ function Plot({ seed, index }) {
     onInteract: () => {
       const st = useStore.getState()
       if (st.carrying === seed.id) {
-        if (st.plantSeed(seed.id)) {
-          audio.sfx('plant')
-          // honesty is planted by hand — that *is* its care
-          if (seed.id === 'honesty') setTimeout(() => st.growSeed('honesty') && audio.sfx('bloom'), 900)
-        }
+        if (st.plantSeed(seed.id)) audio.sfx(seed.id === 'honesty' ? 'bloom' : 'plant')
         return
       }
-      if (st.carrying) return say('This plot is waiting for a different seed ✦', 3000)
       const now = st.seedState[seed.id]
+      // an empty plot can only take its own seed; a planted one can always be cared for
+      if (!now && st.carrying) return say('This plot is waiting for a different seed ✦', 3000)
       if (!now) return say(`The seed of ${seed.title} is hidden somewhere on the island ✦`, 3600)
+      if (now === 'carried') return say(`Bring the seed of ${seed.title} here to plant it ✦`, 3200)
       if (now === 'grown') return st.showDiscovery({ kind: 'seed', title: seed.title, text: seed.message }, 5000)
       if (seed.id === 'kindness') return st.hasWater ? st.growSeed('kindness') && audio.sfx('bloom') : say('It needs a little water from Reflection Lake ✦', 3600)
-      if (seed.id === 'adventures') return say('Light the two guiding stones beside it ✦', 3200)
+      if (seed.id === 'honesty') return st.growSeed('honesty') && audio.sfx('bloom')
+      if (seed.id === 'adventures') {
+        if (st.stonesLit.length >= 2) return st.growSeed('adventures') && audio.sfx('bloom')
+        return say('Light the two guiding stones beside it ✦', 3200)
+      }
       if (seed.id === 'growth') return st.growSeed('growth') && audio.sfx('bloom')
       if (seed.id === 'future') {
         const others = seeds.filter((s) => s.id !== 'future')
@@ -290,8 +292,7 @@ function GuidingStone({ n, position, lit, active }) {
     onInteract: () => {
       const st = useStore.getState()
       st.lightStone(n)
-      audio.sfx('light')
-      if (useStore.getState().stonesLit.length >= 2) setTimeout(() => useStore.getState().growSeed('adventures') && audio.sfx('bloom'), 700)
+      audio.sfx(useStore.getState().seedState.adventures === 'grown' ? 'bloom' : 'light')
     },
   })
   useFrame((_, delta) => {

@@ -89,7 +89,6 @@ export function BlossomTree(props) {
           </mesh>
         ))}
       </group>
-      <pointLight position={[0.3, 2.7, 0.6]} color="#ff9ccc" intensity={6} distance={6} decay={2} />
       <DriftParticles
         position={[0.3, 2.0, 0]}
         count={count(46, 24)}

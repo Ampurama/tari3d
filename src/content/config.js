@@ -322,7 +322,14 @@ export const sweetNotes = [
 ]
 
 export const hints = {
-  explore: 'Walk with WASD or the joystick · drag to look around · E or ✦ to interact',
+  /** the 💡 hint button — after this many seconds without progress it offers itself */
+  idleNudgeSeconds: 75,
+  idleNudge: 'Stuck? Tap 💡 Hint — I’ll show you the way ♡',
+  toTelescope: 'Chapter 2 starts on Starfall Cliff: take the glowing path to the right of the Love Tree, walk up the ramp and use the telescope.',
+  allDone: 'Every chapter is complete ♡ The ending is waiting for you.',
+  secretStar: 'After the ending, a tiny star appears beside the Love Tree. Walk to the tree and reach for it.',
+  everything: 'You’ve found everything in our little universe ♡ Walk around as long as you like.',
+  explore: 'Walk with WASD or the joystick · drag to turn the island · E or ✦ to interact',
   secretLocked: 'This path is still sleeping… read the letter first ♡',
   secretUnlocked: 'Something just woke up at the end of the glowing path ✦',
 }
@@ -415,11 +422,24 @@ export const avatarSelect = {
  * CHAPTER 1 — THE LITTLE THINGS. Five objects around the island, each with its own interaction.
  * `photo` must be one of your real photos (or null for a soft placeholder).
  */
+/** Names of the island's places, written on the map (rename freely). */
+export const placeNames = {
+  meadow: 'Starting Meadow',
+  garden: 'Memory Garden',
+  forest: 'Heartwood Forest',
+  lake: 'Reflection Lake',
+  cliff: 'Starfall Cliff',
+  cove: 'Secret Cove',
+  gallery: 'Our Memories',
+  tree: 'The Love Tree',
+}
+
 export const littleThings = [
   {
     id: 'photo',
     title: 'A Photograph',
     zone: 'Memory Garden',
+    hint: 'Go left from the Love Tree into the Memory Garden. A small photo covered by a cloth stands among the pink flowers — walk up to it and lift the cloth.',
     message: 'One of my favorite photos of us — proof that ordinary days with you turn into something I want to keep.',
     photo: 'photos/2agustus.jpeg',
   },
@@ -427,24 +447,28 @@ export const littleThings = [
     id: 'letter',
     title: 'A Letter in a Bottle',
     zone: 'Reflection Lake',
+    hint: 'Head to Reflection Lake (top right) and walk onto the wooden bridge. A glass bottle is floating right beside it — reach for it from the bridge.',
     message: 'Some of my favorite words are the small ones — the ones I get to share with you on ordinary days.',
   },
   {
     id: 'flower',
     title: 'A Sleeping Flower',
     zone: 'Heartwood Forest',
+    hint: 'Follow the path into the Heartwood Forest (top left). Between the tall trees a glowing flower is sleeping — walk close and touch it.',
     message: 'Some things only bloom when someone is gentle with them. Thank you for being gentle with me.',
   },
   {
     id: 'musicbox',
     title: 'A Music Box',
     zone: 'Starfall Cliff',
+    hint: 'Take the glowing path to the right of the Love Tree and walk up the ramp onto Starfall Cliff. The music box waits near the top.',
     message: 'If our little moments had a sound, I think it would be this — soft, simple, and worth replaying.',
   },
   {
     id: 'star',
     title: 'A Fallen Star',
     zone: 'The Starting Meadow',
+    hint: 'It’s close to where you started: in the Starting Meadow (bottom), a little to the left of the path — look for a tiny star glowing in the grass.',
     message: 'Even the smallest light changes what you can see. You did that for me.',
   },
 ]
@@ -456,30 +480,35 @@ export const littleThings = [
 export const connections = [
   {
     id: 'trust',
+    hint: 'Find the lantern on your island (the left one). Press and keep holding it — don’t let go — until its light stays on.',
     title: 'Trust',
     how: 'Press and hold the lantern until its light stays on.',
     message: 'Trust is a light you keep on, even when you can’t see the other side.',
   },
   {
     id: 'communication',
+    hint: 'Tap the glowing pink shell on your island (left). Wait while the light flies across, then tap the purple shell on the other island (right) to answer.',
     title: 'Communication',
     how: 'Send a light from your island, then answer it from the other one.',
     message: 'Distance can make things difficult, but it doesn’t erase what matters.',
   },
   {
     id: 'patience',
+    hint: 'A small light drifts back and forth over the middle of the bridge. Wait until it is inside the glowing ring (the ring gets brighter), then tap.',
     title: 'Patience',
     how: 'Wait for the drifting light to reach the gap — then tap.',
     message: 'Some days, love means waiting a little longer for the right moment.',
   },
   {
     id: 'understanding',
+    hint: 'Tap one of the stars above the bridge to begin. Watch the order they light up in, then tap them in exactly that order. Wrong? Tap a star again to see the order once more.',
     title: 'Understanding',
     how: 'Watch the stars, then light them in the same order.',
     message: 'Some days, love means understanding. Other days, it means trying again.',
   },
   {
     id: 'effort',
+    hint: 'Tap (or click) the wheel again and again — about ten turns — until the last piece of the bridge slides into place.',
     title: 'Effort',
     how: 'Turn the wheel until the last part of the bridge appears.',
     message: 'Even when we’re far apart, we can still choose to show up for each other.',
@@ -488,11 +517,11 @@ export const connections = [
 
 /** CHAPTER 3 — A FUTURE WE GROW. Five seeds, each grown in its own way around the Love Tree. */
 export const seeds = [
-  { id: 'honesty', title: 'Honesty', care: 'Clear the soil by hand — hold to plant it.', message: 'Honesty — so that we always know where we stand.' },
-  { id: 'kindness', title: 'Kindness', care: 'Bring it water from Reflection Lake.', message: 'Kindness — especially on the days that are hard.' },
-  { id: 'adventures', title: 'Shared Adventures', care: 'Light the two guiding stones beside it.', message: 'Shared adventures — big trips and tiny walks alike.' },
-  { id: 'growth', title: 'Growth Together', care: 'Stay with it a while — hold until it grows.', message: 'Some things are worth taking care of, even when the future is uncertain.' },
-  { id: 'future', title: 'A Future Built Together', care: 'Connect it to the light of the other four.', message: 'I hope we keep learning, growing, and becoming better together.' },
+  { id: 'honesty', where: 'Far left edge of the Memory Garden, past the bench.', title: 'Honesty', care: 'Clear the soil by hand — hold to plant it.', message: 'Honesty — so that we always know where we stand.' },
+  { id: 'kindness', where: 'At the top edge of the Heartwood Forest, behind the tall trees.', title: 'Kindness', care: 'Bring it water from Reflection Lake.', message: 'Kindness — especially on the days that are hard.' },
+  { id: 'adventures', where: 'Up on Starfall Cliff (right side), near the telescope.', title: 'Shared Adventures', care: 'Light the two guiding stones beside it.', message: 'Shared adventures — big trips and tiny walks alike.' },
+  { id: 'growth', where: 'On the far (top) shore of Reflection Lake.', title: 'Growth Together', care: 'Stay with it a while — hold until it grows.', message: 'Some things are worth taking care of, even when the future is uncertain.' },
+  { id: 'future', where: 'In the Starting Meadow, on the path toward the Secret Cove (bottom right).', title: 'A Future Built Together', care: 'Connect it to the light of the other four.', message: 'I hope we keep learning, growing, and becoming better together.' },
 ]
 
 /** Optional notes hidden around the island. They never block the story. */

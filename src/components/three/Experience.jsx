@@ -1,7 +1,8 @@
 import { lazy, Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { AdaptiveDpr, PerformanceMonitor, Preload } from '@react-three/drei'
+import { PerformanceMonitor, Preload } from '@react-three/drei'
 import { tier } from '../../lib/device'
+import { ISO } from '../../lib/iso'
 import { useStore } from '../../store'
 import CameraDirector from './CameraDirector'
 import Sky from './Sky'
@@ -15,13 +16,15 @@ import { Effects, Lights } from './Atmosphere'
 import DebugBridge from './DebugBridge'
 import { PlayerAvatar, PlayerController } from './Player'
 import AvatarStage from './AvatarStage'
+import GuideBeacon from './GuideBeacon'
 
 // heavy, rarely-visited places are split into their own chunks and only mounted when needed
 const FutureWorlds = lazy(() => import('./FutureWorlds'))
 const FinalRoom = lazy(() => import('./FinalRoom'))
 
 export default function Experience() {
-  const [dpr, setDpr] = useState(tier === 'high' ? 1.75 : 1.5)
+  // crisp but affordable: MSAA in the composer smooths the edges, the resolution stays moderate
+  const [dpr, setDpr] = useState(tier === 'high' ? 1.6 : 1.4)
   const view = useStore((s) => s.view)
 
   return (
@@ -29,7 +32,7 @@ export default function Experience() {
       className="scene"
       shadows="percentage"
       dpr={[1, dpr]}
-      camera={{ fov: 50, near: 0.1, far: 1500, position: [0, 70, 72] }}
+      camera={{ fov: ISO.skyFov, near: 0.5, far: 3000, position: [0, 70, 90] }}
       gl={{ antialias: false, powerPreference: 'high-performance', alpha: false, stencil: false }}
       onCreated={({ gl }) => {
         gl.setClearColor('#05051a')
@@ -38,8 +41,7 @@ export default function Experience() {
       }}
       aria-label="Our little universe — an interactive 3D world"
     >
-      <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(1, d - 0.25))} />
-      <AdaptiveDpr pixelated={false} />
+      <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(1, d - 0.2))} />
       <CameraDirector />
       <PlayerController />
       <DebugBridge />
@@ -49,6 +51,7 @@ export default function Experience() {
         <IntroHeart />
         <World />
         <PlayerAvatar />
+        <GuideBeacon />
         <AvatarStage />
         <MemoryLane />
         <Constellation />

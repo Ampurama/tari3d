@@ -139,6 +139,8 @@ export function StoryDirector() {
       Boolean(s.discovery) ||
       s.curtain,
   )
+  // set when the last chapter is celebrated: the ending starts once that dialog is closed
+  const endingQueued = useRef(false)
 
   // a chapter just got completed → celebrate it once (never interrupting something she's reading)
   useEffect(() => {
@@ -154,10 +156,25 @@ export function StoryDirector() {
       if (next) st.showToast(`Chapter ${fresh.index + 1} complete ✦ Chapter ${fresh.index + 2} — ${next.title} — is open.`, 6500)
       const lines = [...(fresh.outro || [])]
       if (fresh.hint) lines.push({ speaker: 'narrator', text: fresh.hint })
+      const last = fresh.index === CHAPTER_COUNT - 1 && !st.mainEndingSeen
+      if (last) {
+        lines.push({ speaker: 'narrator', text: 'Every little thing is in its place now. Look — the Love Tree is waking up…' })
+        endingQueued.current = true
+      }
       st.startDialog(lines, `outro:${fresh.index}`)
     }, 1600)
     return () => clearTimeout(t)
   }, [phase, doneCount, celebrated, dialog, view, reading])
+
+  // the whole journey is done → the final cinematic begins (after the last chapter's words)
+  useEffect(() => {
+    if (!endingQueued.current || dialog || view !== 'explore' || reading) return
+    const t = setTimeout(() => {
+      endingQueued.current = false
+      useStore.getState().startCinematic()
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [dialog, view, reading])
 
   // Chapter 3 introduces itself the first time she's back on the island with it unlocked
   useEffect(() => {

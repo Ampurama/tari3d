@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { player } from './player'
+import { player, walkTo } from './player'
 
 /*
  * Proximity interactions. Objects register themselves with a world position, a reach radius,
@@ -86,7 +86,7 @@ export function approach(id) {
   const near = Math.hypot(pos.x - p.x, pos.z - p.z) <= it.radius
   // "hold to…" things are never completed by a single tap: walk there and let her hold
   if (it.hold > 0) {
-    if (!near) player.walkTarget = { x: pos.x, z: pos.z, stopAt: Math.max(0.6, it.radius * 0.7) }
+    if (!near) walkTo(pos.x, pos.z, Math.max(0.6, it.radius * 0.7))
     player.onArrive = null
     return true
   }
@@ -94,7 +94,7 @@ export function approach(id) {
     it.onInteract()
     return true
   }
-  player.walkTarget = { x: pos.x, z: pos.z, stopAt: Math.max(0.6, it.radius * 0.7) }
+  if (!walkTo(pos.x, pos.z, Math.max(0.6, it.radius * 0.7))) return false
   player.onArrive = () => {
     const again = interactables.get(id)
     if (again && again.enabled() && !(again.hold > 0)) again.onInteract()

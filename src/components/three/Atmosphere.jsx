@@ -1,15 +1,36 @@
+import { useEffect, useRef } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
 import { Bloom, EffectComposer, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import { moonPosition } from '../../lib/layout'
 import { tier } from '../../lib/device'
 
+/** Shadows are redrawn every other frame: half the cost, no visible difference at this pace. */
+function ShadowThrottle() {
+  const gl = useThree((s) => s.gl)
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false
+    gl.shadowMap.needsUpdate = true
+    return () => {
+      gl.shadowMap.autoUpdate = true
+    }
+  }, [gl])
+  const tick = useRef(0)
+  useFrame(() => {
+    tick.current = (tick.current + 1) % 2
+    if (tick.current === 0) gl.shadowMap.needsUpdate = true
+  })
+  return null
+}
+
 /** Moonlight, soft fills and a locally-generated environment for glossy reflections (no downloads). */
 export function Lights() {
   const shadowSize = tier === 'high' ? 2048 : 1024
   return (
     <>
-      <hemisphereLight args={['#b7a2ff', '#241a4d', 0.5]} />
+      <ShadowThrottle />
+      <hemisphereLight args={['#c4b0ff', '#2c1f5c', 0.62]} />
       <ambientLight intensity={0.08} color="#f3d9ff" />
       <directionalLight
         position={[moonPosition.x * 0.2, moonPosition.y * 0.35, moonPosition.z * 0.12]}
@@ -18,6 +39,7 @@ export function Lights() {
         castShadow
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-bias={-0.0004}
+        shadow-intensity={0.6}
         shadow-radius={4}
         shadow-normalBias={0.03}
         shadow-camera-left={-14}
@@ -42,7 +64,7 @@ export function Lights() {
 export function Effects() {
   const high = tier === 'high'
   return (
-    <EffectComposer multisampling={high ? 4 : 0} enableNormalPass={false}>
+    <EffectComposer multisampling={high ? 4 : 2} enableNormalPass={false}>
       <Bloom mipmapBlur intensity={high ? 0.95 : 0.8} luminanceThreshold={0.82} luminanceSmoothing={0.25} radius={0.72} />
       <ToneMapping mode={ToneMappingMode.NEUTRAL} />
       <Vignette eskil={false} offset={0.22} darkness={0.62} />

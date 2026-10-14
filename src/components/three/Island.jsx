@@ -106,7 +106,7 @@ export function FloatingRocks({ amount = 7 }) {
     const rand = seeded(77)
     return Array.from({ length: amount }, (_, i) => ({
       a: (i / amount) * Math.PI * 2,
-      r: 14 + rand() * 4,
+      r: 15.5 + rand() * 4,
       y: -1.5 + rand() * 4,
       s: 0.18 + rand() * 0.35,
     }))

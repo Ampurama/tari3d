@@ -285,7 +285,6 @@ function FallenStar() {
   const { found, allFound, item, position, find } = useLittle('star')
   const star = useRef()
   const halo = useRef()
-  const light = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
   useInteractable('little:star', {
     position,
@@ -298,7 +297,6 @@ function FallenStar() {
     star.current.position.y = damp(star.current.position.y, found ? 3.4 : 0.32 + (reducedMotion ? 0 : Math.sin(t * 2) * 0.04), 0.8, delta)
     star.current.rotation.y = reducedMotion ? 0 : t * (found ? 0.6 : 1.4)
     halo.current.scale.setScalar(damp(halo.current.scale.x, found ? (allFound ? 4.5 : 3.6) : 1.1, 1, delta))
-    light.current.intensity = damp(light.current.intensity, found ? 9 : 1.5, 1, delta)
   })
   return (
     <Tappable id="little:star" position={position}>
@@ -313,7 +311,6 @@ function FallenStar() {
           <meshBasicMaterial color={[3, 2.6, 1.6]} toneMapped={false} />
         </mesh>
         <Glow ref={halo} color="#fff1c9" size={1} opacity={0.85} />
-        <pointLight ref={light} color="#ffe2a8" intensity={1.5} distance={8} />
       </group>
     </Tappable>
   )

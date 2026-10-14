@@ -44,7 +44,7 @@ function Found() {
               <button type="button" className="btn-glow" onClick={() => setStage('transition')}>
                 {secretEnding.found.button}
               </button>
-              <button type="button" className="btn-ghost" onClick={() => useStore.setState({ secretStage: null })}>
+              <button type="button" className="btn-ghost" onClick={() => useStore.getState().stayInUniverse()}>
                 Not now
               </button>
             </motion.div>

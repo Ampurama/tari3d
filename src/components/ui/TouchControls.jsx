@@ -62,6 +62,17 @@ export function InteractButton() {
   const prompt = useStore((s) => s.prompt)
   const ring = useRef()
 
+  // a hold never carries over to something else, or survives the button going away
+  useEffect(() => {
+    if (!prompt) input.interactHeld = false
+  }, [prompt])
+  useEffect(
+    () => () => {
+      input.interactHeld = false
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!prompt?.hold) return
     let raf

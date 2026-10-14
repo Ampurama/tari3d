@@ -5,10 +5,13 @@ import { timeScale, useStore } from '../../store'
 import { glowTexture, heartTexture, petalTexture } from '../../lib/textures'
 import { seeded } from '../../lib/island'
 
-/** Pixel scale so point sizes can be given in world units. */
-function updatePointScale(material, state) {
+/**
+ * Pixel scale so point sizes can be given in world units.
+ * `fixedFov`: size as if seen through that lens (the far star dome shouldn't swell under the flat 2D long lens).
+ */
+function updatePointScale(material, state, fixedFov) {
   const { size, viewport, camera } = state
-  const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(fixedFov || camera.fov) / 2)
   material.uniforms.uScale.value = (size.height * viewport.dpr * 0.5) / tanHalf
 }
 
@@ -288,7 +291,7 @@ export function StarDome({ count = 2200, radius = 380 }) {
     lastView.current = view
     u.uTime.value += delta * (reducedMotion ? 0.2 : 1)
     u.uReveal.value = Math.min(1, u.uReveal.value + delta * (reducedMotion ? 2 : view === 'epilogue' ? 0.22 : 0.35))
-    updatePointScale(material, state)
+    updatePointScale(material, state, 50)
     // follow the camera with a whisper of parallax from the pointer
     const p = useStore.getState().pointer
     ref.current.position.copy(state.camera.position)

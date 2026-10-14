@@ -200,7 +200,7 @@ export default function ConnectionsUI({ flat = false }) {
 
   return (
     <>
-      <div className="connections" role="list" aria-label="Connections">
+      <div className={`connections${done.length >= connections.length ? ' is-whole' : ''}`} role="list" aria-label="Connections">
         {connections.map((c) => {
           const isDone = done.includes(c.id)
           const Flat = FLAT[c.id]
@@ -213,7 +213,7 @@ export default function ConnectionsUI({ flat = false }) {
               <AnimatePresence>
                 {open === c.id && !isDone && (
                   <motion.div className="connection-how" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                    <p>{c.how}</p>
+                    <p>{flat ? c.how : c.hint || c.how}</p>
                     {flat && Flat && <Flat onDone={complete(c.id)} />}
                   </motion.div>
                 )}
@@ -222,8 +222,8 @@ export default function ConnectionsUI({ flat = false }) {
           )
         })}
       </div>
-      <p className="thread-prompt">
-        {done.length >= connections.length ? 'The bridge is whole. Tap an island to open its message ♡' : next ? `Next: ${next.title} — ${next.how}` : ''}
+      <p className={`thread-prompt${done.length >= connections.length ? ' is-whole' : ''}`}>
+        {done.length >= connections.length ? 'The bridge is whole. Tap an island to open its message ♡' : next ? `💡 ${next.title} — ${flat ? next.how : next.hint || next.how}` : ''}
       </p>
       <AnimatePresence>
         {m && (
