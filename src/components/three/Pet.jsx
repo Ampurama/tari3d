@@ -8,6 +8,7 @@ import { seeded, standHeight, walkable } from '../../lib/terrain'
 import { findPath } from '../../lib/path'
 import { useInteractable } from '../../lib/interactions'
 import { petAct, petHome, usePet } from '../../lib/pet'
+import { aboard } from '../../lib/balloon'
 import { useHome } from '../../lib/home'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
@@ -181,7 +182,8 @@ function PetActor({ pet }) {
       s.mode = 'interacting'
     } else if (pet.mode === 'follow') {
       const mine = pet.follow_target === myId
-      const t = mine ? { x: player.position.x, z: player.position.z, yaw: player.yaw } : partner.online && partner.shown.ok && pet.follow_target ? partner.shown : null
+      // (nobody to follow while they're up in the balloon: it waits at home)
+      const t = mine ? (player.balloon ? null : { x: player.position.x, z: player.position.z, yaw: player.yaw }) : partner.online && partner.shown.ok && pet.follow_target && !aboard(pet.follow_target) ? partner.shown : null
       if (t) {
         s.mode = 'following'
         // a little behind and to the left (the right side is for holding hands)

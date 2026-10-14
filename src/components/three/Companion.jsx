@@ -294,7 +294,7 @@ export default function Companion() {
             store.mochiSay(companion.envelope, 3200)
           }
         }
-      } else if (s.mode === 'follow' && store.mochiStay) {
+      } else if (s.mode === 'follow' && (store.mochiStay || player.balloon)) {
         // waiting where she left it: looks around, and turns to watch her
         let dy = Math.atan2(player.position.x - mochi.position.x, player.position.z - mochi.position.z) - mochi.yaw
         dy = Math.atan2(Math.sin(dy), Math.cos(dy))

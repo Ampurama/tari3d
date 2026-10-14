@@ -320,5 +320,43 @@ if (skyRow.error) {
   }
 }
 
+console.log('\n── hot air balloon')
+const balloonRow = await owner.c.from('balloon').select('*').eq('id', 1).maybeSingle()
+if (balloonRow.error) {
+  check('balloon table exists', false, `${balloonRow.error.message} — run supabase/migrations/006_balloon.sql`)
+} else {
+  const anonBalloon = await anon.from('balloon').select('id')
+  check('signed-out visitor cannot see the balloon', !anonBalloon.data?.length, anonBalloon.error?.message || `${anonBalloon.data?.length} rows`)
+  const anonBoard = await anon.rpc('balloon_board')
+  check('signed-out visitor cannot board', Boolean(anonBoard.error), anonBoard.error?.message)
+  const forgeFlight = await owner.c.from('balloon').update({ state: 'flying', dest: 'sky', departed_at: new Date().toISOString() }).eq('id', 1).select('id')
+  check('nobody can fly the balloon by writing to it directly', Boolean(forgeFlight.error) || !forgeFlight.data?.length, forgeFlight.error?.message)
+  const forgeSeat = await owner.c.from('balloon').update({ seat_b: tari.id }).eq('id', 1).select('id')
+  check('nobody can put someone else in a seat', Boolean(forgeSeat.error) || !forgeSeat.data?.length, forgeSeat.error?.message)
+  const badDock = await owner.c.rpc('balloon_call', { p_to: 'moon' })
+  check('an unknown destination is refused', Boolean(badDock.error), badDock.error?.message)
+  if (outsider) {
+    const outsiderBoard = await outsider.c.rpc('balloon_board')
+    check('outsider cannot board', Boolean(outsiderBoard.error), outsiderBoard.error?.message)
+  } else skip('outsider cannot board')
+  const b = balloonRow.data
+  if (b.state !== 'docked' || b.seat_a || b.seat_b) {
+    console.log('SKIP  boarding checks  — someone is in the balloon (or it is flying); get out in the game, then run this again')
+  } else {
+    const o1 = await owner.c.rpc('balloon_board')
+    const o2 = await owner.c.rpc('balloon_board')
+    check('boarding twice still takes only one seat', o2.data?.seat_a === owner.id && !o2.data?.seat_b, o1.error?.message || o2.error?.message)
+    const t1 = await tari.c.rpc('balloon_board')
+    check('Tari takes the other seat', t1.data?.seat_b === tari.id, t1.error?.message)
+    const ownerReady = await owner.c.rpc('balloon_ready', { p_ready: true })
+    check('it waits until everyone in the basket is ready', ownerReady.data?.state === 'docked' && ownerReady.data?.ready_a === true && ownerReady.data?.ready_b === false, ownerReady.error?.message)
+    // put everything back without flying anywhere
+    await owner.c.rpc('balloon_ready', { p_ready: false })
+    const tLeave = await tari.c.rpc('balloon_leave')
+    const oLeave = await owner.c.rpc('balloon_leave')
+    check('both can get out again (test seats cleared)', !oLeave.data?.seat_a && !oLeave.data?.seat_b, tLeave.error?.message || oLeave.error?.message)
+  }
+}
+
 console.log(failures ? `\n${failures} check(s) FAILED — the room is NOT private yet.` : '\nAll checks passed: the room only lets the two of you in.')
 process.exit(failures ? 1 : 0)

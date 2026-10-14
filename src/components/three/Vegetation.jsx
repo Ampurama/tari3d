@@ -42,6 +42,7 @@ const KEEP_CLEAR = [
   ...Object.values(noteSpots).map((p) => [p.x, p.z, 1.0]),
   ...Object.values(spots).map((p) => [p.x, p.z, 1.3]),
   [SKY_BRIDGE.x, SKY_BRIDGE.z0, 2.4], // where the sky bridge to the home island starts
+  [5.0, -1.0, 3.0], // the hot air balloon's landing pad (lib/balloon.js)
 ]
 /**
  * Everything she has to find or use must stay visible from the 2.5D camera:

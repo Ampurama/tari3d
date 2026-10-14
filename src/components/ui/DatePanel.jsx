@@ -29,6 +29,7 @@ import { audio } from '../../audio/engine'
 import { dates } from '../../content/config'
 import { acceptHand, declineHand, releaseHand, useHand } from '../../lib/hand'
 import { SkyCards } from './SkyPanel'
+import { BalloonCard } from './BalloonPanel'
 
 /*
  * LIFE TOGETHER + VIRTUAL DATE — the screens: two small buttons ("Aktivitas", "Virtual Date"),
@@ -509,6 +510,7 @@ export default function DatePanel() {
       <div className="top-stack">
         <DateFloat />
         <HandFloat />
+        <BalloonCard />
         <SkyCards />
       </div>
       <AnimatePresence>

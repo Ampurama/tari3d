@@ -28,6 +28,8 @@ export const player = {
   vy: 0,
   air: false,
   safe: { x: SPAWN.x, z: SPAWN.z },
+  /** riding in the hot air balloon: her seat ('a' / 'b'), set from the server's row (lib/balloon.js) */
+  balloon: null,
 }
 
 /**

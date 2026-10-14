@@ -10,6 +10,7 @@ import { viewpointSpot } from '../../lib/layout'
 import { holdSeat, standUp } from '../../lib/actions'
 import { followBlocked, handFollow, holding, myHand, releaseHand } from '../../lib/hand'
 import { respawnPoint } from '../../lib/sky'
+import { holdBalloon } from '../../lib/balloon'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
 import Avatar from './Avatar'
@@ -40,7 +41,9 @@ const SKY_CENTER = new THREE.Vector3(SKY.x + 1.5, SKY.level + 0.4, SKY.z + 2)
 const center = new THREE.Vector3()
 /** The diorama is whichever island she's on (blending across the bridges). */
 const islandCenter = () => {
-  const { x, z } = player.position
+  const { x, y, z } = player.position
+  // riding the balloon: the camera stays with the basket all the way
+  if (player.balloon) return center.set(x, y - 0.6, z)
   if (skyDistance(x, z) < 1.6) return center.copy(SKY_CENTER)
   const e = eastBridgeAt(x, z)
   if (e.t > 0 && e.t < 1 && e.off < 3) return center.lerpVectors(MAIN_CENTER, SKY_CENTER, THREE.MathUtils.smoothstep(e.t, 0.15, 0.85))
@@ -124,6 +127,8 @@ export function PlayerController() {
     if (!exploring) {
       // leaving the island for a story moment: stand up first
       if (player.seat && s.view !== 'explore') standUp()
+      // in the balloon she rides along even with a menu open
+      if (player.balloon) holdBalloon(delta)
       // a menu opened mid-jump: come down where she is (or back to safety over the clouds)
       if (player.air) {
         const g = groundAt(player.position.x, player.position.z)
@@ -158,7 +163,11 @@ export function PlayerController() {
     let dirX = 0
     let dirZ = 0
     let targetSpeed = 0
-    if (lead) {
+    if (player.balloon) {
+      // in the basket: her own keys rest until she's back on the ground
+      player.walkTarget = null
+      player.onArrive = null
+    } else if (lead) {
       player.walkTarget = null
       player.onArrive = null
       const dx = lead.x - player.position.x
@@ -207,7 +216,7 @@ export function PlayerController() {
     // jump (Space / "Lompat"), only up on Sky Island
     if (input.jumpPresses !== lastJump.current) {
       lastJump.current = input.jumpPresses
-      if (!player.air && !player.seat && !lead && inSkyArea(player.position.x, player.position.z)) {
+      if (!player.air && !player.seat && !player.balloon && !lead && inSkyArea(player.position.x, player.position.z)) {
         if (holding()) releaseHand('self')
         player.air = true
         player.vy = JUMP_SPEED
@@ -244,7 +253,8 @@ export function PlayerController() {
       dy = Math.atan2(Math.sin(dy), Math.cos(dy))
       player.yaw += dy * Math.min(1, delta * 8)
     }
-    if (player.seat) holdSeat()
+    if (player.balloon) holdBalloon(delta)
+    else if (player.seat) holdSeat()
     else if (player.air) {
       player.vy -= GRAVITY * delta
       player.position.y += player.vy * delta

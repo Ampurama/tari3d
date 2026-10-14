@@ -272,6 +272,29 @@ can exist at a time, checkpoints only move forward and only for yourself, finish
 goal, and the round completes only when both of you have finished. As with dates, where you are is reported by your
 own game (positions aren't stored), so the server can't prove you actually jumped every cloud.
 
+### Hot air balloon
+
+Needs `supabase/migrations/006_balloon.sql` (run once, after 005; rollback at the bottom), then the verify script again.
+
+One shared balloon flies between a pad on the main island (the open lawn east of the Love Tree) and a pad on Sky
+Island, in 40 seconds, up over the clouds and well above the rope bridge.
+
+- **Naik Balon Udara** (E / ✦ at the basket, while it's on the ground): you glide into one of the two spots in the
+  basket. Your own movement rests while you're aboard; the camera stays with the basket.
+- **Siap Terbang** (card at the top): it takes off once everyone in the basket is ready (alone is fine too).
+  **Menunggu pasangan…** shows while the other person isn't ready yet.
+- In the air: **Perjalanan sedang berlangsung**, with the progress; gestures (Aktivitas) work up there.
+  You can't get out until it lands.
+- **Turun dari Balon** once it's down: you step out beside the basket onto solid ground (never mid-air).
+- **Panggil balon udara** at an empty pad calls the empty balloon over from the other island.
+
+How it stays the same for both of you: the server keeps one row (where it's docked, who's in which seat, who's
+ready, when it took off) and every change goes through a function that checks who's asking (you can only take,
+leave or get ready in your *own* seat; two seats at most; it can't take off twice). Its position in the air is
+never sent: both games compute it from the take-off time on the server's clock and the fixed route, and the other
+person's character is placed in their spot in the basket. If someone drops offline mid-flight, the balloon still
+lands on time; they're still aboard when they come back (and can get out then).
+
 Not included yet: **photo frames with your own pictures**. That needs private image uploads (a Supabase Storage
 bucket with policies for the two members, size/type limits, and a `photo_path` column on `house_items`), so the
 frames and the memory corner are text-only for now.

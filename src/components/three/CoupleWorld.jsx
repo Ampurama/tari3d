@@ -15,6 +15,7 @@ import { Glow } from './Bits'
 import EmoteFx from './EmoteFx'
 import { partnerEmote } from '../../lib/actions'
 import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from '../../lib/hand'
+import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
 
 /*
  * PLAYING TOGETHER, in the world: the other person's character walking around the island
@@ -48,13 +49,21 @@ function Partner() {
       g.position.set(t.x, t.y, t.z)
       g.userData.placed = true
     }
-    const k = 1 - Math.exp(-delta * 10)
-    g.position.x += (t.x - g.position.x) * k
-    g.position.z += (t.z - g.position.z) * k
-    g.position.y = damp(g.position.y, t.y, 12, delta)
-    let dy = t.yaw - g.rotation.y
-    dy = Math.atan2(Math.sin(dy), Math.cos(dy))
-    g.rotation.y += dy * Math.min(1, delta * 10)
+    const riding = mateSeat()
+    if (riding) {
+      // in the balloon: exactly in their spot in the basket, flown here the same as ours
+      const pose = balloonPose()
+      g.position.copy(seatPosition(riding, pose))
+      g.rotation.y = pose.yaw
+    } else {
+      const k = 1 - Math.exp(-delta * 10)
+      g.position.x += (t.x - g.position.x) * k
+      g.position.z += (t.z - g.position.z) * k
+      g.position.y = damp(g.position.y, t.y, 12, delta)
+      let dy = t.yaw - g.rotation.y
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy))
+      g.rotation.y += dy * Math.min(1, delta * 10)
+    }
     motion.current.speed = damp(motion.current.speed, t.speed, 8, delta)
     motion.current.sit = Boolean(partner.seat)
     motion.current.emote = partnerEmote()
