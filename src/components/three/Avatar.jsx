@@ -36,8 +36,12 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
   const head = useRef()
   const legL = useRef()
   const legR = useRef()
+  const kneeL = useRef()
+  const kneeR = useRef()
   const armL = useRef()
   const armR = useRef()
+  const elbowL = useRef()
+  const elbowR = useRef()
   const eyes = useRef()
   const phase = useRef(0)
   const blink = useRef(2)
@@ -53,35 +57,51 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
     phase.current += delta * (moving ? 4 + speed * 1.8 : 0)
     const swing = moving ? Math.min(1, speed / 2.2) * (speed > 3 ? 0.95 : 0.7) : 0
     const s = Math.sin(phase.current)
+    const c = Math.cos(phase.current)
+    const aL = armL.current
+    const aR = armR.current
+    const eL = elbowL.current
+    const eR = elbowR.current
+    // legs: the thigh swings from the hip, the knee bends as that foot comes through
     legL.current.rotation.x = s * swing
     legR.current.rotation.x = -s * swing
+    kneeL.current.rotation.x = swing * (0.15 + 0.85 * Math.max(0, c))
+    kneeR.current.rotation.x = swing * (0.15 + 0.85 * Math.max(0, -c))
+    // arms: swing opposite to the legs, hanging a little away from the body, elbows soft
     const cheer = Math.min(1, motion.cheer || 0)
-    armL.current.rotation.x = -s * swing * 0.9 - cheer * 2.6
-    armR.current.rotation.x = s * swing * 0.9 - cheer * 2.6
-    armL.current.rotation.z = 0.12 + cheer * 0.3
-    armR.current.rotation.z = -0.12 - cheer * 0.3
+    aL.rotation.set(-s * swing * 0.8 - cheer * 2.6, 0, -0.09 - cheer * 0.3)
+    aR.rotation.set(s * swing * 0.8 - cheer * 2.6, 0, 0.09 + cheer * 0.3)
+    eL.rotation.set(-0.18 - swing * 0.3 * Math.max(0, s), 0, 0)
+    eR.rotation.set(-0.18 - swing * 0.3 * Math.max(0, -s), 0, 0)
     // bob while walking, breathe while standing
     const breathe = reducedMotion ? 0 : Math.sin(t * 2) * 0.012
-    body.current.position.y = moving ? Math.abs(Math.cos(phase.current)) * 0.05 * swing : breathe + cheer * Math.abs(Math.sin(t * 9)) * 0.08
+    body.current.position.y = moving ? Math.abs(c) * 0.05 * swing : breathe + cheer * Math.abs(Math.sin(t * 9)) * 0.08
     body.current.rotation.x = moving ? 0.08 * Math.min(1, speed / 3) : 0
     head.current.rotation.y = moving || reducedMotion ? 0 : Math.sin(t * 0.6) * 0.18
     head.current.rotation.z = moving || reducedMotion ? 0 : Math.sin(t * 0.9) * 0.04
-    // sitting: legs forward, hands resting on the lap
+    // sitting: on a chair the shins hang down; on the ground (a blanket, the porch) the legs stretch out
     if (motion.sit) {
+      const ground = motion.sit === 'ground'
       legL.current.rotation.x = legR.current.rotation.x = -1.45
-      armL.current.rotation.x = armR.current.rotation.x = -0.55
-      armL.current.rotation.z = 0.2
-      armR.current.rotation.z = -0.2
+      kneeL.current.rotation.x = kneeR.current.rotation.x = ground ? 0.08 : 1.4
+      // hands resting on the lap
+      aL.rotation.set(-0.3, 0, -0.12)
+      aR.rotation.set(-0.3, 0, 0.12)
+      eL.rotation.set(-1.0, 0, 0)
+      eR.rotation.set(-1.0, 0, 0)
       body.current.position.y = breathe
       body.current.rotation.x = 0
     }
-    // holding hands: the leader's right hand and the follower's left reach out to each other
-    if (motion.hand === 'right') {
-      armR.current.rotation.x = -0.25 - s * swing * 0.3
-      armR.current.rotation.z = -0.62
-    } else if (motion.hand === 'left') {
-      armL.current.rotation.x = -0.25 + s * swing * 0.3
-      armL.current.rotation.z = 0.62
+    // holding hands: the arm reaches down and a little forward, so the two hands meet halfway between
+    // you (characters stand HAND_OFFSET = 0.55 apart, shoulders 0.2 out, hand 0.28 from the shoulder)
+    if (motion.hand === 'right' || motion.hand === 'left') {
+      const right = motion.hand === 'right'
+      const arm = right ? aR : aL
+      arm.rotation.set(-0.47, 0, right ? 0.27 : -0.27)
+      ;(right ? eR : eL).rotation.set(-0.05, 0, 0)
+      // no bobbing and no lean while holding hands: both bodies stay level, so the hands stay together
+      body.current.position.y = breathe
+      body.current.rotation.x = 0
     }
     // little gestures (all procedural: a few joint angles over a couple of seconds)
     const e = motion.emote
@@ -90,28 +110,31 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
       const wig = reducedMotion ? 0 : Math.sin(et * 11)
       const k = Math.min(1, et * 4)
       if (e.kind === 'wave' || e.kind === 'call') {
-        armR.current.rotation.x = -2.7 * k
-        armR.current.rotation.z = -0.35 + wig * 0.35
+        // the hand up, waving from the elbow
+        aR.rotation.set(-2.6 * k, 0, 0.3)
+        eR.rotation.set(-0.35 * k, 0, wig * 0.55 * k)
         if (e.kind === 'call') {
-          armL.current.rotation.x = -2.0 * k
-          armL.current.rotation.z = 0.5
+          // the other hand cupped by the mouth
+          aL.rotation.set(-1.15 * k, 0, -0.25)
+          eL.rotation.set(-1.95 * k, 0, 0)
         }
       } else if (e.kind === 'heart') {
-        // both hands above the head, curved into a heart
-        armL.current.rotation.x = armR.current.rotation.x = -2.85 * k
-        armL.current.rotation.z = -0.55 * k
-        armR.current.rotation.z = 0.55 * k
+        // both arms up, the forearms curving in over the head: a heart
+        aL.rotation.set(-2.7 * k, 0, -0.4 * k)
+        aR.rotation.set(-2.7 * k, 0, 0.4 * k)
+        eL.rotation.set(0, 0, 1.15 * k)
+        eR.rotation.set(0, 0, -1.15 * k)
       } else if (e.kind === 'happy') {
-        armL.current.rotation.x = armR.current.rotation.x = -2.5 * k
-        armL.current.rotation.z = 0.4
-        armR.current.rotation.z = -0.4
+        aL.rotation.set(-2.5 * k, 0, -0.45)
+        aR.rotation.set(-2.5 * k, 0, 0.45)
+        eL.rotation.set(0, 0, 0)
+        eR.rotation.set(0, 0, 0)
         if (!motion.sit && !reducedMotion) body.current.position.y = Math.abs(Math.sin(et * 9)) * 0.12
       } else if (e.kind === 'photo') {
-        // a peace sign by the face, head tilted
-        armR.current.rotation.x = -2.3 * k
-        armR.current.rotation.z = -0.9 * k
-        armL.current.rotation.z = 0.35
-        head.current.rotation.z = 0.18 * k
+        // a peace sign by the cheek, head tilted toward it
+        aR.rotation.set(-1.3 * k, 0, 0.4 * k)
+        eR.rotation.set(-1.75 * k, 0, 0)
+        head.current.rotation.z = -0.18 * k
         head.current.rotation.y = 0
       }
     }
@@ -125,18 +148,23 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
   return (
     <group ref={ref} {...props}>
       <group ref={body}>
-        {/* legs (pivot at the hip) */}
+        {/* legs: thigh (pivot at the hip), shin and shoe (pivot at the knee) */}
         {[
-          [legL, -0.09],
-          [legR, 0.09],
-        ].map(([r, x], i) => (
-          <group key={i} ref={r} position={[x, 0.38, 0]}>
-            <mesh position={[0, -0.17, 0]} material={mats.bottom} castShadow={castShadow}>
-              <capsuleGeometry args={[0.065, 0.2, 4, 10]} />
+          [legL, kneeL, -0.09],
+          [legR, kneeR, 0.09],
+        ].map(([hip, knee, x], i) => (
+          <group key={i} ref={hip} position={[x, 0.38, 0]}>
+            <mesh position={[0, -0.085, 0]} material={mats.bottom} castShadow={castShadow}>
+              <capsuleGeometry args={[0.064, 0.1, 4, 10]} />
             </mesh>
-            <mesh position={[0, -0.34, 0.03]} scale={[1, 0.7, 1.35]} material={mats.shoes} castShadow={castShadow}>
-              <sphereGeometry args={[0.075, 12, 10]} />
-            </mesh>
+            <group ref={knee} position={[0, -0.17, 0]}>
+              <mesh position={[0, -0.07, 0]} material={dress ? mats.skin : mats.bottom} castShadow={castShadow}>
+                <capsuleGeometry args={[dress ? 0.042 : 0.056, 0.08, 4, 10]} />
+              </mesh>
+              <mesh position={[0, -0.165, 0.03]} scale={[1, 0.68, 1.4]} material={mats.shoes} castShadow={castShadow}>
+                <sphereGeometry args={[0.072, 12, 10]} />
+              </mesh>
+            </group>
           </group>
         ))}
 
@@ -156,18 +184,39 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
           </>
         )}
 
-        {/* arms (pivot at the shoulder) */}
+        {/* a neck, and rounded shoulders */}
+        <mesh position={[0, 0.77, 0]} material={mats.skin}>
+          <cylinderGeometry args={[0.05, 0.06, 0.1, 10]} />
+        </mesh>
+        {[-0.17, 0.17].map((x) => (
+          <mesh key={x} position={[x, 0.67, 0]} material={mats.top} castShadow={castShadow}>
+            <sphereGeometry args={[0.068, 12, 10]} />
+          </mesh>
+        ))}
+
+        {/* arms: upper arm (pivot at the shoulder), forearm and hand (pivot at the elbow) */}
         {[
-          [armL, -0.2],
-          [armR, 0.2],
-        ].map(([r, x], i) => (
-          <group key={i} ref={r} position={[x, 0.66, 0]}>
-            <mesh position={[0, -0.13, 0]} material={mats.top} castShadow={castShadow}>
-              <capsuleGeometry args={[0.05, 0.16, 4, 10]} />
+          [armL, elbowL, -0.2, -1],
+          [armR, elbowR, 0.2, 1],
+        ].map(([shoulder, elbow, x, side], i) => (
+          <group key={i} ref={shoulder} position={[x, 0.66, 0]}>
+            <mesh position={[0, -0.07, 0]} material={mats.top} castShadow={castShadow}>
+              <capsuleGeometry args={[0.048, 0.07, 4, 10]} />
             </mesh>
-            <mesh position={[0, -0.27, 0]} material={mats.skin}>
-              <sphereGeometry args={[0.05, 10, 8]} />
-            </mesh>
+            <group ref={elbow} position={[0, -0.15, 0]}>
+              <mesh position={[0, -0.055, 0]} material={mats.skin} castShadow={castShadow}>
+                <capsuleGeometry args={[0.04, 0.06, 4, 10]} />
+              </mesh>
+              {/* the hand: a soft palm with a little thumb on the front */}
+              <group position={[0, -0.13, 0]}>
+                <mesh scale={[0.85, 1.15, 0.62]} material={mats.skin}>
+                  <sphereGeometry args={[0.046, 12, 10]} />
+                </mesh>
+                <mesh position={[-side * 0.022, 0.012, 0.026]} scale={[0.8, 1.2, 0.8]} material={mats.skin}>
+                  <sphereGeometry args={[0.017, 8, 6]} />
+                </mesh>
+              </group>
+            </group>
           </group>
         ))}
 

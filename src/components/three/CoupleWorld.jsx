@@ -13,7 +13,7 @@ import Avatar from './Avatar'
 import Tappable from './Interact'
 import { Glow } from './Bits'
 import EmoteFx from './EmoteFx'
-import { partnerEmote } from '../../lib/actions'
+import { partnerEmote, sitStyle } from '../../lib/actions'
 import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from '../../lib/hand'
 import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
 
@@ -65,7 +65,7 @@ function Partner() {
       g.rotation.y += dy * Math.min(1, delta * 10)
     }
     motion.current.speed = damp(motion.current.speed, t.speed, 8, delta)
-    motion.current.sit = Boolean(partner.seat)
+    motion.current.sit = partner.seat ? sitStyle(partner.seat.seat) : false
     motion.current.emote = partnerEmote()
     motion.current.hand = mateHand()
     // where they're drawn, for holding hands and for the pet

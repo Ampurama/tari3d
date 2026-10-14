@@ -7,7 +7,7 @@ import { groundAt, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, 
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
-import { holdSeat, standUp } from '../../lib/actions'
+import { holdSeat, sitStyle, standUp } from '../../lib/actions'
 import { followBlocked, handFollow, holding, myHand, releaseHand } from '../../lib/hand'
 import { respawnPoint } from '../../lib/sky'
 import { holdBalloon } from '../../lib/balloon'
@@ -400,7 +400,7 @@ export function PlayerAvatar() {
   return (
     <>
       <group ref={group}>
-        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: Boolean(player.seat), emote: player.emote, hand: myHand() })} />
+        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sitStyle(player.seat), emote: player.emote, hand: myHand() })} />
         <EmoteFx get={() => player.emote} />
         {(carrying || hasWater) && (
           <group ref={carry} position={[0, 1.55, 0]}>

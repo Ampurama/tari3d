@@ -105,6 +105,14 @@ export function holdSeat() {
   player.speed = 0
 }
 
+/** How someone sits there: 'chair' (shins hang down) or 'ground' (a blanket, the porch edge: legs stretched out). */
+export function sitStyle(id) {
+  if (!id) return false
+  const s = seatDef(id)
+  if (!s) return 'chair'
+  return s.y - standHeight(s.x, s.z) < 0.25 ? 'ground' : 'chair'
+}
+
 /** Another free seat on the same piece of furniture, if there is one. */
 export function freeSibling(id) {
   const g = seatDef(id)?.group
