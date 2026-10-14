@@ -37,8 +37,6 @@ export const rig = { baseDist: 100, minDist: 36 }
 const SKY_VIEWS = new Set(['intro', 'avatar', 'finale', 'finalRoom', 'constellation', 'future'])
 export const fovFor = (view) => (SKY_VIEWS.has(view) ? ISO.skyFov : ISO.fov)
 
-/** Distances written for a 30° lens, converted to the flat lens (same framing). */
-export const LENS = Math.tan((15 * Math.PI) / 180) / Math.tan(((ISO.fov / 2) * Math.PI) / 180)
 
 const D2R = Math.PI / 180
 

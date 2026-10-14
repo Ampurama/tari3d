@@ -1,25 +1,27 @@
-import { connections, littleThings, seeds, story } from '../content/config'
+import { companion, connections, couple, glowFlowers, littleThings, story } from '../content/config'
 
 /*
- * Three chapters, measured only from what she has actually done (saved in the store).
+ * Five chapters, measured only from what she has actually done (saved in the store).
  * A task returns [have, need]; need === 0 (empty config) counts as done.
  * Ids that no longer exist in the config are ignored, so nothing is ever double-counted.
  */
 
 const countIds = (list, items) => items.filter((it) => list.includes(it.id)).length
 
+/** The three Disaster Date mini-games, in the order they are played. */
+export const PICNIC_GAMES = ['catch', 'save', 'fix']
+
 const TASKS = [
-  // 1 — The Little Things
-  [{ label: 'Find the five little things hidden around the island', measure: (s) => [countIds(s.littleFound, littleThings), littleThings.length] }],
-  // 2 — Miles Between Us
-  [{ label: 'Restore the five connections between the two islands', measure: (s) => [countIds(s.connectionsDone, connections), connections.length] }],
-  // 3 — A Future We Grow
-  [
-    {
-      label: 'Plant and grow the five glowing seeds around the Love Tree',
-      measure: (s) => [seeds.filter((sd) => s.seedState[sd.id] === 'grown').length, seeds.length],
-    },
-  ],
+  // 1 — The Goofy Beginning
+  [{ label: 'Bangunin si hati berbulu, terus kumpulin tiga bunga bercahaya', measure: (s) => [countIds(s.flowersFound, glowFlowers), glowFlowers.length] }],
+  // 2 — Little Things About You
+  [{ label: 'Temukan lima hal kecil yang disembunyiin di pulau', measure: (s) => [countIds(s.littleFound, littleThings), littleThings.length] }],
+  // 3 — A Little Far, Never Apart
+  [{ label: 'Sambungin lagi lima hal di antara dua pulau', measure: (s) => [countIds(s.connectionsDone, connections), connections.length] }],
+  // 4 — The Disaster Date
+  [{ label: 'Selamatkan piknik: tiga mini-game kecil', measure: (s) => [PICNIC_GAMES.filter((g) => s.picnicDone.includes(g)).length, PICNIC_GAMES.length] }],
+  // 5 — A Letter From the Future
+  [{ label: 'Buka amplop di bawah Love Tree', measure: (s) => [s.envelopeOpened ? 1 : 0, 1] }],
 ]
 
 export const CHAPTER_COUNT = Math.min(story.chapters.length, TASKS.length)
@@ -42,22 +44,34 @@ export function chapterStatus(state) {
   return out
 }
 
+/** Index of a chapter by its id ('goofy' | 'little-things' | 'miles' | 'picnic' | 'letter'). */
+export const chapterIndex = (id) => story.chapters.findIndex((c) => c.id === id)
+
 export const completedCount = (state) => chapterStatus(state).filter((c) => c.done).length
 
 /** The chapter currently being played (first unfinished), or null when everything is done. */
 export const currentChapter = (state) => chapterStatus(state).find((c) => !c.done) || null
 
-/** 0..1 — how much of the whole journey is done (the Love Tree grows with it). */
+/** 0..1 — how much of the whole journey is done (the Love Tree, the lanterns and the sky follow it). */
 export function journeyProgress(state) {
-  const total = littleThings.length + connections.length + seeds.length
-  if (!total) return 1
-  const grown = seeds.filter((sd) => state.seedState[sd.id] === 'grown').length
-  return (countIds(state.littleFound, littleThings) + countIds(state.connectionsDone, connections) + grown) / total
+  const total = glowFlowers.length + littleThings.length + connections.length + PICNIC_GAMES.length + 1
+  return (
+    (countIds(state.flowersFound, glowFlowers) +
+      countIds(state.littleFound, littleThings) +
+      countIds(state.connectionsDone, connections) +
+      PICNIC_GAMES.filter((g) => state.picnicDone.includes(g)).length +
+      (state.envelopeOpened ? 1 : 0)) /
+    total
+  )
 }
 
-/** Replace {me}/{you} placeholders in dialog lines. */
+/** Any game line with {me}/{you}/{pet} filled in (nicknames come from `couple` in config.js). */
+export const withNames = (text) => (typeof text === 'string' ? fillNames(text, couple) : text)
+
+/** Replace {me}/{you}/{pet} placeholders in dialog lines. */
 export function fillNames(text, couple) {
   return text
     .replaceAll('{me}', couple.me.nickname || couple.me.name)
     .replaceAll('{you}', couple.you.nickname || couple.you.name)
+    .replaceAll('{pet}', companion.name)
 }

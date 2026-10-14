@@ -1,6 +1,6 @@
 import { Component, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Archive, BookHeart, Footprints, Hourglass, Images, Lock, Mail, Orbit, Sparkles, Sprout, Star, Telescope } from 'lucide-react'
+import { Archive, BookHeart, Flower2, Footprints, Heart, Hourglass, Images, Lock, Mail, Orbit, Sparkles, Star, Telescope, Utensils } from 'lucide-react'
 import { constellation, hints, loveCapsule, memoryLane, story } from '../../content/config'
 import { CHAPTER_COUNT, chapterStatus } from '../../lib/story'
 import { useStore } from '../../store'
@@ -20,7 +20,8 @@ import FutureOverlay from './FutureOverlay'
 import { CinematicOverlay, EndingLetter } from './Ending'
 import SecretEnding from './SecretEnding'
 import AvatarSelect from './AvatarSelect'
-import { FlatChapterSheets } from './FlatStory'
+import { FlatChapterSheets, FlatPicnic } from './FlatStory'
+import PicnicUI from './PicnicUI'
 
 export class ErrorBoundary extends Component {
   state = { failed: false }
@@ -52,11 +53,18 @@ function FlatWorld() {
 
   const chapterCards = chapters.map((c) => ({
     key: `ch${c.index}`,
-    icon: c.done ? Sparkles : !c.unlocked ? Lock : [Star, Telescope, Sprout][c.index],
+    icon: c.done ? Sparkles : !c.unlocked ? Lock : { goofy: Heart, 'little-things': Star, miles: Telescope, picnic: Utensils, letter: Mail }[c.id] || Flower2,
     title: `Chapter ${c.index + 1} · ${c.title}`,
     text: !c.unlocked ? 'Finish the chapter before ✦' : `${c.tasks[0].have}/${c.tasks[0].need} · ${c.subtitle}`,
     locked: !c.unlocked,
-    go: () => (c.index === 0 ? setSheet('little') : c.index === 1 ? useStore.getState().travelToMiles() : setSheet('seeds')),
+    go: () => {
+      const st = useStore.getState()
+      if (c.id === 'goofy') return setSheet('goofy')
+      if (c.id === 'little-things') return setSheet('little')
+      if (c.id === 'miles') return st.travelToMiles()
+      if (c.id === 'picnic') return st.startPicnic()
+      if (c.id === 'letter') return c.done ? st.openLetterAgain() : st.openEnvelope()
+    },
   }))
   const extras = [
     { key: 'memories', icon: Images, title: 'Our memories', text: 'Little moments I keep close.', go: () => goTo('memories') },
@@ -158,6 +166,8 @@ export default function Fallback() {
       <SecretEnding flat />
       <LetterOverlay flat />
       <DistanceOverlay flat />
+      <FlatPicnic />
+      <PicnicUI />
       <FinaleOverlay flat />
       <FlatHiddenHearts />
       <Hud flat />

@@ -72,6 +72,10 @@ function SettingsPanel() {
             <button type="button" className="icon-btn panel-close" onClick={() => setPanel(null)} aria-label="Close">
               <X size={18} />
             </button>
+            <span className="eyebrow">Paused</span>
+            <button type="button" className="btn-glow small settings-resume" onClick={() => setPanel(null)}>
+              Resume ♡
+            </button>
             <h2>Sound</h2>
             <div className="setting-row">
               <span>
@@ -126,7 +130,8 @@ function SettingsPanel() {
 const VIEW_TITLES = {
   memories: 'Our memories',
   letter: 'A letter for you',
-  distance: 'Miles Between Us',
+  distance: 'A Little Far, Never Apart',
+  picnic: 'The Disaster Date',
   lane: 'Memory Lane',
   timemachine: 'Time Machine',
   future: 'Future Simulator',
@@ -255,6 +260,8 @@ export default function Hud({ flat = false }) {
       if (st.discovery) return st.closeDiscovery()
       if (st.dialog) return st.closeDialog()
       const v = st.view
+      // on the island, Escape pauses: the settings (sound, help) open and the avatar waits
+      if (v === 'explore' && st.phase === 'world') return st.setPanel('settings')
       if (['explore', 'intro', 'avatar', 'finale', 'cinematic', 'ending', 'finalRoom', 'epilogue'].includes(v)) return
       if (v === 'memories' && st.selectedMemory !== null) return
       if (v === 'capsule' && st.capsuleLetter) return

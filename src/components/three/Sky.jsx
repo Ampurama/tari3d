@@ -6,6 +6,8 @@ import { cloudTexture, glowTexture, moonTexture } from '../../lib/textures'
 import { moonPosition } from '../../lib/layout'
 import { seeded } from '../../lib/island'
 import { count } from '../../lib/device'
+import { CINE, cineTime, windowAt } from '../../lib/cinematic'
+import { journeyProgress } from '../../lib/story'
 import { StarDome } from './Particles'
 
 const skyVertex = /* glsl */ `
@@ -24,6 +26,7 @@ const skyFragment = /* glsl */ `
   uniform vec3 uViolet;
   uniform float uDim;
   uniform float uTime;
+  uniform float uSunset;
   void main() {
     vec3 d = normalize(vDir);
     float h = d.y;
@@ -34,6 +37,10 @@ const skyFragment = /* glsl */ `
     float n2 = pow(max(dot(d, normalize(vec3(0.75, 0.1, -0.4))), 0.0), 9.0);
     float n3 = pow(max(dot(d, normalize(vec3(0.2, -0.3, 0.9))), 0.0), 7.0);
     col += uPink * n1 * 0.55 + uViolet * n2 * 0.6 + uViolet * n3 * 0.35;
+    // the evening: pink, purple and gold, warmest low in the north where the camera looks
+    float low = smoothstep(0.6, -0.05, h);
+    col = mix(col, mix(vec3(0.36, 0.2, 0.5), vec3(1.0, 0.56, 0.5), low), uSunset * 0.7 * smoothstep(-0.35, 0.05, h));
+    col += vec3(1.0, 0.72, 0.38) * pow(max(dot(d, normalize(vec3(0.15, 0.06, -1.0))), 0.0), 10.0) * uSunset * 0.7;
     // a soft, slowly moving aurora ribbon low over the northern horizon (pure math: almost free)
     float az = atan(d.x, -d.z);
     float ribbon = d.y - 0.16 - 0.07 * sin(az * 2.0 + uTime * 0.05) - 0.03 * sin(az * 5.0 - uTime * 0.08);
@@ -58,6 +65,7 @@ function SkyGradient() {
           uViolet: { value: new THREE.Color('#8b6cff') },
           uDim: { value: 1 },
           uTime: { value: 0 },
+          uSunset: { value: 0 },
         },
         vertexShader: skyVertex,
         fragmentShader: skyFragment,
@@ -73,6 +81,11 @@ function SkyGradient() {
     const target = view === 'finale' ? 0.35 : view === 'intro' ? 0.75 : view === 'epilogue' ? 1.35 : 1
     material.uniforms.uDim.value = THREE.MathUtils.damp(material.uniforms.uDim.value, target, 1.5, delta)
     material.uniforms.uTime.value += delta
+    // the sky follows the story: a little warmer with every chapter, a full sunset for the finale
+    const s = useStore.getState()
+    const sunset =
+      s.view === 'cinematic' ? windowAt(CINE.sunset, cineTime(state.clock.elapsedTime)) : s.view === 'ending' ? 1 : s.view === 'picnic' && s.picnicStage === 'sunset' ? 0.9 : s.mainEndingSeen ? 0.6 : journeyProgress(s) * 0.45
+    material.uniforms.uSunset.value = THREE.MathUtils.damp(material.uniforms.uSunset.value, sunset, 0.8, delta)
   })
   return (
     <mesh ref={ref} material={material} renderOrder={-20} frustumCulled={false}>

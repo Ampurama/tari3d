@@ -19,8 +19,10 @@ import { DistantIslands, IslandGround, Lake, LuminousPaths, PathLanterns, PlaceN
 import Vegetation from './Vegetation'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
-import SeedGarden from './SeedGarden'
 import Discoveries from './Discoveries'
+import Companion from './Companion'
+import Picnic from './Picnic'
+import { BonusHeart, Envelope, GlowFlowers } from './StoryObjects'
 
 
 /** Lets an older feature also be used with the E key / interact button when the avatar is close. */
@@ -37,7 +39,8 @@ export default function World() {
   const travelToMiles = useStore((s) => s.travelToMiles)
   const letterRead = useStore((s) => s.letterRead)
   const view = useStore((s) => s.view)
-  const milesOpen = useChapterUnlocked(1)
+  const ended = useStore((s) => s.mainEndingSeen)
+  const milesOpen = useChapterUnlocked('miles')
 
   const open = (v) => () => {
     audio.sparkle()
@@ -68,7 +71,11 @@ export default function World() {
 
       {/* the story */}
       <LittleThings />
-      <SeedGarden />
+      <Companion />
+      <GlowFlowers />
+      <Picnic />
+      <Envelope />
+      <BonusHeart />
       <Discoveries />
 
       {/* older places, now living in the island's zones */}
@@ -85,7 +92,7 @@ export default function World() {
       <Interactive label={milesOpen ? 'Look across the sky' : 'A telescope'} onSelect={toMiles} position={spots.telescope} sparkleOffset={[0.25, 1.45, 0]} sparkleColor="#d9c6ff">
         <Telescope rotation={[0, -2.2, 0]} />
       </Interactive>
-      <Station id="telescope" position={spots.telescope} label={milesOpen ? 'Look across the sky (Chapter 2)' : 'Look through the telescope'} onUse={toMiles} />
+      <Station id="telescope" position={spots.telescope} label={milesOpen ? 'Look across the sky (Chapter 3)' : 'Look through the telescope'} onUse={toMiles} />
 
       <Interactive label={letterRead ? 'One last thing…' : 'Locked ♡'} onSelect={toFinale} position={spots.arch} sparkleOffset={[0, 2.35, 0]} sparkleColor={letterRead ? '#ff9fd0' : '#8f86b8'}>
         <SecretArch rotation={[0, FACE_CAMERA + 0.15, 0]} />
@@ -111,6 +118,8 @@ export default function World() {
       <HiddenHearts group="sky" />
 
       <Fireflies count={count(30, 16)} area={[20, 4, 20]} center={[0, 0.5, 0]} seed={8} />
+      {/* the finale's fireflies around the Love Tree (a few, not a swarm) */}
+      {(view === 'cinematic' || ended) && <Fireflies count={count(34, 16)} area={[7, 3.5, 7]} center={[0, 1.4, 0]} seed={77} colors={['#ffe2a8', '#ffd6ea']} />}
       <DriftParticles position={[0, 4, 0]} count={count(36, 18)} area={[26, 10, 26]} size={0.16} speed={0.16} seed={12} intensity={1.1} />
     </group>
   )

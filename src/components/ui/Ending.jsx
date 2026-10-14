@@ -1,77 +1,112 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mail, RotateCcw, SkipForward, X } from 'lucide-react'
-import { finalCinematic, loveLetter } from '../../content/config'
-import { CINE_LENGTH, SCENES, TITLE_AT } from '../../lib/cinematic'
+import { Images, Mail, RotateCcw, SkipForward, X } from 'lucide-react'
+import { finalCinematic, finalMessage, loveLetter } from '../../content/config'
+import { CINE, CINE_LENGTH } from '../../lib/cinematic'
+import { withNames } from '../../lib/story'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { HeartPlayer } from './SecretEnding'
 
 /**
- * FINAL CINEMATIC overlay — cinematic bars, captions for each scene, soft cuts between them,
- * the title, and a skip button (after a brief moment). The camera is driven in 3D.
+ * FINAL CINEMATIC overlay — cinematic bars, two quiet captions, the title, and then the final
+ * message one line at a time. It can be skipped straight to the message; at the end she chooses:
+ * replay it, revisit the memories, read the letter again, or stay in the little world.
  */
 export function CinematicOverlay({ flat = false }) {
   const view = useStore((s) => s.view)
+  const run = useStore((s) => s.cineRun)
   const finish = useStore((s) => s.finishCinematic)
-  const reducedMotion = useStore((s) => s.reducedMotion)
   const [t, setT] = useState(0)
+  const start = useRef(0)
   const open = view === 'cinematic'
-  const speed = reducedMotion ? 4 : 1
+  const lines = useMemo(() => finalMessage.lines.filter(Boolean).map(withNames), [])
 
   useEffect(() => {
     if (!open) {
       setT(0)
       return
     }
-    const start = performance.now()
-    const id = setInterval(() => setT(((performance.now() - start) / 1000) * speed), 100)
-    // the 3D camera ends the cinematic; this is the safety net (and the clock for the 2D version)
-    const end = setTimeout(() => useStore.getState().finishCinematic(), ((CINE_LENGTH + (flat ? 0 : 2)) * 1000) / speed)
-    return () => {
-      clearInterval(id)
-      clearTimeout(end)
-    }
-  }, [open, speed, flat])
+    start.current = performance.now()
+    setT(0)
+    const id = setInterval(() => setT((performance.now() - start.current) / 1000), 100)
+    return () => clearInterval(id)
+  }, [open, run])
 
-  const scene = SCENES.findIndex((s) => t >= s.from && t < s.to)
-  const lines = finalCinematic.scenes[scene] || []
-  const inScene = scene >= 0 ? t - SCENES[scene].from : 0
-  // a soft dip to black at the first two scene changes (they jump far across the universe)
-  const cut = [SCENES[1].from, SCENES[2].from].some((c) => Math.abs(t - c) < 0.7)
-  const titleOn = t >= TITLE_AT
+  // the 2D version has no 3D camera to mark the ending as seen
+  useEffect(() => {
+    if (open && t >= CINE_LENGTH) useStore.getState().markEndingSeen()
+  }, [open, t])
+
+  const skip = () => {
+    start.current = performance.now() - CINE.message * 1000
+    setT(CINE.message)
+  }
+  const caption = t >= CINE.captions[0] && t < CINE.captions[0] + 6 ? finalCinematic.captions[0] : t >= CINE.captions[1] && t < CINE.captions[1] + 5 ? finalCinematic.captions[1] : null
+  const titleOn = t >= CINE.title && t < CINE.message - 0.5
+  const shown = t >= CINE.message ? Math.min(lines.length, Math.floor((t - CINE.message) / CINE.line) + 1) : 0
+  const choices = t >= CINE_LENGTH + 0.6
+  const scene = t < CINE.lanterns[0] ? 0 : t < CINE.message ? 1 : 2
 
   return (
     <AnimatePresence>
       {open && (
         <motion.div className={`cutscene-ui${flat ? ' is-flat' : ''}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.8 } }}>
-          {flat && <div className={`flat-cine scene-${Math.max(0, scene)}`} aria-hidden="true" />}
-          <motion.div className="letterbox top" initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 1.2 }} />
-          <motion.div className="letterbox bottom" initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 1.2 }} />
-          <div className={`cine-cut${cut ? ' is-on' : ''}`} aria-hidden="true" />
+          {flat && <div className={`flat-cine scene-${scene}`} aria-hidden="true" />}
+          <motion.div className="letterbox top" initial={{ scaleY: 0 }} animate={{ scaleY: shown ? 0.6 : 1 }} transition={{ duration: 1.2 }} />
+          <motion.div className="letterbox bottom" initial={{ scaleY: 0 }} animate={{ scaleY: shown ? 0.6 : 1 }} transition={{ duration: 1.2 }} />
           <div className="cutscene-caption" aria-live="polite">
             <AnimatePresence mode="popLayout">
-              {!titleOn && lines[0] && inScene > 1 && (
-                <motion.p key={`${scene}-a`} initial={{ opacity: 0, y: 10, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, filter: 'blur(6px)' }} transition={{ duration: 1.2 }}>
-                  {lines[0]}
-                </motion.p>
-              )}
-              {!titleOn && lines[1] && inScene > 4.4 && (
-                <motion.p key={`${scene}-b`} className="soft" initial={{ opacity: 0, y: 10, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, filter: 'blur(6px)' }} transition={{ duration: 1.2 }}>
-                  {lines[1]}
+              {caption && !shown && (
+                <motion.p key={caption} initial={{ opacity: 0, y: 10, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, filter: 'blur(6px)' }} transition={{ duration: 1.2 }}>
+                  {caption}
                 </motion.p>
               )}
             </AnimatePresence>
           </div>
           <AnimatePresence>
             {titleOn && (
-              <motion.h1 className="cine-title" initial={{ opacity: 0, letterSpacing: '0.6em', filter: 'blur(10px)' }} animate={{ opacity: 1, letterSpacing: '0.18em', filter: 'blur(0px)' }} transition={{ duration: 3, ease: [0.22, 1, 0.36, 1] }}>
-                {finalCinematic.title}
+              <motion.h1 className="cine-title" initial={{ opacity: 0, letterSpacing: '0.5em', filter: 'blur(10px)' }} animate={{ opacity: 1, letterSpacing: '0.16em', filter: 'blur(0px)' }} exit={{ opacity: 0, transition: { duration: 1.2 } }} transition={{ duration: 3, ease: [0.22, 1, 0.36, 1] }}>
+                {withNames(finalCinematic.title)}
               </motion.h1>
             )}
           </AnimatePresence>
-          {t > 2 && (
-            <button type="button" className="btn-ghost cutscene-skip" onClick={finish}>
+          {shown > 0 && (
+            <div className="final-message" aria-live="polite">
+              {lines.slice(0, shown).map((line, i) => (
+                <motion.p key={i} className={i === lines.length - 2 ? 'is-name' : ''} initial={{ opacity: 0, y: 10, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 1.6 }}>
+                  {line}
+                </motion.p>
+              ))}
+              <AnimatePresence>
+                {choices && (
+                  <motion.div className="final-choices" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }}>
+                    <button type="button" className="btn-glow" onClick={() => finish('explore')}>
+                      {finalMessage.stay}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={() => finish('memories')}>
+                      <Images size={15} /> {finalMessage.memories}
+                    </button>
+                    <button type="button" className="btn-ghost" onClick={() => finish('ending')}>
+                      <Mail size={15} /> {finalMessage.letter}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => {
+                        audio.sparkle()
+                        useStore.getState().replayCinematic()
+                      }}
+                    >
+                      <RotateCcw size={15} /> {finalMessage.replay}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {t > 2 && t < CINE.message && (
+            <button type="button" className="btn-ghost cutscene-skip" onClick={skip}>
               <SkipForward size={15} /> {finalCinematic.skip}
             </button>
           )}
@@ -82,7 +117,7 @@ export function CinematicOverlay({ flat = false }) {
 }
 
 /**
- * THE LOVE LETTER — after the cinematic. It can be closed (and opened again), the photo can be
+ * THE LOVE LETTER — from the envelope beneath the Love Tree (Chapter 5); the finale follows it. It can be closed (and opened again), the photo can be
  * looked at properly, the voice note plays only when she presses play, and she can always go back
  * into the world or replay the ending.
  */
@@ -90,6 +125,7 @@ export function EndingLetter() {
   const view = useStore((s) => s.view)
   const back = useStore((s) => s.back)
   const startCinematic = useStore((s) => s.startCinematic)
+  const ended = useStore((s) => s.mainEndingSeen)
   const reducedMotion = useStore((s) => s.reducedMotion)
   const [folded, setFolded] = useState(false)
   const [shown, setShown] = useState(0)
@@ -104,7 +140,7 @@ export function EndingLetter() {
     return () => window.removeEventListener('keydown', onKey)
   }, [zoom])
   const paragraphs = useMemo(
-    () => [loveLetter.opening, ...loveLetter.body, ...(loveLetter.personalNote ? [loveLetter.personalNote] : []), ...loveLetter.ending].filter(Boolean),
+    () => [loveLetter.opening, ...loveLetter.body, ...(loveLetter.personalNote ? [loveLetter.personalNote] : []), ...loveLetter.ending].filter(Boolean).map(withNames),
     [],
   )
   const all = shown >= paragraphs.length
@@ -141,7 +177,7 @@ export function EndingLetter() {
                   <X size={16} />
                 </button>
                 <div className="love-letter-body">
-                  <h2>{loveLetter.greeting}</h2>
+                  <h2>{withNames(loveLetter.greeting)}</h2>
                   {paragraphs.slice(0, shown).map((p, i) => (
                     <motion.p key={i} className={i === 0 ? 'opening' : ''} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2 }}>
                       {p}
@@ -166,23 +202,39 @@ export function EndingLetter() {
                 <footer>
                   {!all ? (
                     <button type="button" className="btn-ghost" onClick={() => setShown(paragraphs.length)}>
-                      Read it all
+                      {loveLetter.readAll}
                     </button>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        onClick={() => {
-                          audio.sparkle()
-                          startCinematic()
-                        }}
-                      >
-                        <RotateCcw size={14} /> Replay the ending
-                      </button>
-                      <button type="button" className="btn-glow small" onClick={back}>
-                        Return to our world
-                      </button>
+                      {/* the first time, the letter leads into the finale */}
+                      {!ended ? (
+                        <button
+                          type="button"
+                          className="btn-glow small"
+                          onClick={() => {
+                            audio.sparkle()
+                            startCinematic()
+                          }}
+                        >
+                          {loveLetter.continue}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-ghost"
+                            onClick={() => {
+                              audio.sparkle()
+                              startCinematic()
+                            }}
+                          >
+                            <RotateCcw size={14} /> {loveLetter.replay}
+                          </button>
+                          <button type="button" className="btn-glow small" onClick={back}>
+                            {loveLetter.back}
+                          </button>
+                        </>
+                      )}
                     </>
                   )}
                 </footer>
@@ -190,10 +242,10 @@ export function EndingLetter() {
             ) : (
               <motion.div key="folded" className="letter-folded" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                 <button type="button" className="btn-glow" onClick={() => setFolded(false)}>
-                  <Mail size={16} /> Open the letter
+                  <Mail size={16} /> {loveLetter.open}
                 </button>
                 <button type="button" className="btn-ghost" onClick={back}>
-                  Return to our world
+                  {loveLetter.back}
                 </button>
               </motion.div>
             )}

@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { CameraControls, CameraControlsImpl } from '@react-three/drei'
 import * as THREE from 'three'
 import { areas, framePose, futurePose, lanePose, loveTree, poses, resolvePose } from '../../lib/layout'
-import { cine, CINE_LENGTH, cinematicCamera } from '../../lib/cinematic'
+import { cine, CINE, CINE_LENGTH, cinematicCamera } from '../../lib/cinematic'
 import { player } from '../../lib/player'
 import { standHeight } from '../../lib/terrain'
 import { connections } from '../../content/config'
@@ -234,13 +234,15 @@ export default function CameraDirector() {
     // the final cinematic drives the camera itself
     if (view === 'cinematic') {
       if (cine.t0 === null) cine.t0 = clock.elapsedTime
-      const t = (clock.elapsedTime - cine.t0) * (reducedMotion ? 4 : 1)
-      const { pos, tgt } = cinematicCamera(Math.min(t, CINE_LENGTH), size.width / size.height, ISO.fov)
+      const t = clock.elapsedTime - cine.t0
+      // with reduced motion the camera simply holds one calm shot of the tree
+      const { pos, tgt } = cinematicCamera(reducedMotion ? CINE.title : t, size.width / size.height)
       c.setLookAt(pos.x, pos.y, pos.z, tgt.x, tgt.y, tgt.z, false)
       c.setFocalOffset(0, 0, 0, false)
+      // the whole message has been shown: the ending counts as seen (she chooses what's next)
       if (t >= CINE_LENGTH && !cineDone.current) {
         cineDone.current = true
-        useStore.getState().finishCinematic()
+        useStore.getState().markEndingSeen()
       }
       return
     }

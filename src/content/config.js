@@ -1,20 +1,21 @@
 /**
  * ─────────────────────────────────────────────────────────────
- *  OUR LITTLE UNIVERSE — personal content
- *  Everything you'll want to change lives in this folder:
- *    • config.js   → names, places, dates, captions, messages, music
- *    • letter.txt  → the love letter (plain text, edit freely)
- *    • /public/photos → your photos (see README)
+ *  OUR LITTLE UNIVERSE — isi personal
+ *  Semua yang ingin kamu ubah ada di folder ini:
+ *    • config.js   → nama, tempat, tanggal, caption, pesan, dialog, musik
+ *    • /public/photos → foto-foto kamu (lihat README)
+ *  Di dialog: {me} dan {you} otomatis jadi nama panggilan di `couple`,
+ *  {pet} jadi nama teman kecil (Mochi).
  * ─────────────────────────────────────────────────────────────
  */
 
 export const couple = {
-  // Person 1 (you — the one who built this universe)
-  // `nickname` is what the little messages call you (falls back to `name`).
+  // Orang 1 (kamu — yang membuat dunia kecil ini)
+  // `nickname` dipakai di dialog dan pesan (kalau kosong, pakai `name`).
   me: { name: 'Rayhan', nickname: 'Rayhan', place: 'Jakarta', icon: '🌙' },
-  // Person 2 (your favorite person)
+  // Orang 2 (orang favoritmu) — ganti `nickname` kalau mau dipanggil dengan nama lain
   you: { name: 'Tari', nickname: 'Tari', place: 'Makassar', icon: '🌸' },
-  // Optional: the day your story started (YYYY-MM-DD). Set to null to hide.
+  // Opsional: hari pertama cerita kalian (YYYY-MM-DD). Isi null untuk menyembunyikan.
   since: '2026-08-01',
 }
 
@@ -25,12 +26,11 @@ export const intro = {
 }
 
 /**
- * Photos (and short videos) for the floating gallery, in timeline order.
- * Drop files in /public/photos and update `src`.
- *  • Photos: JPG/PNG/WebP — around 1200px on the long side is plenty.
- *  • Videos: add `type: 'video'` (MP4). They play silently in their 3D frame,
- *    and with sound controls when opened.
- * The first 10 also float as frames around the island; any extra ones still appear in the gallery.
+ * Foto (dan video pendek) untuk galeri, urut sesuai waktu.
+ * Taruh file di /public/photos lalu ubah `src`.
+ *  • Foto: JPG/PNG/WebP — sekitar 1200px di sisi panjang sudah cukup.
+ *  • Video: tambahkan `type: 'video'` (MP4).
+ * 12 pertama berdiri di plaza Our Memories; sisanya tetap ada di album.
  */
 export const memories = [
   {
@@ -97,9 +97,8 @@ export const memories = [
 ]
 
 /**
- * MEMORY LANE — floating lanterns leading away from the island, one per milestone.
- * Keep them in order. `photo` is optional (null → a soft glowing placeholder, never a fake photo).
- * `story` is yours to write — a few sentences about that day. Leave '' to show only the title.
+ * MEMORY LANE — lentera yang melayang dari pulau, satu untuk setiap momen.
+ * `photo` opsional (null → cahaya lembut, bukan foto palsu).
  */
 export const memoryLane = {
   title: 'Memory Lane',
@@ -151,8 +150,7 @@ export const memoryLane = {
 }
 
 /**
- * LOVE CAPSULE — "open when…" letters for different moods.
- * Letters stay in Bahasa Indonesia; labels are what shows on each envelope.
+ * LOVE CAPSULE — surat "buka kalau…" untuk berbagai suasana hati.
  */
 export const loveCapsule = {
   title: 'Love Capsule',
@@ -207,9 +205,8 @@ export const loveCapsule = {
 }
 
 /**
- * LDR COUNTDOWN — the next time you'll meet.
- * `date`: 'YYYY-MM-DDTHH:mm' (local time), or null if it isn't decided yet.
- * When it's null the site shows `noDateMessage` instead of inventing a date.
+ * HITUNG MUNDUR LDR — kapan kalian ketemu lagi.
+ * `date`: 'YYYY-MM-DDTHH:mm' (waktu lokal), atau null kalau belum pasti.
  */
 export const nextMeeting = {
   date: null,
@@ -220,9 +217,8 @@ export const nextMeeting = {
 }
 
 /**
- * HIDDEN HEARTS — five tiny hearts hidden around the universe.
- * Hints show up in the collection panel. The reward unlocks when all five are found.
- * `reward.media` is optional: { type: 'image' | 'video', src: 'photos/…' }.
+ * HATI TERSEMBUNYI — lima hati kecil yang disembunyikan di dunia ini.
+ * `reward.media` opsional: { type: 'image' | 'video', src: 'photos/…' }.
  */
 export const hiddenHearts = {
   hints: [
@@ -241,8 +237,7 @@ export const hiddenHearts = {
 }
 
 /**
- * OUR CONSTELLATION — each star is one thing I love about you.
- * Add or remove lines; the heart reshapes itself (6–16 works best).
+ * RASI BINTANG KITA — setiap bintang adalah satu hal yang aku suka dari kamu.
  */
 export const constellation = {
   title: 'Our Constellation',
@@ -268,9 +263,9 @@ export const letter = {
 }
 
 export const distance = {
-  heading: 'Different places, same sky',
-  line1: 'Two places, one sky, one heart.',
-  line2: 'No matter how far we are, you will always have a place in my universe.',
+  heading: 'Beda tempat, langit yang sama',
+  line1: 'Dua tempat, satu langit, satu hati.',
+  line2: 'Sejauh apa pun kita, kamu selalu punya tempat di duniaku.',
 }
 
 export const finale = {
@@ -299,19 +294,19 @@ export const finale = {
 }
 
 /**
- * Music.
- *  • src: null  → a soft, generated music-box melody plays (no file needed).
- *  • src: 'audio/our-song.mp3' → put a file you have the rights to in /public/audio.
- * Music never starts until there is a tap/click.
+ * Musik.
+ *  • src: null  → melodi music box lembut dibuat otomatis (nggak perlu file).
+ *  • src: 'audio/lagu-kita.mp3' → taruh file yang boleh kamu pakai di /public/audio.
+ * Musik nggak akan mulai sebelum ada ketukan/klik.
  */
 export const music = {
   src: null,
   volume: 0.55,
-  // Start the music when "Enter Our World" is pressed (that press counts as interaction).
+  // Musik mulai saat tombol masuk ditekan (tekanan itu dihitung sebagai interaksi).
   startOnEnter: true,
 }
 
-/** Little notes that pop up when one of the floating hearts is tapped. */
+/** Catatan kecil yang muncul saat hati melayang disentuh. */
 export const sweetNotes = [
   'You make ordinary days feel like a soft song.',
   'I still smile every time your name lights up my phone.',
@@ -322,77 +317,175 @@ export const sweetNotes = [
 ]
 
 export const hints = {
-  /** the 💡 hint button — after this many seconds without progress it offers itself */
+  /** tombol 💡 Hint — kalau segini detik nggak ada kemajuan, tombolnya menawarkan diri */
   idleNudgeSeconds: 75,
-  idleNudge: 'Stuck? Tap 💡 Hint — I’ll show you the way ♡',
-  toTelescope: 'Chapter 2 starts on Starfall Cliff: take the glowing path to the right of the Love Tree, walk up the ramp and use the telescope.',
-  allDone: 'Every chapter is complete ♡ The ending is waiting for you.',
-  secretStar: 'After the ending, a tiny star appears beside the Love Tree. Walk to the tree and reach for it.',
-  everything: 'You’ve found everything in our little universe ♡ Walk around as long as you like.',
-  explore: 'Walk with WASD or the joystick · drag to turn the island · E or ✦ to interact',
-  secretLocked: 'This path is still sleeping… read the letter first ♡',
-  secretUnlocked: 'Something just woke up at the end of the glowing path ✦',
+  idleNudge: 'Bingung? Tekan 💡 Hint — nanti aku tunjukin jalannya ♡',
+  toTelescope: 'Babak 3 dimulai di Starfall Cliff: ikuti jalan yang bercahaya di kanan Love Tree, naik ke atas, lalu pakai teropongnya.',
+  wakeMochi: 'Ada hati kecil berbulu yang lagi tidur di padang, dekat banget sama tempat kamu mulai. Samperin, terus tekan E (atau ✦) buat bangunin dia.',
+  toPicnic: 'Tempat pikniknya ada di bukit kecil antara Love Tree dan Secret Cove — cari tikar kotak-kotak. Naik ke situ, terus tekan E (atau ✦).',
+  toEnvelope: 'Mochi nemu sesuatu di bawah Love Tree! Jalan ke depan pohon, terus buka amplopnya.',
+  allDone: 'Semua babak udah selesai ♡ Ending-nya lagi nungguin kamu.',
+  secretStar: 'Setelah ending, ada bintang kecil yang muncul di samping Love Tree. Samperin pohonnya, terus sentuh bintangnya.',
+  secretHeart: 'Ada hati kecil yang bercahaya, ngumpet di balik pohon sakura besar di Memory Garden…',
+  everything: 'Kamu udah nemuin semuanya di dunia kecil kita ♡ Jalan-jalan aja sepuasnya.',
+  explore: 'Jalan pakai WASD atau joystick · geser untuk memutar pulau · E atau ✦ untuk berinteraksi',
+  secretLocked: 'Jalan ini masih tidur… baca suratnya dulu, ya ♡',
+  secretUnlocked: 'Ada yang baru bangun di ujung jalan yang bercahaya ✦',
 }
 
 /* ═══════════════════════════════════════════════════════════════
- *  STORY — "EVERY LITTLE THING LEADS TO YOU"
- *  Three chapters. Each one unlocks after the previous is finished.
- *  What counts as "finished" is measured from what she actually does
- *  (see src/lib/story.js) — progress is never faked.
- *  In dialog lines, {me} and {you} become the nicknames above.
+ *  CERITA — "DUNIA KECIL UNTUK TARI"
+ *  Lima babak pendek. Setiap babak terbuka setelah babak sebelumnya selesai.
+ *  "Selesai" diukur dari hal yang benar-benar dia lakukan (src/lib/story.js).
+ *  speaker: 'narrator' | 'me' | 'you' | 'pet' (teman kecil)
  * ═══════════════════════════════════════════════════════════════ */
 
 export const story = {
-  title: 'Every Little Thing Leads to You',
-  tagline: 'Every little thing leads to you',
-  narrator: 'The Universe',
+  title: 'Dunia Kecil untuk Kamu',
+  tagline: 'Dunia kecil yang aku bikin buat kamu',
+  narrator: 'Semesta',
   prologue: [
-    { speaker: 'narrator', text: 'Welcome to a little universe that was made with love — for one person.' },
-    { speaker: 'me', text: 'Hi {you}. Walk around, look closely, touch whatever glows. Nothing here is in a hurry.' },
+    { speaker: 'narrator', text: 'Selamat datang di dunia kecil yang dibuat dengan sayang — buat satu orang aja.' },
+    { speaker: 'me', text: 'Hai, {you}. Jalan pakai WASD atau joystick, geser layar buat memutar pulau, dan tekan E (atau ✦) kalau ada yang bercahaya.' },
   ],
   chapters: [
     {
-      id: 'little-things',
-      title: 'The Little Things',
-      subtitle: 'Small memories that mean everything',
+      id: 'goofy',
+      title: 'Awal Petualangan',
+      subtitle: 'Setiap petualangan butuh teman yang agak ceroboh',
       intro: [
-        { speaker: 'narrator', text: 'Chapter One — The Little Things.' },
-        { speaker: 'me', text: 'Five little things are hidden around the island: a photograph, a letter, a flower, a music box and a fallen star.' },
-        { speaker: 'narrator', text: 'Sometimes, it isn’t the biggest moments that stay with us. It’s the little things we never knew we would miss.' },
+        { speaker: 'narrator', text: 'Babak Satu — Awal Petualangan.' },
+        { speaker: 'narrator', text: 'Ada sesuatu yang kecil dan berbulu lagi tidur di padang. Tidurnya serius banget.' },
       ],
-      outro: [{ speaker: 'narrator', text: 'Every little thing leaves a mark. And somehow, they all lead somewhere.' }],
-      hint: 'Follow the light up to Starfall Cliff — the telescope there looks across the sky.',
+      outro: [{ speaker: 'pet', text: 'Kita tim yang hebat! …ya, aku kebanyakan jatuh sih. Tapi tetap tim yang hebat.' }],
+      hint: '',
+    },
+    {
+      id: 'little-things',
+      title: 'Hal-Hal Kecil Tentang Kamu',
+      subtitle: 'Kenangan kecil yang artinya besar',
+      intro: [
+        { speaker: 'narrator', text: 'Babak Dua — Hal-Hal Kecil Tentang Kamu.' },
+        { speaker: 'me', text: 'Ada lima hal kecil yang disembunyiin di pulau ini: sebuah foto, surat dalam botol, bunga yang tidur, kotak musik, dan bintang jatuh.' },
+        { speaker: 'pet', text: 'Aku bantu cari! Aku jago nemuin barang. Aku pernah nemuin ekorku sendiri. (Aku nggak punya ekor.)' },
+      ],
+      outro: [{ speaker: 'narrator', text: 'Setiap hal kecil ninggalin bekas. Dan entah gimana, semuanya mengarah ke satu tempat.' }],
+      hint: 'Ikuti cahaya ke atas Starfall Cliff — teropong di sana bisa lihat sampai ke seberang langit.',
     },
     {
       id: 'miles',
-      title: 'Miles Between Us',
-      subtitle: 'Distance does not have to mean disconnection',
+      title: 'Jauh, Tapi Tetap Dekat',
+      subtitle: 'Jarak nggak harus bikin kita jauh',
       intro: [
-        { speaker: 'narrator', text: 'Chapter Two — Miles Between Us.' },
-        { speaker: 'narrator', text: 'Two islands, a whole sky apart. The bridge between them is unfinished.' },
-        { speaker: 'me', text: 'Five things hold a bridge like this together. Find them, and wake each one up.' },
+        { speaker: 'narrator', text: 'Babak Tiga — Jauh, Tapi Tetap Dekat.' },
+        { speaker: 'narrator', text: 'Dua pulau, dipisahin satu langit. Jembatan di antaranya belum jadi.' },
+        { speaker: 'pet', text: 'Kita beda pulau, nih. Tapi tenang, aku jago bikin jembatan!' },
       ],
-      outro: [{ speaker: 'narrator', text: 'Maybe love isn’t about never being far apart. Maybe it’s about continuing to find our way back to each other.' }],
-      hint: 'Return to the island and visit the glowing garden around the Love Tree.',
+      outro: [
+        { speaker: 'pet', text: 'Lihat! Akhirnya nyambung juga! Ternyata kalau kita sabar dan saling bantu, jalan yang jauh pun bisa jadi lebih dekat.' },
+        { speaker: 'narrator', text: 'Percaya, ngobrol, sabar, saling ngerti, dan terus milih satu sama lain — lagi dan lagi.' },
+      ],
+      hint: 'Balik ke pulau, yuk. Mochi udah nyiapin piknik kecil…',
     },
     {
-      id: 'future',
-      title: 'A Future We Grow',
-      subtitle: 'Love is something we keep building',
+      id: 'picnic',
+      title: 'Kencan yang Berantakan',
+      subtitle: 'Nggak harus sempurna, kok',
       intro: [
-        { speaker: 'narrator', text: 'Chapter Three — A Future We Grow.' },
-        { speaker: 'me', text: 'Five glowing seeds are hidden around the island. Each one needs a home in the soil around the Love Tree.' },
-        { speaker: 'narrator', text: 'Not everything beautiful happens overnight.' },
+        { speaker: 'narrator', text: 'Babak Empat — Kencan yang Berantakan.' },
+        { speaker: 'pet', text: 'Pikniknya udah siap! Eh... kok kuenya ilang?!' },
       ],
-      outro: [{ speaker: 'narrator', text: 'Maybe the future isn’t something we find. Maybe it’s something we build, one little thing at a time.' }],
+      outro: [{ speaker: 'pet', text: 'Yah, memang nggak sempurna. Tapi kalau bisa ketawa bareng begini, kayaknya udah cukup bahagia, deh.' }],
+      hint: 'Langitnya mulai keemasan… Mochi lari ke arah Love Tree.',
+    },
+    {
+      id: 'letter',
+      title: 'Surat dari Masa Depan',
+      subtitle: 'Ada kata-kata yang memang buat disimpan',
+      intro: [
+        { speaker: 'narrator', text: 'Babak Lima — Surat dari Masa Depan.' },
+        { speaker: 'pet', text: 'Kayaknya ini surat yang dari tadi disembunyiin di bawah pohon, deh. Buka, yuk. Aku jadi penasaran!' },
+      ],
+      outro: [],
       hint: '',
     },
   ],
 }
 
 /**
- * AVATARS — the little souls she can play as. Names, outfits and colours are all editable.
- * They are stylised characters, not portraits of anyone real.
+ * TEMAN KECIL — hati kecil berbulu yang ngikutin dia ke mana-mana dan heboh sama semuanya.
+ * Semua kalimat bisa diubah. Dia nggak pernah menghalangi apa pun; kalimatnya muncul sebagai gelembung kecil.
+ */
+export const companion = {
+  name: 'Mochi',
+  sleeping: 'Zzz… (beneran nggak ngintip)',
+  wake: ['…Aku belum bangun. Nggak ada buktinya.', 'Iya, iya, aku bangun!! Hai, aku Mochi! Aku udah nungguin kamu dari lama banget. (Sepuluh menit.)'],
+  follow: 'Eh, tungguin aku dong! Kakiku pendek, tau!',
+  pet: ['Hehe, geli!', '*goyang-goyang senang*', 'Aku mau ngikutin kamu ke mana aja. Soalnya aku nggak tahu jalan.', 'Lagi! Lagi!', 'Kamu wangi bunga. Eh, itu bunganya ding.'],
+  flower: ['Bunga yang bercahaya! Petik, petik!', 'Yeay! Satu bunga ketemu! Tinggal dua lagi. Semangat, {you}!', 'Udah tiga semuanya!! Aku mau nangis. Nangis bahagia. Nangis berbulu.'],
+  carry: ['Biar aku yang bawa yang ini!', '…', 'Lho, bunganya kok lebih tinggi dari aku?!'],
+  roll: ['Wiiii— aku sengaja kok!'],
+  butterfly: ['Kupu-kupu! Balik dong! Aku cuma mau temenan!', 'Ke mana dia? Tadi beneran ada, kan?'],
+  found: ['Ketemu!!', 'Keren! Kamu keren banget!', 'Aku tahu kamu pasti bisa! (Aku berharap, sih.)', '*muter-muter heboh*'],
+  bridge: ['Ups! Kayaknya aku tadi sok tahu. Coba kita pikirin lagi, ya!', 'Aku percaya sama kamu! Aku juga percaya sama camilan.', 'Dikit lagi! Jembatannya malu-malu. Coba lagi, yuk!'],
+  picnic: ['Oke, ada masalah kecil…', 'JANGAN KUENYA!', 'Sempurna! Ya — sempurna versi berantakan.'],
+  saved: 'Hampir aja makan siang kita berubah jadi makan angin!',
+  envelope: 'Psst! Ada sesuatu yang nungguin di bawah Love Tree!',
+  reward: {
+    title: 'Kenangan kecil pertama',
+    text: 'Mochi nemu ini buat kamu. Ini salah satu kenangan pertama di dunia kecil ini — dan salah satu favoritku.',
+  },
+}
+
+/** BABAK 1 — tiga bunga bercahaya di padang, dekat tempat petualangannya dimulai. */
+export const glowFlowers = [
+  { id: 'rose', color: '#ff8fc4' },
+  { id: 'sky', color: '#a8d8ff' },
+  { id: 'sun', color: '#ffd98a' },
+]
+
+/** BABAK 4 — KENCAN YANG BERANTAKAN. Tiga mini-game singkat yang nggak bisa gagal; semua kalimat bisa diubah. */
+export const picnic = {
+  title: 'Kencan yang Berantakan',
+  games: {
+    catch: { title: 'Tangkap Bunga Terbang', how: 'Bunganya diterbangin angin! Sentuh (atau klik) tiga bunga yang lagi melayang. Bisa juga tekan E.', done: 'Tiga bunga ketangkap ✦' },
+    save: { title: 'Selamatkan Piknik', how: 'Ada maling kecil yang ngincer kue kita! Sentuh dia pas dia masuk ke lingkaran yang bercahaya. (Atau tekan E.)', done: 'Kuenya selamat ✦', early: 'Kecepetan — sekarang dia malah ngeliatin kamu. Canggung.', late: 'Kuenya diambil! …terus jatuh. Coba lagi, yuk.' },
+    fix: { title: 'Rapikan Piknik', how: 'Sentuh satu barang, terus sentuh tempat bercahaya yang cocok buat barang itu. (Atau tekan E buat naruh barang berikutnya.)', done: 'Pikniknya siap ✦', wrong: 'Hmm, bukan di situ tempatnya 🙈', pick: 'Sentuh dulu salah satu barang yang berantakan ✦' },
+  },
+  wind: 'Wusss! Anginnya bikin piknik kita berantakan… 🙈',
+  /** muncul saat mereka duduk berdua waktu senja */
+  message: 'Yah, memang nggak sempurna. Tapi kalau bisa ketawa bareng begini, kayaknya udah cukup bahagia, deh.',
+}
+
+/** BABAK 5 — amplop di bawah Love Tree (membuka surat cinta di bawah). */
+export const envelope = {
+  label: 'Buka amplop di bawah Love Tree',
+}
+
+/** Kata-kata terakhir ending. Muncul satu per satu; baris kosong dilewati. */
+export const finalMessage = {
+  lines: [
+    'Perjalanannya sudah selesai...',
+    'Semua bunga, jembatan, hadiah, dan tempat kecil yang kamu temukan tadi...',
+    'Sebenarnya cuma caraku untuk menyampaikan satu hal.',
+    'Di antara banyak hal yang bisa aku buat...',
+    'Aku paling bersyukur karena bisa mengenal kamu.',
+    'Makasih, ya, {you}, udah jadi bagian dari dunia aku. 🤍',
+  ],
+  replay: 'Ulangi ending',
+  memories: 'Lihat lagi kenangan kita',
+  letter: 'Baca suratnya lagi',
+  stay: 'Tetap di dunia kecil kita',
+}
+
+/** RAHASIA KECIL — hati kecil bercahaya di balik pohon sakura besar di Memory Garden. */
+export const secretHeart = {
+  title: 'Rahasia kecil',
+  text: 'Ada satu hal di dunia kecil ini yang nggak pernah bisa aku jelasin pakai kode: seberapa berartinya kamu buat aku.',
+}
+
+/**
+ * AVATAR — tokoh kecil yang bisa dia pilih. Nama, baju, dan warna bisa diubah.
  * outfit: 'pants' | 'dress'   hairStyle: 'short' | 'long'   accessory: 'scarf' | 'bow' | null
  */
 export const avatars = [
@@ -418,11 +511,7 @@ export const avatarSelect = {
   rotateHint: 'Drag to turn around',
 }
 
-/**
- * CHAPTER 1 — THE LITTLE THINGS. Five objects around the island, each with its own interaction.
- * `photo` must be one of your real photos (or null for a soft placeholder).
- */
-/** Names of the island's places, written on the map (rename freely). */
+/** Nama-nama tempat di pulau, tertulis di peta (bebas diganti). */
 export const placeNames = {
   meadow: 'Starting Meadow',
   garden: 'Memory Garden',
@@ -434,97 +523,91 @@ export const placeNames = {
   tree: 'The Love Tree',
 }
 
+/**
+ * BABAK 2 — HAL-HAL KECIL TENTANG KAMU. Lima benda di pulau, masing-masing dengan pesannya.
+ * `photo` harus salah satu foto asli kamu (atau null).
+ */
 export const littleThings = [
   {
     id: 'photo',
-    title: 'A Photograph',
+    title: 'Sebuah Foto',
     zone: 'Memory Garden',
-    hint: 'Go left from the Love Tree into the Memory Garden. A small photo covered by a cloth stands among the pink flowers — walk up to it and lift the cloth.',
-    message: 'One of my favorite photos of us — proof that ordinary days with you turn into something I want to keep.',
+    hint: 'Ke kiri dari Love Tree, masuk ke Memory Garden. Ada foto kecil yang ditutup kain di antara bunga-bunga pink — samperin, terus buka kainnya.',
+    message: 'Salah satu foto favoritku tentang kita — bukti kalau hari biasa sama kamu bisa jadi sesuatu yang pengin aku simpan.',
     photo: 'photos/2agustus.jpeg',
   },
   {
     id: 'letter',
-    title: 'A Letter in a Bottle',
+    title: 'Surat dalam Botol',
     zone: 'Reflection Lake',
-    hint: 'Head to Reflection Lake (top right) and walk onto the wooden bridge. A glass bottle is floating right beside it — reach for it from the bridge.',
-    message: 'Some of my favorite words are the small ones — the ones I get to share with you on ordinary days.',
+    hint: 'Ke Reflection Lake (kanan atas), terus naik ke jembatan kayu. Ada botol kaca yang ngambang di sebelahnya — ambil dari atas jembatan.',
+    message: 'Ada banyak hal kecil tentang kamu yang mungkin kamu anggap biasa aja. Tapi buat aku, justru hal-hal itu yang bikin kamu istimewa.',
   },
   {
     id: 'flower',
-    title: 'A Sleeping Flower',
+    title: 'Bunga yang Tidur',
     zone: 'Heartwood Forest',
-    hint: 'Follow the path into the Heartwood Forest (top left). Between the tall trees a glowing flower is sleeping — walk close and touch it.',
-    message: 'Some things only bloom when someone is gentle with them. Thank you for being gentle with me.',
+    hint: 'Ikuti jalan setapak ke Heartwood Forest (kiri atas). Di antara pohon-pohon tinggi ada bunga bercahaya yang lagi tidur — samperin dan sentuh.',
+    message: 'Ada hal-hal yang cuma mekar kalau diperlakukan dengan lembut. Makasih udah lembut sama aku.',
   },
   {
     id: 'musicbox',
-    title: 'A Music Box',
+    title: 'Kotak Musik',
     zone: 'Starfall Cliff',
-    hint: 'Take the glowing path to the right of the Love Tree and walk up the ramp onto Starfall Cliff. The music box waits near the top.',
-    message: 'If our little moments had a sound, I think it would be this — soft, simple, and worth replaying.',
+    hint: 'Ikuti jalan bercahaya di kanan Love Tree, terus naik ke Starfall Cliff. Kotak musiknya nunggu di dekat puncak.',
+    message: 'Kalau disuruh memilih satu hal yang bikin hari aku lebih baik, kayaknya jawabannya bakal tetap kamu.',
   },
   {
     id: 'star',
-    title: 'A Fallen Star',
-    zone: 'The Starting Meadow',
-    hint: 'It’s close to where you started: in the Starting Meadow (bottom), a little to the left of the path — look for a tiny star glowing in the grass.',
-    message: 'Even the smallest light changes what you can see. You did that for me.',
+    title: 'Bintang Jatuh',
+    zone: 'Starting Meadow',
+    hint: 'Dekat banget sama tempat kamu mulai: di Starting Meadow (bawah), agak ke kiri — cari bintang kecil yang bersinar di rumput.',
+    message: 'Cahaya sekecil apa pun bisa bikin semuanya kelihatan beda. Kamu ngelakuin itu buat aku.',
   },
 ]
 
 /**
- * CHAPTER 2 — MILES BETWEEN US. Five elements that rebuild the bridge between two islands.
- * The interactions are fixed; titles, instructions and messages are yours to edit.
+ * BABAK 3 — JAUH, TAPI TETAP DEKAT. Lima hal yang menyambung jembatan di antara dua pulau.
  */
 export const connections = [
   {
     id: 'trust',
-    hint: 'Find the lantern on your island (the left one). Press and keep holding it — don’t let go — until its light stays on.',
-    title: 'Trust',
-    how: 'Press and hold the lantern until its light stays on.',
-    message: 'Trust is a light you keep on, even when you can’t see the other side.',
+    hint: 'Cari lentera di pulau kamu (yang kiri). Tekan dan tahan terus — jangan dilepas — sampai lampunya nyala sendiri.',
+    title: 'Percaya',
+    how: 'Tekan dan tahan lenteranya sampai lampunya tetap menyala.',
+    message: 'Percaya itu kayak lampu yang tetap dinyalain, walaupun kita belum bisa lihat ujung satunya.',
   },
   {
     id: 'communication',
-    hint: 'Tap the glowing pink shell on your island (left). Wait while the light flies across, then tap the purple shell on the other island (right) to answer.',
-    title: 'Communication',
-    how: 'Send a light from your island, then answer it from the other one.',
-    message: 'Distance can make things difficult, but it doesn’t erase what matters.',
+    hint: 'Sentuh kerang pink yang bercahaya di pulau kamu (kiri). Tunggu cahayanya terbang ke seberang, terus sentuh kerang ungu di pulau satunya (kanan) buat membalas.',
+    title: 'Komunikasi',
+    how: 'Kirim cahaya dari pulau kamu, terus balas dari pulau satunya.',
+    message: 'Jarak bisa bikin semuanya lebih susah, tapi nggak bisa menghapus hal yang penting.',
   },
   {
     id: 'patience',
-    hint: 'A small light drifts back and forth over the middle of the bridge. Wait until it is inside the glowing ring (the ring gets brighter), then tap.',
-    title: 'Patience',
-    how: 'Wait for the drifting light to reach the gap — then tap.',
-    message: 'Some days, love means waiting a little longer for the right moment.',
+    hint: 'Ada cahaya kecil yang bolak-balik di tengah jembatan. Tunggu sampai dia masuk ke lingkaran bercahaya (lingkarannya jadi lebih terang), baru sentuh.',
+    title: 'Sabar',
+    how: 'Tunggu cahayanya sampai di celah — baru sentuh.',
+    message: 'Kadang sayang itu artinya mau nunggu sedikit lebih lama buat momen yang tepat.',
   },
   {
     id: 'understanding',
-    hint: 'Tap one of the stars above the bridge to begin. Watch the order they light up in, then tap them in exactly that order. Wrong? Tap a star again to see the order once more.',
-    title: 'Understanding',
-    how: 'Watch the stars, then light them in the same order.',
-    message: 'Some days, love means understanding. Other days, it means trying again.',
+    hint: 'Sentuh salah satu bintang di atas jembatan buat mulai. Perhatiin urutan nyalanya, terus sentuh dengan urutan yang sama persis. Salah? Sentuh bintangnya lagi buat lihat urutannya sekali lagi.',
+    title: 'Saling Mengerti',
+    how: 'Perhatiin bintangnya, terus nyalain dengan urutan yang sama.',
+    message: 'Ada hari-hari di mana sayang itu artinya mengerti. Ada juga hari di mana artinya mau coba lagi.',
   },
   {
     id: 'effort',
-    hint: 'Tap (or click) the wheel again and again — about ten turns — until the last piece of the bridge slides into place.',
-    title: 'Effort',
-    how: 'Turn the wheel until the last part of the bridge appears.',
-    message: 'Even when we’re far apart, we can still choose to show up for each other.',
+    hint: 'Sentuh (atau klik) rodanya berkali-kali — kira-kira sepuluh putaran — sampai potongan terakhir jembatannya terpasang.',
+    title: 'Usaha',
+    how: 'Putar rodanya sampai bagian terakhir jembatan muncul.',
+    message: 'Walaupun jauh, kita tetap bisa milih buat hadir buat satu sama lain.',
   },
 ]
 
-/** CHAPTER 3 — A FUTURE WE GROW. Five seeds, each grown in its own way around the Love Tree. */
-export const seeds = [
-  { id: 'honesty', where: 'Far left edge of the Memory Garden, past the bench.', title: 'Honesty', care: 'Clear the soil by hand — hold to plant it.', message: 'Honesty — so that we always know where we stand.' },
-  { id: 'kindness', where: 'At the top edge of the Heartwood Forest, behind the tall trees.', title: 'Kindness', care: 'Bring it water from Reflection Lake.', message: 'Kindness — especially on the days that are hard.' },
-  { id: 'adventures', where: 'Up on Starfall Cliff (right side), near the telescope.', title: 'Shared Adventures', care: 'Light the two guiding stones beside it.', message: 'Shared adventures — big trips and tiny walks alike.' },
-  { id: 'growth', where: 'On the far (top) shore of Reflection Lake.', title: 'Growth Together', care: 'Stay with it a while — hold until it grows.', message: 'Some things are worth taking care of, even when the future is uncertain.' },
-  { id: 'future', where: 'In the Starting Meadow, on the path toward the Secret Cove (bottom right).', title: 'A Future Built Together', care: 'Connect it to the light of the other four.', message: 'I hope we keep learning, growing, and becoming better together.' },
-]
-
-/** Optional notes hidden around the island. They never block the story. */
+/** Catatan opsional yang disembunyikan di pulau. Nggak pernah menghalangi cerita. */
 export const hiddenNotes = [
   { id: 'forest-hollow', where: 'Heartwood Forest', text: 'If you found this, you were curious enough to look. I love that about you.' },
   { id: 'lake-stone', where: 'Reflection Lake', text: 'Still water reflects the sky. I hope I can be that calm place for you sometimes.' },
@@ -532,49 +615,46 @@ export const hiddenNotes = [
   { id: 'cove-light', where: 'Secret Cove', text: 'You found the secret cove. Some of the best things are a little hidden.' },
 ]
 
-/** The view from Starfall Cliff (plays once, the first time she reaches it). */
+/** Pemandangan dari Starfall Cliff (muncul sekali, saat pertama sampai). */
 export const viewpoint = {
   title: 'Starfall Cliff',
   text: 'Look how far you’ve come.',
 }
 
-/** FINAL CINEMATIC — "You were the meaning all along". Timings are handled by the game. */
+/** ENDING — dua keterangan pelan, lalu pesan terakhir di atas. */
 export const finalCinematic = {
-  scenes: [
-    ['Remember all those little things you found?', 'None of them seemed extraordinary on their own.'],
-    ['But every little effort, every conversation, every moment of understanding…', 'Was another way of saying that this matters.'],
-    ['And every little thing we choose to nurture…', 'Can become something beautiful.'],
-  ],
-  title: 'YOU WERE THE MEANING ALL ALONG.',
-  skip: 'Skip',
+  captions: ['Setiap lampu kecil di sini dinyalain buat kamu.', 'Dan semuanya masih menyala sampai sekarang.'],
+  title: 'DUNIA KECIL UNTUK KAMU',
+  skip: 'Lewati',
 }
 
 /**
- * THE LOVE LETTER — shown after the final cinematic.
- * `personalNote`: an extra paragraph only you can write (leave '' to hide it).
- * `photo` / `voice`: a path in /public, or null to hide.
+ * SURAT CINTA — Babak 5: ditemukan di amplop di bawah Love Tree, sebelum ending.
+ * `personalNote`: paragraf tambahan yang cuma kamu yang bisa tulis (kosongkan untuk menyembunyikan).
+ * `photo` / `voice`: path di /public, atau null untuk menyembunyikan.
  */
 export const loveLetter = {
-  greeting: 'Untuk Tari,',
-  opening: 'To the person who makes even the smallest things feel meaningful…',
+  greeting: '{you}, makasih, ya, udah hadir di hidup aku.',
+  opening: 'Aku tahu, aku nggak selalu sempurna. Kadang aku bikin kamu kesal, kadang aku terlalu banyak mikir, dan kadang aku nggak pandai menjelaskan apa yang aku rasakan.',
   body: [
-    'I made this little universe because I wanted to give you something you could walk through — not just read.',
-    'Every memory, every light and every flower here is a small way of saying the same thing: you matter to me, in the little things and in the big ones.',
+    'Tapi ada satu hal yang pengin selalu kamu tahu: aku senang bisa kenal kamu, bisa dekat sama kamu, dan bisa punya kesempatan buat menyayangi kamu.',
+    'Aku nggak tahu semua hal yang bakal kita hadapi nanti. Tapi aku berharap kita bisa terus belajar memahami satu sama lain, saling menguatkan, dan tetap memilih untuk berjalan bersama.',
   ],
   personalNote: '',
-  ending: [
-    'If there’s one thing I hope you remember after this little adventure, it’s that none of these worlds, stars, or flowers were really the point.',
-    'The point was always you.',
-    'And if I could build a thousand little universes, I think I’d still find my way back to you.',
-  ],
+  ending: ['Dunia kecil ini mungkin cuma game sederhana. Tapi aku bikin semuanya karena ada satu orang yang ingin aku buat tersenyum.', 'Orang itu kamu, {you}. 🤍'],
   signature: '— Rayhan',
   photo: 'photos/26september(1).jpeg',
   voice: null,
+  /** tombol-tombol di surat */
+  readAll: 'Baca semuanya',
+  continue: 'Lanjut ♡',
+  replay: 'Ulangi ending',
+  back: 'Kembali ke dunia kita',
+  open: 'Buka suratnya',
 }
 
 /**
- * TIME MACHINE — one entry per date. Uses your real photos; `narration` is yours to edit.
- * `photos` can list several files (photo or .mp4). Leave it [] for a soft placeholder.
+ * MESIN WAKTU — satu entri per tanggal. Pakai foto asli kamu; `narration` bebas diubah.
  */
 export const timeMachine = {
   title: 'Time Machine',
@@ -626,28 +706,27 @@ export const timeMachine = {
 }
 
 /**
- * RED THREAD — the two islands under the same sky.
- * `audio`: put a voice note in /public/audio (e.g. 'audio/voice-1.m4a') to show a play button.
- * When audio is null, only the written message is shown (no fake play button).
+ * BENANG MERAH — dua pulau di bawah langit yang sama.
+ * `audio`: taruh pesan suara di /public/audio (misal 'audio/suara-1.m4a') supaya tombol putar muncul.
  */
 export const redThread = {
-  prompt: 'Tap both islands to tie the red thread.',
-  connected: 'Connected. No distance can untie this.',
+  prompt: 'Sentuh kedua pulau buat mengikat benang merahnya.',
+  connected: 'Tersambung. Nggak ada jarak yang bisa melepasnya.',
   messages: {
     me: {
-      title: 'A message from Jakarta',
-      text: 'Every night I look at the same sky you’re under, and I feel a little closer to you.',
+      title: 'Pesan dari Jakarta',
+      text: 'Setiap malam aku lihat langit yang sama kayak yang ada di atas kamu, dan rasanya aku jadi sedikit lebih dekat.',
       audio: null,
     },
     you: {
-      title: 'A message waiting in Makassar',
-      text: 'Wherever you are, this thread finds you. Pull it whenever you miss me — I’ll feel it.',
+      title: 'Pesan yang nunggu di Makassar',
+      text: 'Di mana pun kamu, benang ini bakal nemuin kamu. Tarik aja kalau lagi kangen — aku pasti kerasa.',
       audio: null,
     },
   },
 }
 
-/** FUTURE SIMULATOR — the worlds behind the portal. Edit titles and messages freely. */
+/** SIMULATOR MASA DEPAN — dunia-dunia di balik portal. Judul dan pesan bebas diubah. */
 export const futureWorlds = {
   title: 'Future Simulator',
   subtitle: 'Worlds we haven’t visited yet — but will.',
@@ -676,10 +755,9 @@ export const futureWorlds = {
 }
 
 /* ═══════════════════════════════════════════════════════════════
- *  SECRET ENDING — "THE ONE THING I COULD NEVER CODE ♡"
- *  Hidden in the Secret Room after the game is finished: a small star
- *  beside the big heart lights up once the final letter has appeared.
- *  Touching it opens this ending. Everything below is editable.
+ *  ENDING RAHASIA — "SATU HAL YANG NGGAK PERNAH BISA AKU KODEKAN ♡"
+ *  Tersembunyi di Ruang Rahasia setelah game selesai.
+ *  Semua di bawah ini bisa diubah.
  * ═══════════════════════════════════════════════════════════════ */
 
 export const secretEnding = {

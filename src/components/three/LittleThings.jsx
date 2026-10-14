@@ -22,7 +22,7 @@ const damp = THREE.MathUtils.damp
 
 function useLittle(id) {
   const found = useStore((s) => s.littleFound.includes(id))
-  const allFound = useChapterUnlocked(1)
+  const allFound = useChapterUnlocked('miles')
   const findLittle = useStore((s) => s.findLittle)
   const item = littleThings.find((l) => l.id === id)
   const index = littleThings.findIndex((l) => l.id === id)

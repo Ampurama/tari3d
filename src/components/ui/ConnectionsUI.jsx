@@ -104,7 +104,7 @@ function FlatPatience({ onDone }) {
     <button
       type="button"
       className={`flat-mech track${inGap ? ' in-gap' : ''}`}
-      onClick={() => (inGap ? onDone() : useStore.getState().showToast('Patience… wait for the light to reach the gap ✦', 2400))}
+      onClick={() => (inGap ? onDone() : useStore.getState().showToast('Sabar… tunggu cahayanya sampai di celah ✦', 2400))}
     >
       <span className="track-gap" />
       <span className="track-dot" style={{ left: `${x * 100}%` }} />
@@ -133,7 +133,7 @@ function FlatUnderstanding({ onDone }) {
     if (phase !== 'input') return
     const next = [...entered, i]
     if (ORDER[next.length - 1] !== i) {
-      useStore.getState().showToast('Almost — watch once more ♡', 2200)
+      useStore.getState().showToast('Dikit lagi — perhatiin sekali lagi, ya ♡', 2200)
       setEntered([])
       timers.current.push(setTimeout(show, 700))
       return
@@ -177,7 +177,7 @@ const FLAT = { trust: FlatTrust, communication: FlatCommunication, patience: Fla
 
 /** Chapter 2 status + instructions, the island messages, and (2D) the mechanics themselves. */
 export default function ConnectionsUI({ flat = false }) {
-  const unlocked = useChapterUnlocked(1)
+  const unlocked = useChapterUnlocked('miles')
   const done = useStore((s) => s.connectionsDone)
   const message = useStore((s) => s.threadMessage)
   const close = useStore((s) => s.closeThreadMessage)
@@ -223,7 +223,7 @@ export default function ConnectionsUI({ flat = false }) {
         })}
       </div>
       <p className={`thread-prompt${done.length >= connections.length ? ' is-whole' : ''}`}>
-        {done.length >= connections.length ? 'The bridge is whole. Tap an island to open its message ♡' : next ? `💡 ${next.title} — ${flat ? next.how : next.hint || next.how}` : ''}
+        {done.length >= connections.length ? 'Jembatannya udah utuh. Sentuh salah satu pulau buat buka pesannya ♡' : next ? `💡 ${next.title} — ${flat ? next.how : next.hint || next.how}` : ''}
       </p>
       <AnimatePresence>
         {m && (

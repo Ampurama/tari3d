@@ -1,62 +1,63 @@
 import * as THREE from 'three'
-import { areas, littleSpots, loveTree, poses, resolvePose } from './layout'
-import { ISLAND_LIFT } from './layout'
-import { isoBack, isoDir, LENS } from './iso'
+import { finalMessage } from '../content/config'
+import { loveTree } from './layout'
 
 /*
- * FINAL CINEMATIC — "You were the meaning all along".
- * Four scenes; the camera, the captions and the effects all read the same timeline.
+ * FINAL CINEMATIC — "A little world made for you".
+ * One quiet place (the Love Tree), one timeline: the camera, the lanterns, the bloom, the sky,
+ * the captions and the final message all read the same clock.
  */
-export const SCENES = [
-  { from: 0, to: 9 }, // the little things
-  { from: 9, to: 18 }, // the connections (the bridge between the islands)
-  { from: 18, to: 27 }, // the future (the Love Tree)
-  { from: 27, to: 37 }, // the whole universe + title
-]
-export const CINE_LENGTH = 37
-export const TITLE_AT = 29.5
+const LINE = 3.6
+const lines = finalMessage.lines.filter(Boolean)
+
+export const CINE = {
+  /** the camera glides in toward the tree */
+  approach: [0, 7],
+  /** the island's lanterns light up one by one */
+  lanterns: [7.5, 14],
+  /** the tree blooms; the heart of lights rises above it */
+  bloom: [13, 20],
+  /** the sky turns pink, purple and gold */
+  sunset: [11, 20],
+  /** two quiet captions */
+  captions: [2.5, 15],
+  /** the title */
+  title: 20.5,
+  /** the final message, one line at a time */
+  message: 25,
+  line: LINE,
+}
+/** When the last line of the message is on screen (the choices appear just after). */
+export const CINE_LENGTH = CINE.message + lines.length * LINE
 
 /** Shared clock: set when the cinematic starts (r3f clock seconds). */
 export const cine = { t0: null }
 export const cineTime = (clockSeconds) => (cine.t0 === null ? 0 : clockSeconds - cine.t0)
+/** 0..1 progress of a [from, to] window at time t. */
+export const windowAt = ([from, to], t) => THREE.MathUtils.clamp((t - from) / (to - from), 0, 1)
 
 const v = (x, y, z) => new THREE.Vector3(x, y, z)
 const ease = (t) => t * t * (3 - 2 * t)
-const D = areas.distance
+const D2R = Math.PI / 180
 
-/** Camera at `dist` (as framed through a 30° lens) from `target` along the flat 2D direction (elevation in degrees, small azimuth drift). */
-const isoShot = (target, dist, elevation, drift = 0) => ({ pos: target.clone().addScaledVector(isoDir(elevation, drift), dist * LENS), tgt: target })
+/** Camera at `dist` from `target`, `elevation` degrees up, `azimuth` radians around (0 = from the south). */
+const shot = (target, dist, elevation, azimuth) => {
+  const el = elevation * D2R
+  return { pos: target.clone().add(v(Math.sin(azimuth) * Math.cos(el), Math.sin(el), Math.cos(azimuth) * Math.cos(el)).multiplyScalar(dist)), tgt: target }
+}
 
-/**
- * Camera position + target at time t (seconds since the cinematic started).
- * The whole cinematic keeps the island's flat 2D angle: it only pans, zooms and lowers a little.
- */
-export function cinematicCamera(t, aspect, fov) {
-  const star = littleSpots[4] || v(0, 0.4, 7)
-  const photo = littleSpots[0] || v(-6, 0.3, 1)
-  const portrait = aspect < 0.8 ? 1.45 : 1
-  if (t < SCENES[1].from) {
-    // Scene 1 — a slow pan from the meadow to the garden, where the little things were found
-    const k = ease(t / 9)
-    const tgt = star.clone().add(v(0, 0.8, 0)).lerp(photo.clone().add(v(0, 0.9, 0)), k)
-    return isoShot(tgt, (17 - k * 5) * portrait, 48 - k * 8)
+/** Camera position + target at time t (seconds since the cinematic started). */
+export function cinematicCamera(t, aspect) {
+  const portrait = aspect < 0.8 ? 1.5 : 1
+  if (t < CINE.approach[1]) {
+    // gently in toward the tree, from the whole island to the two of them at its foot
+    const k = ease(t / CINE.approach[1])
+    const tgt = loveTree.clone().add(v(0, 1.4 + k * 0.6, 1.2 * k))
+    return shot(tgt, (30 - k * 17) * portrait, 42 - k * 18, 0.25 * k)
   }
-  if (t < SCENES[2].from) {
-    // Scene 2 — along the restored bridge between the two islands
-    const k = ease((t - 9) / 9)
-    const tgt = D.clone().add(v(-6, ISLAND_LIFT + 1.0, 0).lerp(v(5, ISLAND_LIFT + 1.2, 0), k))
-    return isoShot(tgt, (19 - k * 3) * portrait, 36)
-  }
-  if (t < SCENES[3].from) {
-    // Scene 3 — closer and lower toward the Love Tree as it blooms and the stars rise; she stands at its foot
-    const k = ease((t - 18) / 9)
-    const tgt = loveTree.clone().addScaledVector(isoBack, 1.4 * (1 - k)).add(v(0, 1.6 + k * 4.6, 0))
-    return isoShot(tgt, (15 + k * 6) * portrait, 40 - k * 22)
-  }
-  // Scene 4 — pull back until the whole little universe is in view (same angle, just further away)
-  const k = ease(Math.min(1, (t - 27) / 8))
-  const wide = resolvePose(poses.epilogue, fov, aspect)
-  const startTgt = loveTree.clone().add(v(0, 6.2, 0))
-  const start = isoShot(startTgt, 21 * portrait, 18)
-  return { pos: start.pos.lerp(wide.position, k), tgt: startTgt.lerp(wide.target, k) }
+  // a slow half-turn around the tree while it blooms, rising to see the heart of lights above it
+  const k = ease(Math.min(1, (t - CINE.approach[1]) / (CINE.title - CINE.approach[1])))
+  const drift = Math.max(0, t - CINE.title) * 0.012
+  const tgt = loveTree.clone().add(v(0, 2 + k * 4, 1.2 * (1 - k)))
+  return shot(tgt, (13 + k * 9) * portrait, 24 - k * 10, 0.25 - k * 0.6 - drift)
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { WATER_LEVEL, worldHeight, ZONES } from './terrain'
-import { connections, constellation, futureWorlds, littleThings, memories, memoryLane, seeds } from '../content/config'
+import { connections, constellation, futureWorlds, glowFlowers, littleThings, memories, memoryLane } from '../content/config'
 import { heartPoint } from './heart'
 import { FACE_CAMERA, isoBack, isoDir } from './iso'
 
@@ -30,7 +30,7 @@ spots.capsule = spots.bench.clone().add(v(0.38, 0.485, 0.02).applyAxisAngle(new 
 
 export const moonPosition = v(-48, 34, -86)
 
-/* ───────── Chapter 1: five little things ───────── */
+/* ───────── Chapter 2: five little things ───────── */
 
 const LITTLE_SPOTS = {
   photo: ground(-6.9, 0.7),
@@ -41,32 +41,35 @@ const LITTLE_SPOTS = {
 }
 export const littleSpots = littleThings.map((l, i) => LITTLE_SPOTS[l.id] || ground(-2 + i, 6))
 
-/* ───────── Chapter 3: seeds and the plots around the Love Tree ───────── */
+/* ───────── Chapter 1: the companion and three glowing flowers in the meadow ───────── */
 
-const SEED_SPOTS = {
-  honesty: ground(-8.0, 3.5),
-  kindness: ground(-4.1, -8.0),
-  adventures: ground(9.7, 3.5),
-  growth: ground(2.4, -8.1),
-  future: ground(2.9, 8.7),
+/** Where the fluffy heart naps until she wakes it (a few steps from where she starts). */
+export const mochiHome = ground(1.1, 7.5)
+const GLOW_SPOTS = { rose: ground(-1.6, 6.0), sky: ground(1.6, 4.7), sun: ground(-1.0, 4.0) }
+export const glowFlowerSpots = glowFlowers.map((f, i) => GLOW_SPOTS[f.id] || ground(-1.5 + i * 1.5, 5.2))
+
+/* ───────── Chapter 4: the picnic on the soft hill between the Love Tree and the cove ───────── */
+
+export const picnicSpot = ground(ZONES.picnic.x, ZONES.picnic.z)
+const at = (dx, dz, lift = 0) => ground(picnicSpot.x + dx, picnicSpot.z + dz, lift)
+export const PICNIC = {
+  /** where each item belongs (the glowing slots of "Fix the Picnic") */
+  slots: { blanket: at(0, 0), basket: at(0.55, -0.35), vase: at(-0.6, -0.4) },
+  /** where the wind left them */
+  scattered: { blanket: at(1.7, 0.9), basket: at(-1.6, 0.8), vase: at(0.4, 1.7) },
+  /** the snack thief sneaks from the bushes to the basket */
+  thiefFrom: at(2.8, -1.4),
+  /** she and the companion sit on the blanket for the sunset */
+  seatHer: at(-0.3, 0.35),
+  seatPet: at(0.35, 0.45),
 }
-// every plot sits on the camera's side of the Love Tree (between the paths), so the canopy never hides one
-const PLOT_ANGLE = { honesty: 44, growth: 71, future: 116, kindness: 186, adventures: 350 }
-export const seedSpots = seeds.map((sd, i) => SEED_SPOTS[sd.id] || ground(-3 + i * 1.5, 5))
-export const plotSpots = seeds.map((sd, i) => {
-  const a = THREE.MathUtils.degToRad(PLOT_ANGLE[sd.id] ?? i * 72)
-  return ground(loveTree.x + Math.cos(a) * 2.75, loveTree.z + Math.sin(a) * 2.75)
-})
-/** Where water can be scooped for the Kindness seed (lake shore near the bridge). */
-export const waterSpot = ground(2.55, -3.9)
-/** The two guiding stones beside the Shared Adventures plot. */
-export const stoneSpots = (() => {
-  const i = seeds.findIndex((sd) => sd.id === 'adventures')
-  const p = plotSpots[i] || loveTree
-  const out = new THREE.Vector3(p.x - loveTree.x, 0, p.z - loveTree.z).normalize()
-  const side = new THREE.Vector3(-out.z, 0, out.x)
-  return [-1, 1].map((s) => ground(p.x + side.x * 0.85 * s + out.x * 0.3, p.z + side.z * 0.85 * s + out.z * 0.3))
-})()
+
+/* ───────── Chapter 5 + the secret ───────── */
+
+/** The envelope lies at the foot of the Love Tree, on the side the camera starts on. */
+export const envelopeSpot = ground(loveTree.x + 0.5, loveTree.z + 1.7)
+/** A tiny glowing heart hidden behind the big blossom tree of the Memory Garden. */
+export const bonusHeartSpot = ground(-9.3, 1.2, 0.35)
 
 /* ───────── optional discoveries ───────── */
 
@@ -200,6 +203,8 @@ export const poses = {
   future: pose(areas.future.clone(), v(0, 0.2, 1), 22, 8, 16),
   /** the love letter: the avatar at the foot of the Love Tree in full bloom */
   ending: pose(loveTree.clone().addScaledVector(isoBack, 0.9).add(v(0, 2.5, 0)), isoDir(28), 8.5, 8, 12),
+  /** the Disaster Date: the picnic hill, a little closer */
+  picnic: pose(picnicSpot.clone().add(v(0.2, 0.5, -0.4)), isoDir(50, -0.35), 8, 6, 0),
   /** secret ending: drift in close to the big heart in the Secret Room */
   secretClose: pose(areas.finalRoom.clone().add(v(0, 2.9, -1.5)), v(0, 0.08, 1), 3.6, 3.4, 5.2),
   /** the final moment: pull far back to see the whole little universe at once */

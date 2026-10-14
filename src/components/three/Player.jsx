@@ -63,6 +63,8 @@ export function PlayerController() {
   const smoothFollow = useRef(new THREE.Vector3().copy(followTarget(ISO.follow)))
   const wasExploring = useRef(false)
   const inViewpoint = useRef(false)
+  const stepTimer = useRef(0)
+  const stepCount = useRef(0)
 
   useFrame((_, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05)
@@ -144,6 +146,14 @@ export function PlayerController() {
       player.yaw += dy * Math.min(1, delta * 12)
     }
     player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
+    // soft footsteps
+    if (player.speed > 0.6) {
+      stepTimer.current -= delta
+      if (stepTimer.current <= 0) {
+        stepTimer.current = player.speed > 3.5 ? 0.27 : 0.38
+        audio.sfx('step', ++stepCount.current)
+      }
+    } else stepTimer.current = 0
     player.cheer = Math.max(0, player.cheer - delta)
 
     // ── left alone for a while, the island slowly turns by itself (any touch stops it)

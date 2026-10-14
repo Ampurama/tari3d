@@ -11,15 +11,16 @@ import {
   Orbit,
   Star,
   Telescope,
+  Utensils,
   X,
 } from 'lucide-react'
-import { couple, secretEnding, story } from '../../content/config'
+import { companion, couple, secretEnding, story } from '../../content/config'
 import { CHAPTER_COUNT, chapterStatus, completedCount, currentChapter, fillNames } from '../../lib/story'
 import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
 
 const speakerName = (speaker) =>
-  speaker === 'me' ? couple.me.name : speaker === 'you' ? couple.you.name : story.narrator
+  speaker === 'me' ? couple.me.name : speaker === 'you' ? couple.you.name : speaker === 'pet' ? companion.name : story.narrator
 
 /** Visual-novel dialog box. Tap / Enter / Space continues; it never blocks the rest of the page. */
 export function DialogBox() {
@@ -139,12 +140,10 @@ export function StoryDirector() {
       Boolean(s.discovery) ||
       s.curtain,
   )
-  // set when the last chapter is celebrated: the ending starts once that dialog is closed
-  const endingQueued = useRef(false)
-
-  // a chapter just got completed → celebrate it once (never interrupting something she's reading)
+  // a chapter just got completed → celebrate it once (never interrupting something she's reading),
+  // and let the next chapter introduce itself right away (the bridge and the picnic introduce themselves on arrival)
   useEffect(() => {
-    if (phase !== 'world' || dialog || reading || ['cinematic', 'ending', 'finalRoom', 'finale', 'letter', 'epilogue', 'avatar'].includes(view)) return
+    if (phase !== 'world' || dialog || reading || !['explore', 'distance'].includes(view)) return
     const status = chapterStatus(useStore.getState())
     const fresh = status.find((c) => c.done && !celebrated.includes(c.index))
     if (!fresh) return
@@ -156,34 +155,13 @@ export function StoryDirector() {
       if (next) st.showToast(`Chapter ${fresh.index + 1} complete ✦ Chapter ${fresh.index + 2} — ${next.title} — is open.`, 6500)
       const lines = [...(fresh.outro || [])]
       if (fresh.hint) lines.push({ speaker: 'narrator', text: fresh.hint })
-      const last = fresh.index === CHAPTER_COUNT - 1 && !st.mainEndingSeen
-      if (last) {
-        lines.push({ speaker: 'narrator', text: 'Every little thing is in its place now. Look — the Love Tree is waking up…' })
-        endingQueued.current = true
-      }
-      st.startDialog(lines, `outro:${fresh.index}`)
+      const introduce = next && !['miles', 'picnic'].includes(next.id) && !introsSeen.includes(next.index)
+      if (introduce) lines.push(...next.intro)
+      if (next?.id === 'letter') st.cueMochi('envelope')
+      if (lines.length) st.startDialog(lines, introduce ? `intro:${next.index}` : `outro:${fresh.index}`)
     }, 1600)
     return () => clearTimeout(t)
-  }, [phase, doneCount, celebrated, dialog, view, reading])
-
-  // the whole journey is done → the final cinematic begins (after the last chapter's words)
-  useEffect(() => {
-    if (!endingQueued.current || dialog || view !== 'explore' || reading) return
-    const t = setTimeout(() => {
-      endingQueued.current = false
-      useStore.getState().startCinematic()
-    }, 1500)
-    return () => clearTimeout(t)
-  }, [dialog, view, reading])
-
-  // Chapter 3 introduces itself the first time she's back on the island with it unlocked
-  useEffect(() => {
-    if (phase !== 'world' || view !== 'explore' || dialog || reading) return
-    const status = chapterStatus(useStore.getState())
-    if (!status[2]?.unlocked || status[2].done || introsSeen.includes(2) || !celebrated.includes(1)) return
-    const t = setTimeout(() => useStore.getState().startDialog(story.chapters[2].intro, 'intro:2'), 2400)
-    return () => clearTimeout(t)
-  }, [phase, view, dialog, reading, introsSeen, celebrated, doneCount])
+  }, [phase, doneCount, celebrated, dialog, view, reading, introsSeen])
 
   // music follows the journey
   useEffect(() => {
@@ -191,7 +169,8 @@ export function StoryDirector() {
     else if (view === 'cinematic' || view === 'ending') audio.setMood('finale')
     else if (view === 'finalRoom' || view === 'epilogue') audio.setMood('quiet')
     else if (view === 'distance') audio.setMood('miles')
-    else audio.setMood(doneCount >= 2 ? 'future' : 'little')
+    else if (view === 'picnic') audio.setMood('future')
+    else audio.setMood(doneCount >= 3 ? 'future' : 'little')
   }, [view, doneCount])
   useEffect(() => audio.setWarmth(connections / 5), [connections])
 
@@ -227,7 +206,14 @@ export function ObjectivePill() {
   )
 }
 
-/** The story book: the three chapters, real progress, replays and a deliberate reset. */
+/** The story book: the five chapters, real progress, replays and a deliberate reset. */
+/** What a chapter's button does in the story book: [while playing, once done]. */
+const ACTIONS = {
+  miles: ['Go to the two islands', 'Visit the islands again'],
+  picnic: ['Go to the picnic', 'Have the picnic again'],
+  letter: ['Open the envelope', 'Read the letter again'],
+}
+
 export function StoryPanel() {
   const panel = useStore((s) => s.panel)
   const setPanel = useStore((s) => s.setPanel)
@@ -246,7 +232,9 @@ export function StoryPanel() {
     const st = useStore.getState()
     setPanel(null)
     if (!c.unlocked) return st.showToast('Finish the previous chapter to unlock this one ♡')
-    if (c.index === 1) return st.travelToMiles()
+    if (c.id === 'miles') return st.travelToMiles()
+    if (c.id === 'picnic') return st.startPicnic()
+    if (c.id === 'letter') return c.done ? st.openLetterAgain() : st.openEnvelope()
     if (st.view !== 'explore') st.back()
     st.startDialog(c.intro, `intro:${c.index}`)
   }
@@ -306,7 +294,7 @@ export function StoryPanel() {
                     </ul>
                   )}
                   <button type="button" className={c.unlocked && !c.done ? 'btn-glow small' : 'btn-ghost'} disabled={!c.unlocked} onClick={() => go(c)}>
-                    {!c.unlocked ? 'Locked — finish the chapter before' : c.done ? (c.index === 1 ? 'Visit the islands again' : 'Hear the beginning again') : c.index === 1 ? 'Go to the two islands' : 'Remind me what to do'}
+                    {!c.unlocked ? 'Locked — finish the chapter before' : ACTIONS[c.id]?.[c.done ? 1 : 0] || (c.done ? 'Hear the beginning again' : 'Remind me what to do')}
                   </button>
                 </li>
               ))}
@@ -322,7 +310,7 @@ export function StoryPanel() {
                     useStore.getState().startCinematic()
                   }}
                 >
-                  {ended ? 'Replay the final cinematic' : 'Watch the ending'}
+                  {ended ? 'Replay the ending' : 'Watch the ending'}
                 </button>
                 {ended && (
                   <button
@@ -386,7 +374,8 @@ export function PlacesSheet() {
   const openFuture = useStore((s) => s.openFuture)
   const travelToMiles = useStore((s) => s.travelToMiles)
   const visited = useStore((s) => s.visited)
-  const milesOpen = useChapterUnlocked(1)
+  const milesOpen = useChapterUnlocked('miles')
+  const picnicOpen = useChapterUnlocked('picnic')
   const places = [
     { key: 'memories', label: 'Memories', icon: Images, go: () => goTo('memories') },
     { key: 'lane', label: 'Memory Lane', icon: Footprints, go: () => openLane() },
@@ -395,7 +384,8 @@ export function PlacesSheet() {
     { key: 'timemachine', label: 'Time Machine', icon: Hourglass, go: () => goTo('timemachine') },
     { key: 'constellation', label: 'Our Stars', icon: Star, go: () => goTo('constellation') },
     { key: 'future', label: 'Future', icon: Orbit, go: () => openFuture(0) },
-    { key: 'distance', label: 'Two Islands', icon: Telescope, go: () => travelToMiles(), locked: !milesOpen, why: 'Opens after Chapter One' },
+    { key: 'distance', label: 'Two Islands', icon: Telescope, go: () => travelToMiles(), locked: !milesOpen, why: 'Opens after Chapter Two' },
+    { key: 'picnic', label: 'The Picnic', icon: Utensils, go: () => useStore.getState().startPicnic(), locked: !picnicOpen, why: 'Opens after Chapter Three' },
   ]
   return (
     <AnimatePresence>

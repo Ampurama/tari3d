@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { addCollider, edgeRadius, MAIN_RADIUS, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
-import { littleSpots, loveTree, noteSpots, plotSpots, seedSpots, spots, stoneSpots, viewpointSpot, waterSpot } from '../../lib/layout'
+import { envelopeSpot, glowFlowerSpots, littleSpots, loveTree, mochiHome, noteSpots, PICNIC, picnicSpot, spots, viewpointSpot } from '../../lib/layout'
 import { blocksView } from '../../lib/iso'
 import { tier } from '../../lib/device'
 import { wind, windMaterial } from '../../lib/wind'
@@ -33,8 +33,11 @@ const KEEP_CLEAR = [
   [loveTree.x, loveTree.z, 3.4],
   [ZONES.gallery.x, ZONES.gallery.z, ZONES.gallery.r + 0.6], // the memories plaza stays open
   ...littleSpots.map((p) => [p.x, p.z, 1.6]),
-  ...seedSpots.map((p) => [p.x, p.z, 1.2]),
-  ...plotSpots.map((p) => [p.x, p.z, 0.9]),
+  ...glowFlowerSpots.map((p) => [p.x, p.z, 1.0]),
+  [mochiHome.x, mochiHome.z, 1.0],
+  [picnicSpot.x, picnicSpot.z, 3.2], // the picnic hill stays open (and the thief's bush path)
+  [PICNIC.thiefFrom.x, PICNIC.thiefFrom.z, 0.9],
+  [envelopeSpot.x, envelopeSpot.z, 0.9],
   ...Object.values(noteSpots).map((p) => [p.x, p.z, 1.0]),
   ...Object.values(spots).map((p) => [p.x, p.z, 1.3]),
 ]
@@ -44,12 +47,12 @@ const KEEP_CLEAR = [
  */
 const MUST_SEE = [
   ...littleSpots,
-  ...seedSpots,
-  ...plotSpots,
-  ...stoneSpots,
+  ...glowFlowerSpots,
+  mochiHome,
+  picnicSpot,
+  envelopeSpot,
   ...Object.values(noteSpots),
   ...Object.values(spots),
-  waterSpot,
   viewpointSpot,
 ]
 /** Would something of this height (world units) at (x, z) hide any of them? */

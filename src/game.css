@@ -1276,3 +1276,331 @@
 .memory-count {
   opacity: 0.75;
 }
+
+/* ───────── Mochi: speech bubbles and sleepy z's ───────── */
+
+.mochi-anchor {
+  pointer-events: none;
+}
+
+.mochi-bubble {
+  position: relative;
+  display: block;
+  max-width: min(240px, 60vw);
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: #fff7fb;
+  color: #5a3a5a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(40, 15, 60, 0.35);
+  transform: translateY(-50%);
+  animation: mochi-pop 0.35s cubic-bezier(0.22, 1.6, 0.36, 1);
+}
+
+.mochi-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: #fff7fb;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 2px;
+}
+
+.mochi-zzz {
+  display: block;
+  color: #e9dcff;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  text-shadow: 0 1px 8px rgba(20, 10, 50, 0.9);
+  animation: mochi-zzz 2.4s ease-in-out infinite;
+}
+
+@keyframes mochi-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-30%) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+@keyframes mochi-zzz {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-8px);
+  }
+}
+
+/* ───────── the picnic HUD ───────── */
+
+.picnic-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  pointer-events: none;
+}
+
+.picnic-card {
+  position: absolute;
+  left: 50%;
+  top: calc(78px + var(--safe-top));
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 28px));
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: rgba(255, 247, 251, 0.92);
+  color: #4a2f4f;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(30, 10, 50, 0.35);
+  pointer-events: auto;
+}
+
+.picnic-card .eyebrow {
+  color: #c4628f;
+}
+
+.picnic-card h2 {
+  margin: 4px 0 6px;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.picnic-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.picnic-count {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #ffd6ea;
+  color: #8a2f5f;
+  font-size: 0.85rem;
+}
+
+.picnic-card.is-sunset {
+  top: auto;
+  bottom: calc(40px + var(--safe-bottom));
+  background: rgba(255, 240, 230, 0.9);
+}
+
+.picnic-message {
+  margin: 0 0 12px !important;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.2rem !important;
+  line-height: 1.4;
+}
+
+.picnic-leave {
+  position: absolute;
+  left: 50%;
+  bottom: calc(18px + var(--safe-bottom));
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+/* ───────── the finale's last words ───────── */
+
+.final-message {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(640px, calc(100vw - 40px));
+  text-align: center;
+  pointer-events: auto;
+}
+
+.final-message p {
+  margin: 0 0 14px;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 2.6vw, 1.45rem);
+  line-height: 1.5;
+  color: #fff6fa;
+  text-shadow: 0 2px 18px rgba(30, 10, 40, 0.9);
+}
+
+.final-message p.is-name {
+  font-size: clamp(1.4rem, 4vw, 2.1rem);
+  font-style: italic;
+  color: #ffd9ec;
+}
+
+.final-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.final-choices button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* the pause menu */
+.settings-resume {
+  display: block;
+  margin: 6px 0 14px;
+}
+
+/* ───────── the 2D chapters ───────── */
+
+.flat-mochi {
+  font-size: 3rem;
+  text-align: center;
+}
+
+.flat-picnic {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.flat-picnic > * {
+  pointer-events: auto;
+}
+
+.flat-catch {
+  position: relative;
+  width: min(420px, 90vw);
+  height: 260px;
+}
+
+.flat-flyer {
+  position: absolute;
+  border: 0;
+  background: none;
+  font-size: 2.6rem;
+  cursor: pointer;
+  animation: flat-fly 6s ease-in-out infinite;
+}
+
+.flat-flyer.f1 {
+  animation-delay: -2s;
+  top: 40%;
+}
+
+.flat-flyer.f2 {
+  animation-delay: -4s;
+  top: 70%;
+}
+
+.flat-flyer.is-caught {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+@keyframes flat-fly {
+  0%,
+  100% {
+    left: 0%;
+    transform: translateY(0) rotate(-10deg);
+  }
+  50% {
+    left: 80%;
+    transform: translateY(-30px) rotate(10deg);
+  }
+}
+
+.flat-save {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+
+.flat-save-track {
+  position: relative;
+  width: min(420px, 86vw);
+  height: 56px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.flat-save-zone {
+  position: absolute;
+  left: 60%;
+  width: 34%;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgba(255, 214, 120, 0.35);
+}
+
+.flat-save-thief,
+.flat-save-basket {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+}
+
+.flat-save-basket {
+  left: 96%;
+}
+
+.flat-fix {
+  display: grid;
+  gap: 14px;
+}
+
+.flat-fix-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.flat-slot {
+  min-width: 110px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 2px dashed rgba(255, 214, 234, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.flat-slot.is-done {
+  border-style: solid;
+  font-size: 1.6rem;
+}
+
+.flat-sunset {
+  font-size: 3rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mochi-zzz,
+  .flat-flyer {
+    animation: none;
+  }
+}

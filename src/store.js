@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { avatars, connections, constellation, futureWorlds, hints, littleThings, loveCapsule, memoryLane, seeds, story, timeMachine } from './content/config'
-import { CHAPTER_COUNT, chapterStatus, completedCount } from './lib/story'
+import { avatars, companion, connections, constellation, futureWorlds, glowFlowers, hints, littleThings, loveCapsule, memories, memoryLane, picnic, secretHeart, story, timeMachine } from './content/config'
+import { CHAPTER_COUNT, chapterIndex, chapterStatus, completedCount, PICNIC_GAMES, withNames } from './lib/story'
 import { player, resetPlayer } from './lib/player'
 
 export const HIDDEN_HEART_COUNT = 5
@@ -25,7 +25,6 @@ function save(patch) {
 
 const saved = loadSaved()
 const arr = (v) => (Array.isArray(v) ? v : [])
-const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {})
 const addOnce = (list, id) => (list.includes(id) ? list : [...list, id])
 let toastId = 0
 let travelToken = 0
@@ -37,13 +36,12 @@ const motionQuery =
 
 /** Story progress keys — the only things a deliberate "reset progress" clears. */
 const STORY_KEYS = {
+  mochiAwake: false,
+  flowersFound: [],
   littleFound: [],
   connectionsDone: [],
-  seedState: {},
-  carrying: null,
-  hasWater: false,
-  stonesLit: [],
-  futureLinks: [],
+  picnicDone: [],
+  envelopeOpened: false,
   prologueSeen: false,
   introsSeen: [],
   celebrated: [],
@@ -83,18 +81,17 @@ export const useStore = create((set, get) => ({
   avatarId: avatars.some((a) => a.id === saved.avatarId) ? saved.avatarId : null,
 
   /* ── story progress: every value comes from something she actually did ── */
+  /** Chapter 1: the companion has been woken up, and the glowing flowers collected */
+  mochiAwake: Boolean(saved.mochiAwake),
+  flowersFound: arr(saved.flowersFound),
   littleFound: arr(saved.littleFound),
   connectionsDone: arr(saved.connectionsDone),
-  /** seed id → 'carried' | 'planted' | 'grown' */
-  seedState: obj(saved.seedState),
-  /** the seed she's holding right now (one at a time) */
-  carrying: typeof saved.carrying === 'string' ? saved.carrying : null,
-  /** water fetched from the lake for the Kindness seed */
-  hasWater: Boolean(saved.hasWater),
-  /** guiding stones lit for the Shared Adventures seed */
-  stonesLit: arr(saved.stonesLit),
-  /** grown seeds already linked to the Future seed */
-  futureLinks: arr(saved.futureLinks),
+  /** Chapter 4: the picnic mini-games she has won ('catch' | 'save' | 'fix') */
+  picnicDone: arr(saved.picnicDone),
+  /** Chapter 5: the envelope beneath the Love Tree */
+  envelopeOpened: Boolean(saved.envelopeOpened),
+  /** the optional secret heart behind the blossom tree */
+  bonusFound: Boolean(saved.bonusFound),
   notesFound: arr(saved.notesFound),
   viewpointSeen: Boolean(saved.viewpointSeen),
   prologueSeen: Boolean(saved.prologueSeen),
@@ -108,6 +105,14 @@ export const useStore = create((set, get) => ({
   secretFound: Boolean(saved.secretFound),
   secretSeen: Boolean(saved.secretSeen),
 
+  /** the companion's speech bubble: { text, id } | null */
+  mochiLine: null,
+  /** a reaction for the companion to act out: { kind, n } ('celebrate' | 'carry' | 'roll' | 'wake' | 'pet' | 'oops') */
+  mochiCue: { kind: null, n: 0 },
+  /** bumps every time the finale (re)starts */
+  cineRun: 0,
+  /** the picnic mini-game being played (view 'picnic'): 'catch' | 'save' | 'fix' | 'sunset' | null */
+  picnicStage: null,
   /** the interactable the avatar is standing next to: { id, label } | null */
   prompt: null,
   /** the 💡 hint guide: a light beam on the next goal and a trail of light from the avatar */
@@ -137,6 +142,8 @@ export const useStore = create((set, get) => ({
     if (get().curtain) return
     const quick = get().reducedMotion
     set({ curtain: true })
+    // (a speech bubble never survives a scene change)
+    set({ mochiLine: null })
     setTimeout(
       () => {
         fn()
@@ -214,6 +221,7 @@ export const useStore = create((set, get) => ({
   back: () =>
     set((s) => ({
       view: 'explore',
+      picnicStage: null,
       selectedMemory: null,
       capsuleLetter: null,
       activeStar: null,
@@ -279,7 +287,7 @@ export const useStore = create((set, get) => ({
   showDiscovery: (discovery, ms = 6500) => {
     const id = ++toastId
     // a discovery card replaces any toast (they would sit on top of each other)
-    set({ toast: null, discovery: { ...discovery, id } })
+    set({ toast: null, discovery: { ...discovery, title: withNames(discovery.title), text: withNames(discovery.text), id } })
     setTimeout(() => {
       if (get().discovery?.id === id) set({ discovery: null })
     }, ms)
@@ -312,10 +320,70 @@ export const useStore = create((set, get) => ({
     if (d.key?.startsWith('intro:')) patch.introsSeen = addOnce(get().introsSeen, Number(d.key.slice(6)))
     save({ prologueSeen: patch.prologueSeen ?? get().prologueSeen, introsSeen: patch.introsSeen ?? get().introsSeen })
     set(patch)
-    // after Chapter 3's last words, the final cinematic begins
-    if (d.key === `outro:${CHAPTER_COUNT - 1}` && completedCount(get()) >= CHAPTER_COUNT && !get().mainEndingSeen) {
-      setTimeout(() => get().startCinematic(), 900)
+  },
+
+  /* ───────── the companion ───────── */
+
+  /** A speech bubble over the companion's head (never blocks anything). */
+  mochiSay: (text, ms = 3600) => {
+    if (!text) return
+    const id = ++toastId
+    set({ mochiLine: { text: withNames(text), id } })
+    setTimeout(() => {
+      if (get().mochiLine?.id === id) set({ mochiLine: null })
+    }, ms)
+  },
+
+  /** Ask the companion to act something out. */
+  cueMochi: (kind) => set((s) => ({ mochiCue: { kind, n: s.mochiCue.n + 1 } })),
+
+  /** Chapter 1 begins: the fluffy heart wakes up (after pretending it isn't). */
+  wakeMochi: () => {
+    if (get().mochiAwake) return false
+    save({ mochiAwake: true })
+    set({ mochiAwake: true })
+    get().cueMochi('wake')
+    get().mochiSay(companion.wake[0], 2000)
+    setTimeout(() => get().mochiSay(companion.wake[1], 5200), 2100)
+    setTimeout(() => get().mochiSay(companion.flower[0], 3600), 7600)
+    return true
+  },
+
+  /* ───────── Chapter 1 — The Goofy Beginning ───────── */
+
+  /** One of the three glowing flowers. Returns true if it was new. */
+  findGlowFlower: (id) => {
+    if (!get().mochiAwake || !glowFlowers.some((f) => f.id === id) || get().flowersFound.includes(id)) return false
+    const flowersFound = [...get().flowersFound, id]
+    save({ flowersFound })
+    set({ flowersFound })
+    player.cheer = 1.2
+    const n = flowersFound.filter((x) => glowFlowers.some((f) => f.id === x)).length
+    // each flower brings its own little Mochi disaster
+    if (n === 1) {
+      get().cueMochi('carry')
+      get().mochiSay(companion.carry[0], 2600)
+      setTimeout(() => get().mochiSay(companion.carry[1], 1400), 2700)
+      setTimeout(() => get().mochiSay(companion.carry[2], 3600), 4200)
+    } else if (n === 2) {
+      get().cueMochi('roll')
+      get().mochiSay(companion.roll[0], 3600)
+    } else {
+      get().cueMochi('celebrate')
+      get().mochiSay(companion.flower[2], 4200)
+      // the reward: the first memory of this little world
+      const first = memories[0]
+      setTimeout(
+        () =>
+          get().showDiscovery(
+            { kind: 'memory', title: companion.reward.title, text: first ? `“${first.caption || first.title}” — ${companion.reward.text}` : companion.reward.text, photo: first?.type === 'video' ? null : first?.src || null },
+            9000,
+          ),
+        1800,
+      )
     }
+    if (n < glowFlowers.length) get().showToast(`Bunga bercahaya: ${n} / ${glowFlowers.length} ✦`, 2600)
+    return true
   },
 
   markCelebrated: (index) => {
@@ -325,12 +393,18 @@ export const useStore = create((set, get) => ({
     set({ celebrated })
   },
 
-  /* ───────── Chapter 1 — The Little Things ───────── */
+  /* ───────── Chapter 2 — Little Things About You ───────── */
 
   /** Record one of the five little things. Returns true if it was new. */
   findLittle: (id) => {
     const item = littleThings.find((l) => l.id === id)
     if (!item || get().littleFound.includes(id)) return false
+    if (!chapterStatus(get())[chapterIndex('little-things')]?.unlocked) {
+      get().mochiSay('Wah, berkilau! Tapi bantuin aku cari bunga yang bercahaya dulu, ya? ♡', 3600)
+      return false
+    }
+    get().cueMochi('celebrate')
+    get().mochiSay(companion.found[get().littleFound.length % companion.found.length], 3000)
     const littleFound = [...get().littleFound, id]
     save({ littleFound })
     set({ littleFound })
@@ -339,24 +413,26 @@ export const useStore = create((set, get) => ({
     return true
   },
 
-  /* ───────── Chapter 2 — Miles Between Us ───────── */
+  /* ───────── Chapter 3 — A Little Far, Never Apart ───────── */
 
   /** Travel from the cliff to the two islands. */
   travelToMiles: () => {
-    if (!chapterStatus(get())[1]?.unlocked) {
-      get().showToast('The telescope shows two islands far away… finish Chapter One first ♡')
+    const i = chapterIndex('miles')
+    if (!chapterStatus(get())[i]?.unlocked) {
+      get().showToast('Dari teropong kelihatan dua pulau yang jauh… selesaiin babak sebelumnya dulu, ya ♡')
       return
     }
     get().throughCurtain(() => get().goTo('distance'), 1500)
-    if (!get().introsSeen.includes(1)) setTimeout(() => get().startDialog(story.chapters[1].intro, 'intro:1'), 3200)
+    if (!get().introsSeen.includes(i)) setTimeout(() => get().startDialog(story.chapters[i].intro, `intro:${i}`), 3200)
   },
 
   completeConnection: (id) => {
     const item = connections.find((c) => c.id === id)
-    if (!item || get().connectionsDone.includes(id) || !chapterStatus(get())[1]?.unlocked) return false
+    if (!item || get().connectionsDone.includes(id) || !chapterStatus(get())[chapterIndex('miles')]?.unlocked) return false
     const connectionsDone = [...get().connectionsDone, id]
     save({ connectionsDone })
     set({ connectionsDone })
+    get().cueMochi('celebrate')
     get().showDiscovery({ kind: 'connection', title: item.title, text: item.message, count: `${connectionsDone.length} / ${connections.length}` }, 5500)
     return true
   },
@@ -369,78 +445,66 @@ export const useStore = create((set, get) => ({
   },
   closeThreadMessage: () => set({ threadMessage: null }),
 
-  /* ───────── Chapter 3 — A Future We Grow ───────── */
+  /* ───────── Chapter 4 — The Disaster Date ───────── */
 
-  pickSeed: (id) => {
+  /** Sit down at the picnic: the first mini-game she hasn't won yet. */
+  startPicnic: () => {
     const s = get()
-    if (!chapterStatus(s)[2]?.unlocked) return false
-    if (!seeds.some((sd) => sd.id === id) || s.seedState[id]) return false
-    if (s.carrying) {
-      get().showToast('You’re already carrying a seed — plant it first ♡', 3200)
+    if (!chapterStatus(s)[chapterIndex('picnic')]?.unlocked) {
+      s.mochiSay('Pikniknya belum siap! (Aku masih milih kue.)', 3200)
       return false
     }
-    const seedState = { ...s.seedState, [id]: 'carried' }
-    save({ seedState, carrying: id })
-    set({ seedState, carrying: id })
-    player.cheer = 0.8
-    get().showToast(`You picked up the seed of ${seeds.find((sd) => sd.id === id).title}. Find its place beside the Love Tree ✦`, 5200)
+    const next = PICNIC_GAMES.find((g) => !s.picnicDone.includes(g)) || 'sunset'
+    s.throughCurtain(() => {
+      set((st) => ({ view: 'picnic', picnicStage: next, panel: null, dialog: null, prompt: null, camNonce: st.camNonce + 1 }))
+      if (!s.introsSeen.includes(chapterIndex('picnic')) && next === PICNIC_GAMES[0]) setTimeout(() => get().startDialog(story.chapters[chapterIndex('picnic')].intro, `intro:${chapterIndex('picnic')}`), 900)
+    }, 1100)
     return true
   },
 
-  /** Plant the carried seed into its plot (each seed has its own plot). */
-  plantSeed: (id) => {
+  /** A mini-game was won: on to the next one (the last one ends at sunset). */
+  winPicnic: (game) => {
     const s = get()
-    if (s.carrying !== id || s.seedState[id] !== 'carried') return false
-    const seedState = { ...s.seedState, [id]: 'planted' }
-    save({ seedState, carrying: null })
-    set({ seedState, carrying: null })
-    const sd = seeds.find((x) => x.id === id)
-    // honesty is planted by hand — that *is* its care, so it grows right away (never left half-done)
-    if (id === 'honesty') return get().growSeed('honesty')
-    get().showToast(`Planted ${sd.title}. ${sd.care}`, 5600)
+    if (!PICNIC_GAMES.includes(game) || s.view !== 'picnic') return false
+    const picnicDone = addOnce(s.picnicDone, game)
+    if (picnicDone !== s.picnicDone) save({ picnicDone })
+    set({ picnicDone })
+    get().cueMochi('celebrate')
+    get().showToast(picnic.games[game].done, 2600)
+    const next = PICNIC_GAMES.find((g) => !picnicDone.includes(g)) || 'sunset'
+    setTimeout(() => {
+      if (get().view === 'picnic') set({ picnicStage: next })
+    }, 1600)
     return true
   },
 
-  /** The seed's own care step is done → it grows. */
-  growSeed: (id) => {
+  /** After the sunset message: back to the island. */
+  leavePicnic: () => get().throughCurtain(() => set((s) => ({ view: 'explore', picnicStage: null, camNonce: s.camNonce + 1 })), 1100),
+
+  /* ───────── Chapter 5 — A Letter From the Future ───────── */
+
+  /** The envelope beneath the Love Tree: the letter opens (the finale follows from the letter). */
+  openEnvelope: () => {
     const s = get()
-    if (s.seedState[id] !== 'planted') return false
-    if (id === 'future') {
-      const others = seeds.filter((sd) => sd.id !== 'future')
-      if (!others.every((sd) => s.seedState[sd.id] === 'grown')) return false
+    if (!chapterStatus(s)[chapterIndex('letter')]?.unlocked) return false
+    if (!s.envelopeOpened) {
+      save({ envelopeOpened: true })
+      set({ envelopeOpened: true })
+      // the last chapter is celebrated by the finale itself
+      s.markCelebrated(chapterIndex('letter'))
     }
-    const seedState = { ...s.seedState, [id]: 'grown' }
-    const patch = { seedState }
-    if (id === 'kindness') patch.hasWater = false
-    save(patch)
-    set(patch)
-    player.cheer = 1.2
-    const sd = seeds.find((x) => x.id === id)
-    const grown = seeds.filter((x) => seedState[x.id] === 'grown').length
-    get().showDiscovery({ kind: 'seed', title: sd.title, text: sd.message, count: `${grown} / ${seeds.length}` }, 5500)
+    s.throughCurtain(() => set((st) => ({ view: 'ending', panel: null, dialog: null, prompt: null, discovery: null, camNonce: st.camNonce + 1 })), 1200)
     return true
   },
 
-  fetchWater: () => {
-    if (get().hasWater) return
-    save({ hasWater: true })
-    set({ hasWater: true })
-    get().showToast('You scooped up a little lake water ✦', 3000)
-  },
-
-  lightStone: (n) => {
-    const stonesLit = addOnce(get().stonesLit, n)
-    save({ stonesLit })
-    set({ stonesLit })
-    // both guiding stones lit → Shared Adventures grows at once
-    if (stonesLit.length >= 2 && get().seedState.adventures === 'planted') get().growSeed('adventures')
-  },
-
-  linkFuture: (id) => {
-    if (get().seedState.future !== 'planted') return
-    const futureLinks = addOnce(get().futureLinks, id)
-    save({ futureLinks })
-    set({ futureLinks })
+  /** The optional secret heart behind the blossom tree. */
+  findBonusHeart: () => {
+    if (!get().bonusFound) {
+      save({ bonusFound: true })
+      set({ bonusFound: true })
+    }
+    get().cueMochi('celebrate')
+    get().showDiscovery({ kind: 'secret', title: secretHeart.title, text: secretHeart.text }, 9000)
   },
 
   /* ───────── optional discoveries ───────── */
@@ -467,19 +531,34 @@ export const useStore = create((set, get) => ({
 
   startCinematic: () => {
     if (completedCount(get()) < CHAPTER_COUNT || get().view === 'cinematic') return false
-    get().throughCurtain(() => set((s) => ({ view: 'cinematic', panel: null, dialog: null, prompt: null, discovery: null, camNonce: s.camNonce + 1 })), 1400)
+    get().throughCurtain(() => set((s) => ({ view: 'cinematic', panel: null, dialog: null, prompt: null, discovery: null, camNonce: s.camNonce + 1, cineRun: s.cineRun + 1 })), 1400)
     return true
   },
 
-  /** After the cinematic (or when skipped): the love letter. */
-  finishCinematic: () => {
+  /** Watch the finale again from the start. */
+  replayCinematic: () => {
+    if (get().view !== 'cinematic') return get().startCinematic()
+    get().throughCurtain(() => set((s) => ({ camNonce: s.camNonce + 1, cineRun: s.cineRun + 1 })), 1000)
+    return true
+  },
+
+  /** The finale is over: remember it, then go where she chose ('explore' | 'memories' | 'ending'). */
+  finishCinematic: (next = 'explore') => {
     if (get().view !== 'cinematic') return
     save({ mainEndingSeen: true })
-    get().throughCurtain(() => set((s) => ({ view: 'ending', mainEndingSeen: true, camNonce: s.camNonce + 1 })), 1000)
+    set({ mainEndingSeen: true })
+    get().throughCurtain(() => set((s) => ({ view: next, selectedMemory: null, camNonce: s.camNonce + 1 })), 1000)
+  },
+
+  /** Mark the finale as seen without leaving it (its last words are on screen). */
+  markEndingSeen: () => {
+    if (get().mainEndingSeen) return
+    save({ mainEndingSeen: true })
+    set({ mainEndingSeen: true })
   },
 
   openLetterAgain: () => {
-    if (!get().mainEndingSeen) return
+    if (!get().envelopeOpened) return
     set((s) => ({ view: 'ending', panel: null, prompt: null, camNonce: s.camNonce + 1 }))
   },
 
@@ -581,7 +660,7 @@ export const useStore = create((set, get) => ({
 
   showToast: (text, duration = 4200) => {
     const id = ++toastId
-    set({ toast: { id, text } })
+    set({ toast: { id, text: withNames(text) } })
     setTimeout(() => {
       if (get().toast?.id === id) set({ toast: null })
     }, duration)
@@ -605,7 +684,8 @@ if (typeof window !== 'undefined') {
 }
 
 /** Story helpers for components (cheap booleans/numbers, so no re-render storms). */
-export const useChapterUnlocked = (i) => useStore((s) => Boolean(chapterStatus(s)[i]?.unlocked))
+/** Is a chapter open? `ch`: its index or its id ('goofy' | 'little-things' | 'miles' | 'picnic' | 'letter'). */
+export const useChapterUnlocked = (ch) => useStore((s) => Boolean(chapterStatus(s)[typeof ch === 'string' ? chapterIndex(ch) : ch]?.unlocked))
 export const useChaptersDone = () => useStore((s) => completedCount(s))
 
 /** Time runs slower in the quiet parts (particles read this every frame). */

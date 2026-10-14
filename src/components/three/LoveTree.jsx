@@ -8,7 +8,7 @@ import { addCollider, seeded } from '../../lib/terrain'
 import { journeyProgress } from '../../lib/story'
 import { heartPoint } from '../../lib/heart'
 import { glowTexture } from '../../lib/textures'
-import { cineTime } from '../../lib/cinematic'
+import { CINE, cineTime, windowAt } from '../../lib/cinematic'
 import { tier } from '../../lib/device'
 import { FACE_CAMERA } from '../../lib/iso'
 import { useStore } from '../../store'
@@ -18,7 +18,7 @@ import { DriftParticles } from './Particles'
 /*
  * THE CENTRAL LOVE TREE — the island's signature landmark.
  * A twisting trunk splits into spiralling branches. Its blossom, lanterns and glow grow with
- * the whole journey (memories found, connections restored, seeds grown). After the ending its
+ * the whole journey (flowers, little things, the bridge, the picnic). After the ending its
  * branch tips are joined by faint lines of light, like a constellation.
  */
 
@@ -132,7 +132,7 @@ function TreeConstellation({ tips }) {
   useFrame(({ clock }) => {
     // scene 3 of the cinematic runs from 18s to 27s
     const t = view === 'cinematic' ? cineTime(clock.elapsedTime) : formed ? 99 : 0
-    const k = THREE.MathUtils.clamp((t - 19) / 6, 0, 1)
+    const k = windowAt(CINE.bloom, t)
     const pos = geometry.attributes.position
     for (let i = 0; i < N; i++) {
       const d = Math.min(1, Math.max(0, k * 1.4 - (i / N) * 0.4))
@@ -140,7 +140,7 @@ function TreeConstellation({ tips }) {
       pos.setXYZ(i, starts[i * 3] + (targets[i * 3] - starts[i * 3]) * e, starts[i * 3 + 1] + (targets[i * 3 + 1] - starts[i * 3 + 1]) * e, starts[i * 3 + 2] + (targets[i * 3 + 2] - starts[i * 3 + 2]) * e)
     }
     pos.needsUpdate = true
-    material.opacity = view === 'cinematic' ? Math.min(1, Math.max(0, (t - 18.5) / 1.5)) : formed ? 0.85 : 0
+    material.opacity = view === 'cinematic' ? windowAt([CINE.bloom[0] - 0.5, CINE.bloom[0] + 1.5], t) : formed ? 0.85 : 0
   })
   if (view !== 'cinematic' && !formed) return null
   return <points geometry={geometry} material={material} frustumCulled={false} />
@@ -156,9 +156,10 @@ export default function LoveTree() {
   const light = useRef()
   const shown = useRef(-1)
   const progress = useStore(journeyProgress)
-  const ending = useStore((s) => s.mainEndingSeen || s.view === 'cinematic' || s.view === 'ending' || s.view === 'epilogue')
+  const ending = useStore((s) => s.mainEndingSeen || s.view === 'epilogue')
+  const inFinale = useStore((s) => s.view === 'cinematic')
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const level = ending ? 1 : progress
+  const baseLevel = ending ? 1 : progress
   const maxBloom = blossoms.length
   const woodMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#a585b8', roughness: 0.75, emissive: '#5b3a7a', emissiveIntensity: 0.18 }), [])
   const bloomMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.55, emissive: '#ff7fb2', emissiveIntensity: 0.2 }), [])
@@ -187,6 +188,8 @@ export default function LoveTree() {
   const scales = useMemo(() => new Float32Array(blossoms.length), [blossoms])
   useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime
+    // in the finale it blooms completely at the moment the hearts rise
+    const level = inFinale ? Math.max(baseLevel, windowAt(CINE.bloom, cineTime(t))) : baseLevel
     // at the start the tree is peaceful but already in leaf-and-blossom (so it reads as a tree from above)
     const target = Math.round(maxBloom * (0.45 + 0.55 * level))
     let dirty = false
@@ -235,7 +238,7 @@ export default function LoveTree() {
         </group>
       )}
       <TreeConstellation tips={tips} />
-      <DriftParticles position={[0, 2.4, 0]} count={tier === 'high' ? 40 : 18} area={[6, 5, 6]} size={0.1} speed={0.28} direction={-1} texture="petal" intensity={0.6 + level} seed={71} />
+      <DriftParticles position={[0, 2.4, 0]} count={tier === 'high' ? 40 : 18} area={[6, 5, 6]} size={0.1} speed={0.28} direction={-1} texture="petal" intensity={0.6 + baseLevel} seed={71} />
     </group>
   )
 }

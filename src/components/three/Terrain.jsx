@@ -19,6 +19,8 @@ import {
 } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
 import { tier } from '../../lib/device'
+import { CINE, cineTime, windowAt } from '../../lib/cinematic'
+import { journeyProgress } from '../../lib/story'
 import { placeNames } from '../../content/config'
 import { useChapterUnlocked, useStore } from '../../store'
 import { IslandBody } from './Island'
@@ -281,7 +283,7 @@ export function Waterfall() {
 /** Glowing stepping stones along the main paths. The cliff path lights up when Chapter 1 is done. */
 export function LuminousPaths() {
   const ref = useRef()
-  const chapter2 = useChapterUnlocked(1)
+  const chapter2 = useChapterUnlocked('miles')
   const reducedMotion = useStore((s) => s.reducedMotion)
   const stones = useMemo(() => {
     const list = []
@@ -396,8 +398,13 @@ export function PathLanterns() {
   const color = useMemo(() => new THREE.Color(), [])
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
+    // more lanterns burn as the journey goes on; in the finale they light up one by one
+    const s = useStore.getState()
+    const lit = s.view === 'cinematic' ? windowAt(CINE.lanterns, cineTime(t)) : s.mainEndingSeen ? 1 : 0.3 + 0.7 * journeyProgress(s)
     items.forEach((l, i) => {
-      const k = reducedMotion ? 1 : 0.88 + 0.12 * Math.sin(t * 3 + l.phase) * Math.sin(t * 1.7 + l.phase * 0.5)
+      const on = (i + 0.5) / items.length <= lit
+      const flicker = reducedMotion ? 1 : 0.88 + 0.12 * Math.sin(t * 3 + l.phase) * Math.sin(t * 1.7 + l.phase * 0.5)
+      const k = on ? flicker : 0.18
       lights.current.setColorAt(i, color.setRGB(2.8 * k, 1.9 * k, 1.05 * k))
     })
     lights.current.instanceColor.needsUpdate = true

@@ -70,32 +70,43 @@ next to it adds soft wind and wind-chimes.
 
 Progress (hearts found, stars lit, envelopes opened, letter read) is saved in the browser.
 
-### The game — “Every Little Thing Leads to You”
+### The game — “A Little World Made for You”
 
 After the intro she **chooses a character** (`avatars` in `config.js`: names, outfit, colours, hair —
-stylised little souls, not portraits) and walks around a large island with zones: the Starting Meadow,
-the Memory Garden, the Heartwood Forest, Reflection Lake (with a bridge and a waterfall), Starfall Cliff,
-a Secret Cove behind a rock arch, and the **Central Love Tree**, which grows with her progress.
+stylised little souls, not portraits) and walks around a small island with zones: the Starting Meadow,
+the Memory Garden, Our Memories (the photo plaza), the Heartwood Forest, Reflection Lake (with a bridge
+and a waterfall), Starfall Cliff, the picnic terrace, the Secret Cove, and the **Central Love Tree**,
+which grows with her progress. **Mochi**, a small fluffy heart (`companion`), follows her everywhere,
+cheers far too hard and gets things funnily wrong. Five short chapters (about 10–15 minutes):
 
 | Chapter | What she does (measured from real actions — never faked) |
 |---|---|
-| 1 · The Little Things | find 5 objects: a photograph (garden), a letter in a bottle (lake), a sleeping flower (forest), a music box (cliff), a fallen star (meadow) |
-| 2 · Miles Between Us | through the telescope on Starfall Cliff: restore Trust, Communication, Patience, Understanding and Effort to build the bridge between two islands |
-| 3 · A Future We Grow | find 5 glowing seeds and grow each in its own plot by the Love Tree (hold to plant, fetch lake water, light two stones, stay with it, connect the four lights) |
+| 1 · The Goofy Beginning | wake Mochi (napping next to the start — this is the tutorial), then pick 3 glowing flowers in the meadow; Mochi gives her the first memory (`memories[0]`) |
+| 2 · Little Things About You | find 5 objects: a photograph (garden), a letter in a bottle (lake), a sleeping flower (forest), a music box (cliff), a fallen star (meadow) |
+| 3 · A Little Far, Never Apart | through the telescope on Starfall Cliff: restore Trust, Communication, Patience, Understanding and Effort to build the bridge between two islands (Mochi "helps") |
+| 4 · The Disaster Date | the picnic terrace: catch 3 flying flowers, save the sandwich from a tiny thief, put the picnic back together — then sunset and `picnic.message` |
+| 5 · A Letter From the Future | Mochi finds an envelope beneath the Love Tree → the love letter → the finale |
 
-Then the **final cinematic** (“You were the meaning all along”), the **love letter** (`loveLetter`:
-greeting, body, `personalNote`, photo, optional `voice`), and — touching the little star by the Love
-Tree afterwards — the optional **secret ending** (`secretEnding`). Both can be replayed from the Story
-book; “Start the story over…” there is the only way to reset (it asks first).
+**The finale** (“A Little World Made for You”): the camera glides to the tree, Mochi sits beside her,
+the island's lanterns light up one by one, a few fireflies, the tree blooms and a heart of lights
+rises, the sky turns into a pink/purple/gold sunset, then `finalMessage.lines` appear one by one.
+It can be skipped to the message; afterwards she can replay it, revisit the memories, read the letter
+again or stay. Optional extras: a **tiny secret heart** behind the big blossom tree in the Memory Garden
+(`secretHeart`), and the older secret ending (the little star by the Love Tree after the finale).
+“Start the story over…” in the Story book is the only way to reset (it asks first).
 
-Controls: **WASD / arrow keys** (Shift to run), scroll/pinch to zoom, **E** to interact,
-or click/tap something to walk to it. On phones: joystick + the ✦ button.
+The island reflects her progress: more path lanterns burn, the sky grows warmer, the Love Tree blooms,
+and the three glowing flowers are replanted at its foot.
+
+Controls: **WASD / arrow keys** (Shift to run), drag to turn the island, scroll/pinch to zoom, **E** to
+interact, **Escape** to pause (sound settings), or click/tap something to walk to it. On phones: joystick
++ the ✦ button. Stuck? **💡 Hint** in the dock says what to do next, and can walk her there.
 
 **Camera — a miniature you can spin.** By default the whole island is in view (about 40° above the
 ground, gentle perspective). Drag to turn it all the way around, scroll / pinch to zoom — the closer
 you zoom, the more tightly the camera follows the avatar; the **Island** button flies back to the
 whole-island view. Arriving on the island sweeps once around it, and after ~16 s without input the
-island slowly turns by itself. Chapter 2 can be turned and zoomed a little too. Tune it in
+island slowly turns by itself. Chapter 3 (the bridge) can be turned and zoomed a little too. Tune it in
 `src/lib/iso.js` (`ISO.elevation`, `ISO.fov`, `ISO.follow`, `ISO.zoomIn`, `ISO.idleSpin`). Place names
 on the map come from `placeNames` in `config.js`. Tapping somewhere (or **Take me there** in a hint)
 walks around trees, water and cliffs (`src/lib/path.js`).
@@ -107,9 +118,14 @@ walks around trees, water and cliffs (`src/lib/path.js`).
 | The five little things (titles, messages, the photo) | `littleThings` |
 | The five connections (instructions, messages) | `connections` |
 | The island messages + optional voice notes | `redThread.messages` |
-| The five seeds | `seeds` |
+| Mochi's name and every line it says | `companion` |
+| The three glowing flowers (colours) | `glowFlowers` |
+| The picnic mini-games (titles, instructions, funny lines) and its message | `picnic` |
+| The envelope label | `envelope` |
+| The finale's last words and its buttons | `finalMessage` |
+| The tiny secret heart | `secretHeart` |
 | Hidden notes, Starfall Cliff text | `hiddenNotes`, `viewpoint` |
-| Cinematic captions and title | `finalCinematic` |
+| Finale captions and title | `finalCinematic` |
 | The love letter | `loveLetter` |
 | Secret ending (message, letter, voice, photo) | `secretEnding` |
 
@@ -126,9 +142,9 @@ constellation, hidden hearts, the letter on the meadow table and the heart arch 
 
 1. **Loading**: a heart fills up while textures and fonts load.
 2. **Intro**: stars fade in, a glowing heart appears, the words, then “Enter Our World ♡”.
-3. **Character selection** → the Starting Meadow.
-4. **Three chapters** (see above), with dialog, discoveries and a story book (📖) showing real progress.
-5. **Final cinematic → love letter → (optional) secret ending.**
+3. **Character selection** → the Starting Meadow, where Mochi is napping.
+4. **Five chapters** (see above), with dialog, discoveries and a story book (📖) showing real progress.
+5. **The envelope → love letter → finale → (optional) secrets.**
 
 Progress, the chosen character and sound settings are remembered in the browser.
 

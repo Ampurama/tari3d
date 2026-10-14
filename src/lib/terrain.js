@@ -20,6 +20,8 @@ export const ZONES = {
   cove: { x: 6.6, z: 7.6, r: 2.1 },
   /** Our Memories: a round, flat gallery plaza with the photos standing in a ring */
   gallery: { x: -5.8, z: 6.9, r: 2.5 },
+  /** The Disaster Date: a soft, level hill for the picnic */
+  picnic: { x: 4.4, z: 4.6, r: 1.9 },
 }
 
 /** Where the player starts after choosing an avatar. */
@@ -48,7 +50,10 @@ export function outline(theta) {
 export const edgeRadius = (x, z) => MAIN_RADIUS * outline(Math.atan2(z, x))
 
 /** Ground height of the main island. */
-export function worldHeight(x, z) {
+/** The picnic terrace sits at whatever height the hillside naturally has at its centre. */
+let picnicLevel = null
+
+export function worldHeight(x, z, skipPicnic = false) {
   const r = Math.hypot(x, z)
   const t = r / edgeRadius(x, z)
   let h = 0.55 * (1 - Math.min(1.2, t) ** 2)
@@ -76,6 +81,14 @@ export function worldHeight(x, z) {
   const ramp = Math.max(0, (-dx * 0.96 + dz * 0.28) / (d || 1))
   const outer = c.r + 1.3 + 3.4 * ramp ** 2
   h += 2.3 * smooth(outer, c.r, d)
+  // the picnic: a small level terrace on the slope below the cliff
+  if (!skipPicnic) {
+    const pq = 1 - smooth(ZONES.picnic.r, ZONES.picnic.r + 1.2, dist(x, z, ZONES.picnic))
+    if (pq > 0) {
+      picnicLevel ??= worldHeight(ZONES.picnic.x, ZONES.picnic.z, true)
+      h = h * (1 - pq) + picnicLevel * pq
+    }
+  }
   // edges roll off before the rock face
   h -= 0.55 * smooth(0.86, 1.0, t)
   return h

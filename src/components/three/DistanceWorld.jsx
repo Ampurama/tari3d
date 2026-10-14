@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, useCursor } from '@react-three/drei'
 import * as THREE from 'three'
-import { connections, couple } from '../../content/config'
+import { companion, connections, couple } from '../../content/config'
 import { areas, connectionSpots, ISLAND_LIFT, ISLAND_SPREAD } from '../../lib/layout'
 import { count } from '../../lib/device'
 import { currentAvatar, useChapterUnlocked, useStore } from '../../store'
@@ -12,6 +12,7 @@ import { Glow, HeartMesh } from './Bits'
 import { DriftParticles, Fireflies } from './Particles'
 import HiddenHearts from './HiddenHearts'
 import Avatar from './Avatar'
+import { BridgeMochi } from './Companion'
 
 /*
  * CHAPTER 2 — MILES BETWEEN US.
@@ -27,11 +28,18 @@ const BRIDGE_START = -S + 2.0
 const BRIDGE_END = S - 2.0
 export const bridgeY = (x) => L + 0.55 + 0.55 * Math.sin(((x - BRIDGE_START) / (BRIDGE_END - BRIDGE_START)) * Math.PI)
 const say = (t, ms) => useStore.getState().showToast(t, ms)
+/** Mochi "helps" — confidently, and not always correctly. */
+let oopsCount = 0
+const mochiOops = () => {
+  const st = useStore.getState()
+  st.cueMochi('oops')
+  st.mochiSay(companion.bridge[oopsCount++ % companion.bridge.length], 3000)
+}
 const idx = (id) => connections.findIndex((c) => c.id === id)
 
 function useConnection(id) {
   const done = useStore((s) => s.connectionsDone.includes(id))
-  const unlocked = useChapterUnlocked(1)
+  const unlocked = useChapterUnlocked('miles')
   const view = useStore((s) => s.view)
   const live = unlocked && !done && view === 'distance'
   const complete = () => {
@@ -83,7 +91,7 @@ function Island({ side }) {
   const read = useStore((s) => s.threadRead.includes(key))
   const reducedMotion = useStore((s) => s.reducedMotion)
   const openMessage = () => {
-    if (!communicated) return say('Restore Communication first — then each island has a message for you ♡', 3600)
+    if (!communicated) return say('Sambungin Komunikasi dulu — habis itu tiap pulau punya pesan buat kamu ♡', 3600)
     audio.sparkle()
     useStore.getState().openThreadMessage(key)
   }
@@ -365,7 +373,10 @@ function Patience() {
   })
   const tap = () => {
     if (Math.abs(x.current) < GAP) complete()
-    else say('Patience… wait until the light reaches the glowing gap ✦', 2600)
+    else {
+      say('Sabar… tunggu cahayanya masuk ke lingkaran yang bercahaya ✦', 2600)
+      mochiOops()
+    }
   }
   const { handlers } = usePress(tap, live)
   return (
@@ -443,7 +454,8 @@ function Understanding() {
     audio.sfx('note', i)
     const next = [...entered, i]
     if (ORDER[next.length - 1] !== i) {
-      say('Almost — watch once more ♡', 2200)
+      say('Dikit lagi — perhatiin sekali lagi, ya ♡', 2200)
+      mochiOops()
       setEntered([])
       timers.current.push(setTimeout(show, 900))
       return
@@ -568,6 +580,7 @@ export default function DistanceWorld() {
           <Traveller />
         </>
       )}
+      {active && <BridgeMochi position={new THREE.Vector3(-S + 1.2, L + 0.05, 1.5)} />}
       <HiddenHearts group="distance" />
       {/* the sea of stars between us — more of it with every connection */}
       <DriftParticles

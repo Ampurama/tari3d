@@ -603,6 +603,39 @@ class AudioEngine {
         ;['C4', 'G4', 'E5', 'C6'].forEach((nm) => this.bellTo(out, freq(nm), t, 0.04, 3.2))
         notes(['G5', 'C6', 'E6'], 0.12, 0.03, 2.4)
         break
+      case 'squeak':
+      case 'boing': {
+        // the companion's little voice: a quick pitch glide (squeak = up, boing = down)
+        const o = ctx.createOscillator()
+        const g = ctx.createGain()
+        o.type = kind === 'boing' ? 'triangle' : 'sine'
+        const base = kind === 'boing' ? 420 : 640 + (n % 4) * 90
+        o.frequency.setValueAtTime(base, t)
+        o.frequency.exponentialRampToValueAtTime(kind === 'boing' ? 150 : base * 1.9, t + (kind === 'boing' ? 0.28 : 0.12))
+        g.gain.setValueAtTime(0.0001, t)
+        g.gain.exponentialRampToValueAtTime(kind === 'boing' ? 0.07 : 0.05, t + 0.02)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'boing' ? 0.32 : 0.16))
+        o.connect(g).connect(out)
+        o.start(t)
+        o.stop(t + 0.4)
+        break
+      }
+      case 'step': {
+        // a soft footstep: a tiny low thump
+        const o = ctx.createOscillator()
+        const g = ctx.createGain()
+        o.frequency.setValueAtTime(110 + (n % 2) * 18, t)
+        o.frequency.exponentialRampToValueAtTime(55, t + 0.06)
+        g.gain.setValueAtTime(0.022, t)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08)
+        o.connect(g).connect(out)
+        o.start(t)
+        o.stop(t + 0.1)
+        break
+      }
+      case 'pop':
+        notes(['C6', 'G6'], 0.04, 0.035, 0.5)
+        break
       default:
         break
     }
