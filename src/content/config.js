@@ -964,8 +964,8 @@ export const cutscenes = {
       { at: 0.6, to: 3.0, text: 'Kadang saya pejamkan mata…' },
       { at: 4.2, to: 8.4, text: '…dan membayangkan kita ada di tempat yang sama.' },
       { at: 9.2, to: 12.6, text: 'Bukan lewat layar. Bukan dari jauh.' },
-      { at: 13.6, to: 18.2, text: 'Saya jalan pelan-pelan ke arah ki…' },
-      { at: 21.0, to: 25.4, text: '…sampai akhirnya bisa berdiri di samping ki.' },
+      { at: 13.6, to: 18.2, text: 'Saya jalan pelan-pelan ke arahta…' },
+      { at: 21.0, to: 25.4, text: '…sampai akhirnya bisa berdiri di sampingta.' },
       { at: 26.4, to: 30.4, text: 'Di sini, jarak nda pernah ada.' },
       { at: 31.4, to: 36.4, text: 'Cuma ada kita, dan malam yang nda perlu lagi dilewati sendiri-sendiri.' },
       { at: 38.6, to: 43.6, text: 'Suatu hari nanti, ini bukan cuma bayangan lagi. 🤍' },
@@ -984,7 +984,7 @@ export const cutscenes = {
   meet: {
     lines: [
       { at: 1.0, to: 5.0, text: 'Akhirnya ketemu di tengah.' },
-      { at: 6.0, to: 11.0, text: 'Di antara dua pulau ta, selalu ada satu tempat yang jadi milik kita berdua.' },
+      { at: 6.0, to: 11.0, text: 'Di antara dua pulau, selalu ada satu tempat yang jadi milik kita berdua.' },
     ],
   },
   /** di ayunan, saat matahari terbenam */
@@ -998,5 +998,5 @@ export const cutscenes = {
     title: 'The Little Things I Look Forward To',
   },
   /** saat main sendirian: sosok bercahaya duduk di kursi sebelahnya */
-  alone: 'Kursi di samping ki selalu saya simpan untuk ki, meskipun saya belum bisa ada di sini. 🤍',
+  alone: 'Kursi di sampingta selalu saya simpan untuk kita, meskipun saya belum bisa ada di sini. 🤍',
 }
