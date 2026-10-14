@@ -25,7 +25,7 @@ import { DriftParticles } from './Particles'
 
 const BRANCHES = 9
 /** The Love Tree is the island's landmark: a little larger than life. */
-const TREE_SCALE = 1.15
+const TREE_SCALE = 1.32
 
 function buildTree() {
   const rand = seeded(777)

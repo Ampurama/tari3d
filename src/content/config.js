@@ -295,7 +295,8 @@ export const finale = {
 
 /**
  * Musik.
- *  • src: null  → melodi music box lembut dibuat otomatis (nggak perlu file).
+ *  • src: null  → waltz orisinal yang lembut diputar otomatis (dibuat langsung, nggak perlu file):
+ *    piano halus, string hangat, irama 3/4 — terinspirasi film animasi gambar tangan (bukan salinan lagu mana pun).
  *  • src: 'audio/lagu-kita.mp3' → taruh file yang boleh kamu pakai di /public/audio.
  * Musik nggak akan mulai sebelum ada ketukan/klik.
  */

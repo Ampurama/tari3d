@@ -31,7 +31,7 @@ const pose = (target, dir, fitW, fitH, minDist) => ({ target, dir: dir.normalize
  * leaning a little toward the avatar.
  */
 const followPose = (aspect = 1.6) =>
-  aspect < 0.8 ? pose(followTarget(ISO.follow).clone(), isoDir(), 16.5, 20, 0) : pose(followTarget(ISO.follow).clone(), isoDir(), 28, 20, 0)
+  aspect < 0.8 ? pose(followTarget(ISO.follow).clone(), isoDir(), 19, 24, 0) : pose(followTarget(ISO.follow).clone(), isoDir(), 33, 24, 0)
 
 /** Once the bridge is whole, Chapter 2 is seen from further back. */
 const distanceWide = pose(areas.distance.clone().add(v(0, 1.6, 0)), isoDir(30), 30, 12, 0)

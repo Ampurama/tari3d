@@ -81,14 +81,14 @@ const EARTH = withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, rou
 
 /** Names of the places, written softly on the map (only while exploring). */
 const PLACE_SPOTS = {
-  meadow: [-2.4, 10.0, 0.2],
-  garden: [-7.0, 5.2, 0.2],
-  forest: [-8.4, -4.4, 0.2],
-  lake: [5.0, -6.6, 0.2],
-  cliff: [9.4, 0.4, 0.3],
-  cove: [7.9, 9.4, 0.2],
-  gallery: [-5.8, 9.9, 0.2],
-  tree: [0, 0, 6.4],
+  meadow: [-2.93, 12.20, 0.2],
+  garden: [-8.54, 6.34, 0.2],
+  forest: [-10.25, -5.37, 0.2],
+  lake: [6.10, -8.05, 0.2],
+  cliff: [11.47, 0.49, 0.3],
+  cove: [9.64, 11.47, 0.2],
+  gallery: [-7.08, 12.08, 0.2],
+  tree: [0.00, 0.00, 6.4],
 }
 export function PlaceNames() {
   const view = useStore((s) => s.view)

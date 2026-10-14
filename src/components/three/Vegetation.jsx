@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { addCollider, edgeRadius, MAIN_RADIUS, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
+import { addCollider, edgeRadius, MAIN_RADIUS, SPREAD, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
 import { envelopeSpot, glowFlowerSpots, littleSpots, loveTree, mochiHome, noteSpots, PICNIC, picnicSpot, spots, viewpointSpot } from '../../lib/layout'
 import { blocksView } from '../../lib/iso'
 import { tier } from '../../lib/device'
@@ -127,8 +127,8 @@ function Grass() {
   const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.6, vertexColors: true, side: THREE.DoubleSide, roughness: 0.95 }), [])
   const items = useMemo(() => {
     const rand = seeded(1201)
-    const stepSize = HIGH ? 0.36 : 0.5
-    const max = HIGH ? 2600 : 1200
+    const stepSize = HIGH ? 0.38 : 0.52
+    const max = HIGH ? 4200 : 1900
     const tints = ['#ffffff', '#f0fff0', '#e9f7ff', '#fff0f6', '#f4ffe6']
     const list = []
     const R = MAIN_RADIUS + 0.5
@@ -172,7 +172,7 @@ function Flowers() {
     const list = []
     // a few dozen flower patches, each one or two colours, denser in the garden and the meadow
     const patches = []
-    for (let i = 0; i < 200 && patches.length < (HIGH ? 34 : 22); i++) {
+    for (let i = 0; i < 300 && patches.length < (HIGH ? 48 : 30); i++) {
       const x = (rand() - 0.5) * MAIN_RADIUS * 2
       const z = (rand() - 0.5) * MAIN_RADIUS * 2
       if (!onLand(x, z, 0.86) || slope(x, z) > 0.6 || pathDistance(x, z) < 0.8 || !clearOf(x, z, -0.3)) continue
@@ -322,13 +322,21 @@ function placeTrees() {
       const a = (i / 10) * Math.PI * 2 + 0.3
       return [ZONES.lake.x + Math.cos(a) * 4.6, ZONES.lake.z + Math.sin(a) * 4.6]
     }),
-    [-4.6, 7.4], [-5.4, 5.8], [4.6, 5.2], [-3.4, 9.0], [9.4, 4.6], [6.6, 0.4], [-2.6, -1.8], [3.4, 3.6], [-8.6, -1.2], [9.9, -1.6],
+    ...[[-4.6, 7.4], [-5.4, 5.8], [4.6, 5.2], [-3.4, 9.0], [9.4, 4.6], [6.6, 0.4], [-2.6, -1.8], [3.4, 3.6], [-8.6, -1.2], [9.9, -1.6]].map(([x, z]) => [x * SPREAD, z * SPREAD]),
   ]
   ringSpots.forEach(([x, z]) => tryPlace('round', x + (rand() - 0.5) * 0.6, z + (rand() - 0.5) * 0.6, 0.85 + rand() * 0.4, 1.6))
   // blossom trees in the Memory Garden
   ;[
     [-8.4, 0.2], [-7.9, 4.9], [-4.6, 5.0], [-4.3, -0.2], [-9.4, 2.6],
-  ].forEach(([x, z]) => tryPlace('blossom', x, z, 0.85 + rand() * 0.3, 1.4))
+  ].forEach(([x, z]) => tryPlace('blossom', x * SPREAD, z * SPREAD, 0.85 + rand() * 0.3, 1.4))
+  // little groves in the wider outer ring of the island (never in front of anything she needs)
+  for (let i = 0, placed = 0; i < 400 && placed < (HIGH ? 22 : 14); i++) {
+    const a = rand() * Math.PI * 2
+    const r = (0.62 + rand() * 0.2) * MAIN_RADIUS
+    const x = Math.cos(a) * r
+    const z = Math.sin(a) * r
+    if (tryPlace(rand() > 0.4 ? 'round' : 'tall', x, z, 0.75 + rand() * 0.45, 1.8)) placed++
+  }
   return out
 }
 

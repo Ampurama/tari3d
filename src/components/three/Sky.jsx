@@ -152,7 +152,7 @@ function Clouds() {
     // a thick, bright sea of clouds under the island (big soft heaps, like a painted background)
     return Array.from({ length: count(26, 14) }, (_, i) => {
       const a = (i / 26) * Math.PI * 2 + rand() * 0.4
-      const r = 16 + rand() * 20
+      const r = 19 + rand() * 22
       const s = 16 + rand() * 14
       return { position: [Math.cos(a) * r, -5 - rand() * 5, Math.sin(a) * r], scale: [s * 1.5, s * 0.8, 1], opacity: 0.85 + rand() * 0.15, seed: (i % 4) + 1, pink: i % 6 === 0 }
     })

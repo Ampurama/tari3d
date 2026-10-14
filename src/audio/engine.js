@@ -1,6 +1,7 @@
 /**
  * Tiny audio engine.
- *  • Music: either your own file (config.music.src) or a gentle generated music-box piece.
+ *  • Music: either your own file (config.music.src) or a gentle generated waltz (original, written
+ *    in the spirit of hand-drawn adventure films: soft piano, warm strings, 3/4 time).
  *  • Ambient: soft generated wind with the occasional wind-chime.
  * Everything is created lazily on the first user gesture, so nothing ever autoplays.
  */
@@ -13,47 +14,61 @@ const freq = (name) => {
   return 440 * 2 ** ((midi - 69) / 12)
 }
 
-// IV – V – iii – vi in C major, two bars each. Soft, hopeful, a little bittersweet.
-const CHORDS = [
-  { root: 'F2', pad: ['F3', 'A3', 'C4', 'E4'], arp: ['F4', 'A4', 'C5', 'E5', 'A5'] },
-  { root: 'G2', pad: ['G3', 'B3', 'D4', 'E4'], arp: ['G4', 'B4', 'D5', 'E5', 'G5'] },
-  { root: 'E2', pad: ['E3', 'G3', 'B3', 'D4'], arp: ['E4', 'G4', 'B4', 'D5', 'G5'] },
-  { root: 'A2', pad: ['A3', 'C4', 'E4', 'G4'], arp: ['A4', 'C5', 'E5', 'G5', 'A5'] },
+/*
+ * THE WALTZ — an original piece in C major, 3/4 time, two bars per chord:
+ *   IVmaj7 – V6 – iii7 – vi9 – ii7 – V7sus4 – Iadd9 – III7 (which leans back into the start)
+ * Soft piano (a low note on beat one, a gentle chord on beats two and three), warm strings that
+ * swell under each chord, and a singable, slightly nostalgic melody on top.
+ */
+const W = (root, comp, pad) => ({ root, comp, pad })
+const WALTZ = [
+  W('F2', ['A3', 'C4', 'E4'], ['F3', 'A3', 'C4', 'E4']),
+  W('G2', ['B3', 'D4', 'E4'], ['G3', 'B3', 'D4', 'E4']),
+  W('E2', ['G3', 'B3', 'D4'], ['E3', 'G3', 'B3', 'D4']),
+  W('A2', ['C4', 'E4', 'B4'], ['A3', 'C4', 'E4', 'B4']),
+  W('D2', ['F3', 'A3', 'C4'], ['D3', 'F3', 'A3', 'C4']),
+  W('G2', ['C4', 'D4', 'F4'], ['G3', 'C4', 'D4', 'F4']),
+  W('C2', ['E3', 'G3', 'D4'], ['C3', 'E3', 'G3', 'D4']),
+  W('E2', ['G#3', 'B3', 'D4'], ['E3', 'G#3', 'B3', 'D4']),
 ]
+const BAR = 6 // eighths in a bar of 3/4
+const CHORD_STEPS = 12 // two bars
+const LOOP_STEPS = WALTZ.length * CHORD_STEPS // 16 bars
 
-// Melody in eighth-note steps: [step within the 8-bar loop, note, length in eighths]
+// The melody, in eighth-note steps: [step within the 16-bar loop, note, length in eighths]
 const MELODY = [
-  [0, 'E5', 2], [2, 'F5', 2], [4, 'A5', 4], [8, 'G5', 6], [14, 'E5', 2],
-  [16, 'D5', 2], [18, 'E5', 2], [20, 'G5', 4], [24, 'E5', 6], [30, 'D5', 2],
-  [32, 'B4', 2], [34, 'D5', 2], [36, 'G5', 4], [40, 'E5', 4], [44, 'D5', 2], [46, 'C5', 2],
-  [48, 'C5', 2], [50, 'E5', 2], [52, 'A5', 2], [54, 'G5', 2], [56, 'E5', 8],
+  [0, 'A4', 3], [3, 'C5', 1], [4, 'E5', 2], [6, 'F5', 4], [10, 'E5', 2],
+  [12, 'D5', 3], [15, 'E5', 1], [16, 'G5', 2], [18, 'E5', 6],
+  [24, 'B4', 3], [27, 'C5', 1], [28, 'D5', 2], [30, 'G5', 6],
+  [36, 'E5', 3], [39, 'D5', 1], [40, 'C5', 2], [42, 'B4', 2], [44, 'C5', 4],
+  [48, 'A4', 3], [51, 'C5', 1], [52, 'F5', 2], [54, 'E5', 4], [58, 'D5', 2],
+  [60, 'C5', 3], [63, 'D5', 1], [64, 'G5', 2], [66, 'F5', 6],
+  [72, 'E5', 3], [75, 'G5', 1], [76, 'C6', 2], [78, 'B5', 2], [80, 'G5', 4],
+  [84, 'B4', 3], [87, 'D5', 1], [88, 'G#5', 4], [92, 'E5', 4],
 ]
-const ARP_PATTERNS = [
-  [0, 2, 3, 4, 3, 2, 1, 2],
-  [0, 1, 2, 4, 2, 3, 1, 2],
-  [0, 2, 1, 3, 2, 4, 3, 1],
-]
-
-const LOOP_STEPS = 64 // 8 bars
 
 /*
- * Moods: the same little music box, arranged differently for each part of the journey.
- * The scheduler switches mood on the next chord, so changes are always smooth.
+ * Moods: the same waltz, played differently for each part of the journey.
+ *   bpm     — quarter notes per minute
+ *   melody  — the tune on top (it rests every third time round, so it can breathe)
+ *   comp    — loudness of the "oom-pah-pah" piano chords (0 = none)
+ *   strings — loudness of the string swells (0 = none)
+ *   arp     — a flowing broken chord when the melody rests
+ * The scheduler switches mood at the next chord, so changes are always smooth.
  */
-const ch = (root, pad, arp) => ({ root, pad, arp })
 const MOODS = {
-  // avatar selection: slow, airy, no melody yet
-  select: { bpm: 58, melody: false, arp: 0.5, chords: [ch('F2', ['F3', 'A3', 'C4', 'E4'], ['F4', 'A4', 'C5', 'E5', 'G5']), ch('D2', ['D3', 'F3', 'A3', 'C4'], ['D4', 'F4', 'A4', 'C5', 'E5']), ch('A#1', ['A#2', 'D3', 'F3', 'A3'], ['A#3', 'D4', 'F4', 'A4', 'C5']), ch('C2', ['C3', 'E3', 'G3', 'D4'], ['C4', 'E4', 'G4', 'D5', 'E5'])] },
-  // Chapter 1 — the original theme
-  little: { bpm: 68, melody: true, arp: 1, chords: CHORDS },
-  // Chapter 2 — atmospheric, more space; it warms up as the bridge is restored
-  miles: { bpm: 60, melody: false, arp: 0.35, chords: [ch('A1', ['A2', 'C3', 'E3', 'G3'], ['A3', 'C4', 'E4', 'G4', 'B4']), ch('F1', ['F2', 'A2', 'C3', 'E3'], ['F3', 'A3', 'C4', 'E4', 'G4']), ch('C2', ['C3', 'E3', 'G3', 'B3'], ['C4', 'E4', 'G4', 'B4', 'D5']), ch('G1', ['G2', 'B2', 'D3', 'F#3'], ['G3', 'B3', 'D4', 'F#4', 'A4'])] },
-  // Chapter 3 — warm and hopeful
-  future: { bpm: 74, melody: false, arp: 1, chords: [ch('G2', ['G3', 'B3', 'D4', 'F#4'], ['G4', 'B4', 'D5', 'F#5', 'A5']), ch('D2', ['D3', 'F#3', 'A3', 'C#4'], ['D4', 'F#4', 'A4', 'C#5', 'E5']), ch('E2', ['E3', 'G3', 'B3', 'D4'], ['E4', 'G4', 'B4', 'D5', 'F#5']), ch('C2', ['C3', 'E3', 'G3', 'B3'], ['C4', 'E4', 'G4', 'B4', 'D5'])] },
-  // the final cinematic and the letter
-  finale: { bpm: 62, melody: true, arp: 0.7, chords: CHORDS },
-  // the secret ending
-  quiet: { bpm: 54, melody: false, arp: 0.25, chords: CHORDS },
+  // avatar selection: slow and airy, strings and broken chords only
+  select: { bpm: 80, melody: false, comp: 0, strings: 0.8, arp: 1 },
+  // exploring, chapters 1–2: the full waltz
+  little: { bpm: 96, melody: true, comp: 1, strings: 0.7, arp: 1 },
+  // the two islands: more space, softer
+  miles: { bpm: 84, melody: true, comp: 0.6, strings: 1, arp: 0.6 },
+  // later chapters and the picnic: brighter, a little quicker
+  future: { bpm: 104, melody: true, comp: 1.1, strings: 0.6, arp: 1 },
+  // the letter and the finale: slower, the strings carry it
+  finale: { bpm: 76, melody: true, comp: 0.7, strings: 1.3, arp: 0.8 },
+  // the secret ending: almost still
+  quiet: { bpm: 66, melody: false, comp: 0, strings: 1, arp: 0.5 },
 }
 
 const AUDIO_PREFS = 'our-little-universe:audio'
@@ -263,7 +278,7 @@ class AudioEngine {
     }
     while (this.nextTime < ctx.currentTime + 0.25) {
       // a new mood starts on a chord change
-      if (this.pendingMood && this.step % 16 === 0) {
+      if (this.pendingMood && this.step % CHORD_STEPS === 0) {
         this.mood = this.pendingMood
         this.pendingMood = null
       }
@@ -277,23 +292,85 @@ class AudioEngine {
   playStep(step, time) {
     const mood = MOODS[this.mood]
     const E = this.eighth()
-    const chord = mood.chords[Math.floor(step / 16) % mood.chords.length]
-    const inChord = step % 16
-    if (inChord === 0) {
-      chord.pad.forEach((n) => this.pad(freq(n), time, E * 16))
-      this.bass(freq(chord.root), time, E * 16)
-    }
-    // Arpeggio — sparser when the melody plays; Chapter 2's arpeggio fills in as it warms up
-    const withMelody = mood.melody && this.loop % 2 === 0
-    const density = this.mood === 'miles' ? 0.3 + this.warmth * 0.7 : mood.arp
-    const pattern = ARP_PATTERNS[(Math.floor(step / 8) + this.loop) % ARP_PATTERNS.length]
-    const idx = pattern[step % 8]
-    const play = withMelody ? step % 2 === 0 : density >= 1 || (step * 7 + this.loop * 3) % 10 < density * 10
-    if (play) this.bell(freq(chord.arp[idx]) / (withMelody ? 2 : 1), time, withMelody ? 0.035 : 0.05, 1.6)
+    const chord = WALTZ[Math.floor(step / CHORD_STEPS) % WALTZ.length]
+    const inBar = step % BAR
+    // strings swell under every chord (the bridge chapter warms them up as it's restored)
+    const strings = mood.strings * (this.mood === 'miles' ? 0.6 + this.warmth * 0.6 : 1)
+    if (step % CHORD_STEPS === 0 && strings > 0) chord.pad.forEach((n) => this.strings(freq(n), time, E * CHORD_STEPS, strings))
+    // oom — the low note on beat one
+    if (inBar === 0) this.piano(freq(chord.root), time, 0.075, E * 5)
+    // pah-pah — a soft chord on beats two and three
+    if (mood.comp && (inBar === 2 || inBar === 4)) chord.comp.forEach((n) => this.piano(freq(n), time, 0.016 * mood.comp, E * 2.2))
+    const withMelody = mood.melody && this.loop % 3 !== 2
     if (withMelody) {
       const note = MELODY.find((m) => m[0] === step)
-      if (note) this.bell(freq(note[1]), time, 0.085, Math.max(1.8, note[2] * E * 1.4))
+      if (note) this.piano(freq(note[1]), time, 0.075, Math.max(1.2, note[2] * E * 1.7))
+    } else if (mood.arp && inBar % 2 === 1 && ((step * 5 + this.loop) % 10) / 10 < mood.arp) {
+      // when the tune rests: a gentle broken chord rising through the harmony
+      const n = chord.pad[(Math.floor(step / 2) + this.loop) % chord.pad.length]
+      this.piano(freq(n) * 2, time, 0.03, E * 3)
     }
+  }
+
+  /** A soft piano-like note: a quick hammer, a warm body, a long gentle fade. */
+  piano(f, time, gain, length) {
+    const ctx = this.ctx
+    const out = ctx.createGain()
+    out.gain.setValueAtTime(0, time)
+    out.gain.linearRampToValueAtTime(gain, time + 0.006)
+    out.gain.exponentialRampToValueAtTime(gain * 0.45, time + 0.28)
+    out.gain.exponentialRampToValueAtTime(0.0001, time + length + 0.6)
+    const tone = ctx.createBiquadFilter()
+    tone.type = 'lowpass'
+    tone.frequency.value = Math.min(5200, f * 6)
+    tone.connect(out).connect(this.musicBus)
+    ;[
+      ['sine', 1, 1],
+      ['triangle', 2, 0.18],
+      ['sine', 3, 0.06],
+    ].forEach(([type, ratio, g]) => {
+      const osc = ctx.createOscillator()
+      osc.type = type
+      osc.frequency.value = f * ratio
+      const og = ctx.createGain()
+      og.gain.value = g
+      osc.connect(og).connect(tone)
+      osc.start(time)
+      osc.stop(time + length + 0.7)
+    })
+  }
+
+  /** A warm string swell: two slightly detuned saws, softened, with a slow vibrato. */
+  strings(f, time, length, level = 1) {
+    const ctx = this.ctx
+    const out = ctx.createGain()
+    const peak = 0.011 * level
+    out.gain.setValueAtTime(0, time)
+    out.gain.linearRampToValueAtTime(peak, time + 1.6)
+    out.gain.setValueAtTime(peak, time + Math.max(1.7, length - 0.8))
+    out.gain.linearRampToValueAtTime(0, time + length + 1.4)
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.value = 1150
+    filter.Q.value = 0.4
+    filter.connect(out).connect(this.musicBus)
+    const vibrato = ctx.createOscillator()
+    vibrato.frequency.value = 5
+    const depth = ctx.createGain()
+    depth.gain.value = 4
+    vibrato.connect(depth)
+    ;[-7, 7].forEach((detune) => {
+      const osc = ctx.createOscillator()
+      osc.type = 'sawtooth'
+      osc.frequency.value = f
+      osc.detune.value = detune
+      depth.connect(osc.detune)
+      osc.connect(filter)
+      osc.start(time)
+      osc.stop(time + length + 1.5)
+    })
+    vibrato.start(time)
+    vibrato.stop(time + length + 1.5)
   }
 
   bell(f, time, gain, length) {
@@ -317,43 +394,6 @@ class AudioEngine {
       osc.start(time)
       osc.stop(time + length + 0.05)
     })
-  }
-
-  pad(f, time, length) {
-    const ctx = this.ctx
-    const out = ctx.createGain()
-    out.gain.setValueAtTime(0, time)
-    out.gain.linearRampToValueAtTime(0.022, time + 1.4)
-    out.gain.setValueAtTime(0.022, time + length - 0.6)
-    out.gain.linearRampToValueAtTime(0, time + length + 1.2)
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'lowpass'
-    filter.frequency.value = 1100
-    filter.connect(out).connect(this.musicBus)
-    ;[-6, 6].forEach((detune) => {
-      const osc = ctx.createOscillator()
-      osc.type = 'triangle'
-      osc.frequency.value = f
-      osc.detune.value = detune
-      osc.connect(filter)
-      osc.start(time)
-      osc.stop(time + length + 1.3)
-    })
-  }
-
-  bass(f, time, length) {
-    const ctx = this.ctx
-    const out = ctx.createGain()
-    out.gain.setValueAtTime(0, time)
-    out.gain.linearRampToValueAtTime(0.07, time + 0.6)
-    out.gain.linearRampToValueAtTime(0, time + length)
-    out.connect(this.musicBus)
-    const osc = ctx.createOscillator()
-    osc.type = 'sine'
-    osc.frequency.value = f
-    osc.connect(out)
-    osc.start(time)
-    osc.stop(time + length + 0.1)
   }
 
   /* ───────── ambient ───────── */

@@ -6,26 +6,32 @@ import * as THREE from 'three'
  * uses this module — rendering, placement, the player controller and the camera.
  */
 
-export const MAIN_RADIUS = 12.8
+/**
+ * How spread out the island is. Every zone, path and placed object is laid out on a base map and
+ * multiplied by this (sizes of things stay the same, the space between them grows).
+ */
+export const SPREAD = 1.22
+export const MAIN_RADIUS = 12.8 * SPREAD
 export const WATER_LEVEL = -0.22
 
 /** Zone centres (x, z) and sizes. The start is in the south (+z), the cliff in the east (+x). */
+const zone = (x, z, r) => ({ x: x * SPREAD, z: z * SPREAD, r })
 export const ZONES = {
-  meadow: { x: 0, z: 7.6, r: 3.6 },
-  tree: { x: 0, z: 0, r: 2.6 },
-  garden: { x: -6.2, z: 2.2, r: 3.2 },
-  forest: { x: -5.4, z: -6.1, r: 3.8 },
-  lake: { x: 5, z: -5, r: 2.7 },
-  cliff: { x: 8.3, z: 2.3, r: 2.3 },
-  cove: { x: 6.6, z: 7.6, r: 2.1 },
+  meadow: zone(0, 7.6, 3.6),
+  tree: zone(0, 0, 2.6),
+  garden: zone(-6.2, 2.2, 3.2),
+  forest: zone(-5.4, -6.1, 3.8),
+  lake: zone(5, -5, 2.7),
+  cliff: zone(8.3, 2.3, 2.3),
+  cove: zone(6.6, 7.6, 2.1),
   /** Our Memories: a round, flat gallery plaza with the photos standing in a ring */
-  gallery: { x: -5.8, z: 6.9, r: 2.5 },
+  gallery: zone(-5.8, 6.9, 2.5),
   /** The Disaster Date: a soft, level hill for the picnic */
-  picnic: { x: 4.4, z: 4.6, r: 1.9 },
+  picnic: zone(4.4, 4.6, 1.9),
 }
 
 /** Where the player starts after choosing an avatar. */
-export const SPAWN = { x: 0, z: 9.2, yaw: Math.PI }
+export const SPAWN = { x: 0, z: 9.2 * SPREAD, yaw: Math.PI }
 
 const smooth = (e0, e1, x) => {
   const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)))
@@ -111,7 +117,7 @@ export const PATHS = [
   [[1.6, 8.4], [3.4, 8.9], [5.0, 8.3], [6.4, 7.7]],
   // meadow → Our Memories (the gallery plaza)
   [[-0.3, 7.6], [-1.9, 7.5], [-3.1, 7.2]],
-]
+].map((path) => path.map(([x, z]) => [x * SPREAD, z * SPREAD]))
 
 const segDist = (px, pz, ax, az, bx, bz) => {
   const vx = bx - ax
@@ -129,7 +135,7 @@ export function pathDistance(x, z) {
 
 /* ───────── the lake bridge ───────── */
 
-export const BRIDGE = { z: -5.0, x0: 2.0, x1: 8.0, halfWidth: 0.55, deck: WATER_LEVEL + 0.32 }
+export const BRIDGE = { z: ZONES.lake.z, x0: ZONES.lake.x - 3, x1: ZONES.lake.x + 3, halfWidth: 0.55, deck: WATER_LEVEL + 0.32 }
 
 export const onBridge = (x, z) => x > BRIDGE.x0 && x < BRIDGE.x1 && Math.abs(z - BRIDGE.z) < BRIDGE.halfWidth
 

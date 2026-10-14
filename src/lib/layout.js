@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { WATER_LEVEL, worldHeight, ZONES } from './terrain'
+import { PATHS, SPREAD, WATER_LEVEL, worldHeight, ZONES } from './terrain'
 import { connections, constellation, futureWorlds, glowFlowers, littleThings, memories, memoryLane } from '../content/config'
 import { heartPoint } from './heart'
 import { FACE_CAMERA, isoBack, isoDir } from './iso'
@@ -7,19 +7,23 @@ import { FACE_CAMERA, isoBack, isoDir } from './iso'
 const v = (x, y, z) => new THREE.Vector3(x, y, z)
 /** A point on the main island's ground (y from the terrain). */
 export const ground = (x, z, lift = 0) => v(x, worldHeight(x, z) + lift, z)
+/** A point on the base map (spread out with the island). */
+const spot = (x, z, lift = 0) => ground(x * SPREAD, z * SPREAD, lift)
+/** A point relative to a zone's centre (stays put inside that zone however big the island gets). */
+const near = (zone, dx, dz, lift = 0) => ground(ZONES[zone].x + dx, ZONES[zone].z + dz, lift)
 
 /** The Central Love Tree — the heart of the island. */
 export const loveTree = ground(ZONES.tree.x, ZONES.tree.z)
 
 /** Where the older features now live on the expanded island. */
 export const spots = {
-  gardenTree: ground(-9.2, 2.4), // the blossom tree of the Memory Garden (off to the side: never in front of the photo or the gallery)
-  bench: ground(-5.7, 3.5),
-  table: ground(2.7, 6.3), // the letter table, by the meadow
-  telescope: ground(9.3, 2.0), // Starfall Cliff — looks across to the two islands (Chapter 2)
-  arch: ground(7.0, 7.7), // the heart arch, in the Secret Cove
-  timeMachine: ground(-1.9, -4.3), // at the edge of the Heartwood Forest
-  portal: ground(7.7, -2.9), // beside Reflection Lake
+  gardenTree: near('garden', -3.0, 0.2), // the blossom tree of the Memory Garden (off to the side: never in front of the photo or the gallery)
+  bench: near('garden', 0.5, 1.3),
+  table: spot(2.7, 6.3), // the letter table, by the meadow
+  telescope: near('cliff', 1.0, -0.3), // Starfall Cliff — looks across to the two islands (Chapter 3)
+  arch: near('cove', 0.4, 0.1), // the heart arch, in the Secret Cove
+  timeMachine: spot(-1.9, -4.3), // at the edge of the Heartwood Forest
+  portal: near('lake', 2.7, 2.1), // beside Reflection Lake
 }
 
 /** The bench turns (almost) toward the 2.5D camera so the Love Capsule on it is never hidden by its backrest. */
@@ -33,19 +37,19 @@ export const moonPosition = v(-48, 34, -86)
 /* ───────── Chapter 2: five little things ───────── */
 
 const LITTLE_SPOTS = {
-  photo: ground(-6.9, 0.7),
-  letter: v(4.15, WATER_LEVEL + 0.04, -6.15), // a bottle floating on the lake, reachable from the bridge
-  flower: ground(-5.3, -6.7),
-  musicbox: ground(8.1, 3.3),
-  star: ground(-2.2, 8.9),
+  photo: near('garden', -0.7, -1.5),
+  letter: v(ZONES.lake.x - 0.85, WATER_LEVEL + 0.04, ZONES.lake.z - 1.15), // a bottle floating on the lake, reachable from the bridge
+  flower: near('forest', 0.1, -0.6),
+  musicbox: near('cliff', -0.2, 1.0),
+  star: spot(-2.2, 8.9),
 }
 export const littleSpots = littleThings.map((l, i) => LITTLE_SPOTS[l.id] || ground(-2 + i, 6))
 
 /* ───────── Chapter 1: the companion and three glowing flowers in the meadow ───────── */
 
 /** Where the fluffy heart naps until she wakes it (a few steps from where she starts). */
-export const mochiHome = ground(1.1, 7.5)
-const GLOW_SPOTS = { rose: ground(-1.6, 6.0), sky: ground(1.6, 4.7), sun: ground(-1.0, 4.0) }
+export const mochiHome = spot(1.1, 7.5)
+const GLOW_SPOTS = { rose: spot(-1.6, 6.0), sky: spot(1.6, 4.7), sun: spot(-1.0, 4.0) }
 export const glowFlowerSpots = glowFlowers.map((f, i) => GLOW_SPOTS[f.id] || ground(-1.5 + i * 1.5, 5.2))
 
 /* ───────── Chapter 4: the picnic on the soft hill between the Love Tree and the cove ───────── */
@@ -69,18 +73,18 @@ export const PICNIC = {
 /** The envelope lies at the foot of the Love Tree, on the side the camera starts on. */
 export const envelopeSpot = ground(loveTree.x + 0.5, loveTree.z + 1.7)
 /** A tiny glowing heart hidden behind the big blossom tree of the Memory Garden. */
-export const bonusHeartSpot = ground(-9.3, 1.2, 0.35)
+export const bonusHeartSpot = near('garden', -3.1, -1.0, 0.35)
 
 /* ───────── optional discoveries ───────── */
 
 export const noteSpots = {
-  'forest-hollow': ground(-7.2, -3.7),
-  'lake-stone': ground(6.9, -7.2),
-  'cliff-edge': ground(10.1, 1.0),
-  'cove-light': ground(8.0, 6.8),
+  'forest-hollow': near('forest', -1.8, 2.4),
+  'lake-stone': near('lake', 1.9, -2.2),
+  'cliff-edge': near('cliff', 1.8, -1.3),
+  'cove-light': near('cove', 1.4, -0.8),
 }
 /** Reaching this spot on Starfall Cliff plays the view once. */
-export const viewpointSpot = { x: 8.7, z: 2.4, r: 1.5 }
+export const viewpointSpot = { x: ZONES.cliff.x + 0.4, z: ZONES.cliff.z + 0.1, r: 1.5 }
 /** The little star near the Love Tree that opens the secret ending (after the main ending). */
 export const secretStarSpot = v(loveTree.x + 1.7, loveTree.y + 4.3, loveTree.z + 0.8)
 
@@ -97,7 +101,10 @@ export const FRAME_SCALE = 0.6
 export const gallery = ground(ZONES.gallery.x, ZONES.gallery.z)
 export const GALLERY_RING = 2.25
 /** direction (angle in the x/z plane) of the plaza's entrance, toward the end of its path */
-const ENTRANCE = Math.atan2(7.2 - ZONES.gallery.z, -3.1 - ZONES.gallery.x)
+const ENTRANCE = (() => {
+  const end = PATHS[6][PATHS[6].length - 1]
+  return Math.atan2(end[1] - ZONES.gallery.z, end[0] - ZONES.gallery.x)
+})()
 export const framePositions = (() => {
   const n = Math.min(memories.length, MAX_FRAMES)
   if (n === 0) return []
@@ -135,7 +142,7 @@ export const futureWorldPositions = futureWorlds.worlds.map((_, i, all) => {
 const LANE_SHIFT = v(-6.4, 0, 1.6)
 export const laneCurve = new THREE.CatmullRomCurve3(
   [v(-6.9, 0.25, 2.6), v(-9.6, 0.8, 5.4), v(-13.0, 1.6, 7.2), v(-16.8, 2.4, 7.0), v(-20.2, 3.2, 4.8), v(-22.6, 4.0, 1.4), v(-23.8, 4.8, -2.6)].map((p) =>
-    p.add(LANE_SHIFT),
+    p.add(LANE_SHIFT).multiply(v(SPREAD, 1, SPREAD)),
   ),
 )
 
@@ -158,8 +165,8 @@ export const starPositions = (() => {
 /** Hidden hearts. `group` says which part of the scene they belong to; positions are local to it. */
 export const hiddenHeartSpots = [
   { group: 'island', position: ground(0.45, -1.85, 0.13) }, // behind the Love Tree
-  { group: 'island', position: ground(-6.9, -4.6, 0.1) }, // among the ferns of the forest
-  { group: 'sky', position: v(14.6, 2.4, 1.4) }, // on a tiny floating rock beside the cliff
+  { group: 'island', position: near('forest', -1.5, 1.5, 0.1) }, // among the ferns of the forest
+  { group: 'sky', position: v(14.6 * SPREAD, 2.4, 1.4 * SPREAD) }, // on a tiny floating rock beside the cliff
   { group: 'distance', position: v(10.35, 1.0, 0.95) }, // on her island under the same sky
   { group: 'constellation', position: v(6.8, -4.6, 0.6) }, // just beside the heart of stars
 ]
@@ -208,7 +215,7 @@ export const poses = {
   /** secret ending: drift in close to the big heart in the Secret Room */
   secretClose: pose(areas.finalRoom.clone().add(v(0, 2.9, -1.5)), v(0, 0.08, 1), 3.6, 3.4, 5.2),
   /** the final moment: pull far back to see the whole little universe at once */
-  epilogue: pose(v(-3, 1.5, 0), isoDir(46), 52, 34, 44),
+  epilogue: pose(v(-3, 1.5, 0), isoDir(46), 52 * SPREAD, 34 * SPREAD, 44),
 }
 
 export function futurePose(index) {
