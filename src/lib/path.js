@@ -1,4 +1,4 @@
-import { colliders, MAIN_RADIUS, slope, standHeight, walkable } from './terrain'
+import { colliders, HOME_ISLAND, MAIN_RADIUS, obstacles, slope, standHeight, walkable } from './terrain'
 
 /*
  * PATHFINDING for tap-to-walk and "Take me there". A small A* over a grid of walkable cells
@@ -7,13 +7,19 @@ import { colliders, MAIN_RADIUS, slope, standHeight, walkable } from './terrain'
  */
 
 const CELL = 0.3
-const MIN = -(MAIN_RADIUS + 1.2)
-const N = Math.ceil((-MIN * 2) / CELL)
+// the grid covers the main island and, to the north, the sky bridge and the home island
+const MIN_X = -(MAIN_RADIUS + 1.2)
+const MIN_Z = HOME_ISLAND.z - HOME_ISLAND.r * 1.1 - 1
+const NX = Math.ceil((-MIN_X * 2) / CELL)
+const NZ = Math.ceil((MAIN_RADIUS + 1.2 - MIN_Z) / CELL)
 let grid = null
-let builtFor = -1
+let builtFor = ''
+const gridKey = () => `${colliders.length}:${obstacles.version}`
 
-const toWorld = (i) => MIN + (i + 0.5) * CELL
-const toCell = (v) => Math.max(0, Math.min(N - 1, Math.floor((v - MIN) / CELL)))
+const toWorldX = (i) => MIN_X + (i + 0.5) * CELL
+const toWorldZ = (j) => MIN_Z + (j + 0.5) * CELL
+const toCellX = (v) => Math.max(0, Math.min(NX - 1, Math.floor((v - MIN_X) / CELL)))
+const toCellZ = (v) => Math.max(0, Math.min(NZ - 1, Math.floor((v - MIN_Z) / CELL)))
 
 /** Can she step from a to b (same rule as the player controller: no climbing steep faces)? */
 function canStep(ax, az, bx, bz) {
@@ -23,9 +29,9 @@ function canStep(ax, az, bx, bz) {
 }
 
 function build() {
-  grid = new Uint8Array(N * N)
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) grid[j * N + i] = walkable(toWorld(i), toWorld(j)) ? 1 : 0
-  builtFor = colliders.length
+  grid = new Uint8Array(NX * NZ)
+  for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) grid[j * NX + i] = walkable(toWorldX(i), toWorldZ(j)) ? 1 : 0
+  builtFor = gridKey()
 }
 
 /** Is the straight segment walkable (sampled finely)? */
@@ -46,14 +52,14 @@ function clearLine(ax, az, bx, bz) {
 
 /** Nearest walkable cell to (x, z) (the goal may be inside a collider, e.g. a bench). */
 function nearestOpen(i, j) {
-  if (grid[j * N + i]) return [i, j]
+  if (grid[j * NX + i]) return [i, j]
   for (let r = 1; r < 12; r++)
     for (let dj = -r; dj <= r; dj++)
       for (let di = -r; di <= r; di++) {
         if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue
         const a = i + di
         const b = j + dj
-        if (a >= 0 && b >= 0 && a < N && b < N && grid[b * N + a]) return [a, b]
+        if (a >= 0 && b >= 0 && a < NX && b < NZ && grid[b * NX + a]) return [a, b]
       }
   return null
 }
@@ -64,18 +70,18 @@ function nearestOpen(i, j) {
  */
 export function findPath(sx, sz, tx, tz) {
   if (clearLine(sx, sz, tx, tz)) return [[tx, tz]]
-  if (!grid || builtFor !== colliders.length) build()
-  const start = nearestOpen(toCell(sx), toCell(sz))
-  const goal = nearestOpen(toCell(tx), toCell(tz))
+  if (!grid || builtFor !== gridKey()) build()
+  const start = nearestOpen(toCellX(sx), toCellZ(sz))
+  const goal = nearestOpen(toCellX(tx), toCellZ(tz))
   if (!start || !goal) return null
-  const si = start[1] * N + start[0]
-  const gi = goal[1] * N + goal[0]
-  const g = new Float32Array(N * N).fill(Infinity)
-  const from = new Int32Array(N * N).fill(-1)
-  const closed = new Uint8Array(N * N)
+  const si = start[1] * NX + start[0]
+  const gi = goal[1] * NX + goal[0]
+  const g = new Float32Array(NX * NZ).fill(Infinity)
+  const from = new Int32Array(NX * NZ).fill(-1)
+  const closed = new Uint8Array(NX * NZ)
   const open = [si]
-  const f = new Float32Array(N * N).fill(Infinity)
-  const h = (k) => Math.hypot((k % N) - goal[0], Math.floor(k / N) - goal[1])
+  const f = new Float32Array(NX * NZ).fill(Infinity)
+  const h = (k) => Math.hypot((k % NX) - goal[0], Math.floor(k / NX) - goal[1])
   g[si] = 0
   f[si] = h(si)
   let found = false
@@ -92,19 +98,19 @@ export function findPath(sx, sz, tx, tz) {
       break
     }
     closed[cur] = 1
-    const ci = cur % N
-    const cj = Math.floor(cur / N)
+    const ci = cur % NX
+    const cj = Math.floor(cur / NX)
     for (let dj = -1; dj <= 1; dj++)
       for (let di = -1; di <= 1; di++) {
         if (!di && !dj) continue
         const ni = ci + di
         const nj = cj + dj
-        if (ni < 0 || nj < 0 || ni >= N || nj >= N) continue
-        const nk = nj * N + ni
+        if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue
+        const nk = nj * NX + ni
         if (closed[nk] || !grid[nk]) continue
         // no cutting corners past obstacles
-        if (di && dj && (!grid[cj * N + ni] || !grid[nj * N + ci])) continue
-        if (!canStep(toWorld(ci), toWorld(cj), toWorld(ni), toWorld(nj))) continue
+        if (di && dj && (!grid[cj * NX + ni] || !grid[nj * NX + ci])) continue
+        if (!canStep(toWorldX(ci), toWorldZ(cj), toWorldX(ni), toWorldZ(nj))) continue
         const cost = g[cur] + (di && dj ? Math.SQRT2 : 1)
         if (cost < g[nk]) {
           if (g[nk] === Infinity) open.push(nk)
@@ -116,11 +122,11 @@ export function findPath(sx, sz, tx, tz) {
   }
   if (!found) return null
   const cells = []
-  for (let k = gi; k !== -1 && k !== si; k = from[k]) cells.push([toWorld(k % N), toWorld(Math.floor(k / N))])
+  for (let k = gi; k !== -1 && k !== si; k = from[k]) cells.push([toWorldX(k % NX), toWorldZ(Math.floor(k / NX))])
   cells.reverse()
   // end on the target itself when she can stand there, otherwise as close as she can get
   if (walkable(tx, tz)) cells.push([tx, tz])
-  else if (!cells.length) cells.push([toWorld(goal[0]), toWorld(goal[1])])
+  else if (!cells.length) cells.push([toWorldX(goal[0]), toWorldZ(goal[1])])
   // pull the path tight: skip every waypoint that can be reached in a straight line
   const out = []
   let ax = sx

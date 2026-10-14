@@ -149,5 +149,56 @@ check('Tari can mark it opened', tariOpens.data?.length === 1, tariOpens.error?.
 const del = await owner.c.from('bottles').delete().eq('id', sent.data?.id).select()
 check('letters cannot be deleted from the website', Boolean(del.error) || !del.data?.length, del.error?.message)
 
+console.log('\n── our little home')
+const house = await owner.c.from('house').select('stage, memory_date').eq('id', 1).maybeSingle()
+check('owner can see the house', Boolean(house.data), house.error?.message || 'no house row — run supabase/migrations/002_our_home.sql')
+if (house.data) {
+  const anonHouse = await anon.from('house').select('stage')
+  check('signed-out visitor cannot see the house', !anonHouse.data?.length, anonHouse.error?.message || `${anonHouse.data?.length} rows`)
+  const anonItems = await anon.from('house_items').select('id')
+  check('signed-out visitor cannot see the furniture', !anonItems.data?.length, anonItems.error?.message || `${anonItems.data?.length} rows`)
+  const anonPlace = await anon.from('house_items').insert({ id: crypto.randomUUID(), kind: 'sofa', area: 'inside', x: 0, z: 0, rot: 0 })
+  check('signed-out visitor cannot place furniture', Boolean(anonPlace.error), anonPlace.error?.message)
+  const anonBuild = await anon.rpc('house_upgrade', { expected: house.data.stage })
+  check('signed-out visitor cannot build', Boolean(anonBuild.error), anonBuild.error?.message)
+  if (outsider) {
+    const outsiderHouse = await outsider.c.from('house').select('stage')
+    check('outsider cannot see the house', !outsiderHouse.data?.length, outsiderHouse.error?.message || `${outsiderHouse.data?.length} rows`)
+    const outsiderBuild = await outsider.c.rpc('house_upgrade', { expected: house.data.stage })
+    check('outsider cannot build', Boolean(outsiderBuild.error), outsiderBuild.error?.message)
+  } else skip('outsider cannot see the house / build')
+  const skipStage = await owner.c.from('house').update({ stage: 5 }).eq('id', 1).select('stage')
+  check('nobody can skip building stages', Boolean(skipStage.error) || !skipStage.data?.length || skipStage.data[0].stage === house.data.stage, skipStage.error?.message)
+  const tariDate = await tari.c.from('house').update({ memory_date: '2001-01-01' }).eq('id', 1).select('memory_date')
+  check('only the owner picks the special date', Boolean(tariDate.error), tariDate.error?.message)
+  if (!tariDate.error) await owner.c.from('house').update({ memory_date: house.data.memory_date }).eq('id', 1) // put it back
+  const badKind = await owner.c.from('house_items').insert({ id: crypto.randomUUID(), kind: 'rocket', area: 'inside', x: 0, z: 0, rot: 0 })
+  check('unknown furniture is refused', Boolean(badKind.error), badKind.error?.message)
+  const outside = await owner.c.from('house_items').insert({ id: crypto.randomUUID(), kind: 'sofa', area: 'inside', x: 40, z: 0, rot: 0 })
+  check('furniture outside the house is refused', Boolean(outside.error), outside.error?.message)
+
+  if (house.data.stage >= 2) {
+    const id = crypto.randomUUID()
+    const placed = await owner.c.from('house_items').insert({ id, kind: 'teddy', area: 'inside', x: 2.5, z: 1.5, rot: 0 }).select('id, version, created_by').single()
+    check('owner can place furniture (made by them)', !placed.error && placed.data?.created_by === owner.id, placed.error?.message)
+    const again = await owner.c.from('house_items').insert({ id, kind: 'teddy', area: 'inside', x: 2.5, z: 1.5, rot: 0 })
+    check('the same item can never be placed twice', again.error?.code === '23505', again.error?.message || 'second insert succeeded')
+    const tariMoves = await tari.c.from('house_items').update({ x: 2.25 }).eq('id', id).eq('version', 1).select('version, updated_by').single()
+    check('Tari can move it (version goes up)', tariMoves.data?.version === 2 && tariMoves.data?.updated_by === tari.id, tariMoves.error?.message)
+    const stale = await owner.c.from('house_items').update({ x: 2.0 }).eq('id', id).eq('version', 1).select('id')
+    check('a move based on an old version is not applied', !stale.error && stale.data?.length === 0, stale.error?.message)
+    const forge = await owner.c.from('house_items').update({ version: 99, kind: 'bed' }).eq('id', id).select('id')
+    check('nobody can change what an item is or its version', Boolean(forge.error), forge.error?.message)
+    const anonDelete = await anon.from('house_items').delete().eq('id', id).select('id')
+    check('signed-out visitor cannot remove furniture', Boolean(anonDelete.error) || !anonDelete.data?.length, anonDelete.error?.message)
+    const removed = await owner.c.from('house_items').delete().eq('id', id).select('id')
+    check('owner can remove furniture (test item cleaned up)', removed.data?.length === 1, removed.error?.message)
+  } else {
+    const early = await owner.c.from('house_items').insert({ id: crypto.randomUUID(), kind: 'sofa', area: 'inside', x: 0, z: 0, rot: 0 })
+    check('no furniture before the cottage is built', Boolean(early.error), early.error?.message)
+    console.log('SKIP  furniture checks  — build the cottage (stage 2) in the game, then run this again')
+  }
+}
+
 console.log(failures ? `\n${failures} check(s) FAILED — the room is NOT private yet.` : '\nAll checks passed: the room only lets the two of you in.')
 process.exit(failures ? 1 : 0)

@@ -117,6 +117,8 @@ export const PATHS = [
   [[1.6, 8.4], [3.4, 8.9], [5.0, 8.3], [6.4, 7.7]],
   // meadow → Our Memories (the gallery plaza)
   [[-0.3, 7.6], [-1.9, 7.5], [-3.1, 7.2]],
+  // tree → the sky bridge to Our Little Home (north coast)
+  [[0.3, -2.0], [0.15, -5.0], [0.0, -8.0], [0.0, -11.1]],
 ].map((path) => path.map(([x, z]) => [x * SPREAD, z * SPREAD]))
 
 const segDist = (px, pz, ax, az, bx, bz) => {
@@ -139,8 +141,42 @@ export const BRIDGE = { z: ZONES.lake.z, x0: ZONES.lake.x - 3, x1: ZONES.lake.x 
 
 export const onBridge = (x, z) => x > BRIDGE.x0 && x < BRIDGE.x1 && Math.abs(z - BRIDGE.z) < BRIDGE.halfWidth
 
+/* ───────── Our Little Home: its own small island to the north, joined by a sky bridge ───────── */
+
+export const HOME_ISLAND = { x: 0, z: -34, r: 9, level: 0.32 }
+const homeOutline = (theta) => 1 + 0.05 * Math.sin(3 * theta + 1.0) + 0.03 * Math.sin(5 * theta - 0.4)
+/** 0 at the home island's centre, 1 at its coast. */
+export const homeDistance = (x, z) =>
+  Math.hypot(x - HOME_ISLAND.x, z - HOME_ISLAND.z) / (HOME_ISLAND.r * homeOutline(Math.atan2(z - HOME_ISLAND.z, x - HOME_ISLAND.x)))
+export const onHomeIsland = (x, z) => homeDistance(x, z) < 1
+/** The home island is flat (it's a garden), rolling off only at the coast. */
+export const homeHeight = (x, z) => HOME_ISLAND.level - 0.45 * smooth(0.84, 1.0, homeDistance(x, z))
+
+/** A rope bridge across the sky, straight north from the main island's coast to the home island. */
+export const SKY_BRIDGE = { x: 0, z0: -13.4, z1: -27.0, halfWidth: 0.6 }
+export const onSkyBridge = (x, z) => Math.abs(x - SKY_BRIDGE.x) < SKY_BRIDGE.halfWidth && z < SKY_BRIDGE.z0 && z > SKY_BRIDGE.z1
+let skyStart = null
+/** Deck height along the sky bridge (it sags a little in the middle). */
+export function skyBridgeHeight(z) {
+  skyStart ??= worldHeight(SKY_BRIDGE.x, SKY_BRIDGE.z0)
+  const t = Math.min(1, Math.max(0, (SKY_BRIDGE.z0 - z) / (SKY_BRIDGE.z0 - SKY_BRIDGE.z1)))
+  return skyStart + (HOME_ISLAND.level - skyStart) * t - 0.3 * Math.sin(Math.PI * t) + 0.04
+}
+
+/** Height of the ground that isn't the main island (the sky bridge, the home island), or null. */
+function otherGround(x, z) {
+  if (onSkyBridge(x, z)) {
+    const deck = skyBridgeHeight(z)
+    if (onHomeIsland(x, z)) return Math.max(deck, homeHeight(x, z))
+    return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
+  }
+  return onHomeIsland(x, z) ? homeHeight(x, z) : null
+}
+
 /** Height the player stands at (terrain, or the bridge deck over the lake). */
 export function standHeight(x, z) {
+  const other = otherGround(x, z)
+  if (other !== null) return other
   const h = worldHeight(x, z)
   return onBridge(x, z) ? Math.max(h, BRIDGE.deck) : h
 }
@@ -160,12 +196,24 @@ export function addCollider(x, z, r) {
  * Blocks the island edge, deep water, steep cliff faces and solid objects.
  */
 export function walkable(x, z, fromY) {
-  if (Math.hypot(x, z) > edgeRadius(x, z) * 0.9) return false
-  if (isWater(x, z)) return false
+  if (onSkyBridge(x, z)) {
+    // the bridge (where it meets the home island, the island's own rules apply)
+  } else if (onHomeIsland(x, z)) {
+    if (homeDistance(x, z) > 0.86) return false
+  } else {
+    if (Math.hypot(x, z) > edgeRadius(x, z) * 0.9) return false
+    if (isWater(x, z)) return false
+  }
   if (fromY !== undefined && standHeight(x, z) - fromY > 0.32) return false // too steep to climb
   for (const c of colliders) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return false
+  for (const b of blockers) if (b(x, z)) return false
   return true
 }
+
+/** Other obstacles, as functions (x, z) → blocked? (the house's walls and furniture). */
+export const blockers = []
+/** Bumped whenever a blocker changes shape, so cached walk grids get rebuilt. */
+export const obstacles = { version: 0 }
 
 /* ───────── deterministic placement helpers ───────── */
 
@@ -177,6 +225,7 @@ export function seeded(seed = 1) {
 
 /** Ground slope (rise per unit) — used to keep grass and trees off cliff faces. */
 export function slope(x, z) {
+  if (otherGround(x, z) !== null) return 0 // the bridge and the home island are gentle everywhere
   const e = 0.25
   return Math.hypot(worldHeight(x + e, z) - worldHeight(x - e, z), worldHeight(x, z + e) - worldHeight(x, z - e)) / (2 * e)
 }

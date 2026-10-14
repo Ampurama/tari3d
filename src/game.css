@@ -1743,3 +1743,225 @@
 .bottle-list small {
   color: var(--muted);
 }
+
+/* ───────── Our Little Home ───────── */
+
+.home-sign-text {
+  display: block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 246, 236, 0.86);
+  color: #8a5a72;
+  font-family: var(--hand);
+  font-size: 1.05rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.home-panel {
+  max-height: min(86vh, 720px);
+  overflow-y: auto;
+}
+
+.home-stages {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.home-stages li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.home-stages li span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--stroke);
+  font-size: 0.75rem;
+}
+
+.home-stages li.is-done span,
+.home-stages li.is-now span {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--rose), var(--lilac));
+  color: #fff;
+}
+
+.home-stages li.is-now {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.home-next {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.home-next p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+.home-next button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.home-memory {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--stroke);
+}
+
+.home-memory h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+}
+
+.home-memory small {
+  color: var(--muted);
+}
+
+.home-memory input:disabled {
+  opacity: 0.55;
+}
+
+.home-buttons {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(184px + var(--safe-bottom));
+  z-index: 36;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.home-buttons button,
+.home-edit button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.home-buttons button:hover,
+.home-edit button:hover:not(:disabled) {
+  border-color: rgba(255, 182, 213, 0.6);
+}
+
+.home-edit button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.home-edit {
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 37;
+  display: grid;
+  gap: 8px;
+  width: min(640px, calc(100vw - 24px));
+  padding: 10px 12px;
+  translate: -50% 0;
+  border-radius: 20px;
+  border: 1px solid var(--stroke);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-family: var(--sans);
+}
+
+.home-edit-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.home-edit-top p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.home-edit-top p.is-bad {
+  color: #ffb3b3;
+}
+
+.home-edit-top .btn-ghost {
+  flex: none;
+}
+
+.home-edit-actions,
+.home-edit-tabs,
+.home-catalog {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.home-edit-actions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.home-edit-holding {
+  margin-right: auto;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.home-edit .is-main {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--rose), var(--lilac));
+  color: #fff;
+}
+
+.home-edit-tabs button.is-on {
+  border-color: rgba(255, 182, 213, 0.7);
+  background: rgba(255, 143, 196, 0.22);
+}
+
+.home-catalog button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.home-catalog button span {
+  font-size: 1.05rem;
+}
+
+.home-edit-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}

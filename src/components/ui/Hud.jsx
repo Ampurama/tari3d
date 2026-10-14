@@ -6,6 +6,7 @@ import { daysSince, isTouch } from '../../lib/device'
 import { input } from '../../lib/player'
 import { useStore } from '../../store'
 import { coupleAvailable } from '../../lib/couple'
+import { useHome } from '../../lib/home'
 import { audio } from '../../audio/engine'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
@@ -239,6 +240,7 @@ export default function Hud({ flat = false }) {
   const consumeUnlock = useStore((s) => s.consumeUnlock)
   const showToast = useStore((s) => s.showToast)
   const secretStage = useStore((s) => s.secretStage)
+  const decorating = useHome((s) => s.editing)
   const inWorld = phase === 'world'
 
   // a dialog covers the bottom of the screen: let go of anything held under it
@@ -284,7 +286,8 @@ export default function Hud({ flat = false }) {
   const cinematic = view === 'cinematic'
   const quiet = cinematic || view === 'epilogue' || view === 'ending' || (view === 'finalRoom' && Boolean(secretStage)) || view === 'avatar'
   const focused = inWorld && !['explore', 'finale', 'finalRoom', 'epilogue', 'cinematic', 'ending', 'avatar'].includes(view)
-  const exploring = inWorld && view === 'explore'
+  // while decorating the house, its own bar takes the bottom of the screen
+  const exploring = inWorld && view === 'explore' && !decorating
 
   return (
     <>

@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { currentAvatar, useStore } from '../../store'
 import { input, player, readMove } from '../../lib/player'
-import { slope, standHeight, walkable } from '../../lib/terrain'
+import { HOME_ISLAND, SKY_BRIDGE, slope, standHeight, walkable } from '../../lib/terrain'
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
@@ -28,14 +28,21 @@ const tmpDir = new THREE.Vector3()
 const follow = new THREE.Vector3()
 
 /** The middle of the island diorama (slightly south, so the far shore isn't cut). */
-const ISLAND_CENTER = new THREE.Vector3(0, 0.4, 0.8)
+const MAIN_CENTER = new THREE.Vector3(0, 0.4, 0.8)
+/** The middle of the home island, the same way. */
+const HOME_CENTER = new THREE.Vector3(HOME_ISLAND.x, HOME_ISLAND.level + 0.4, HOME_ISLAND.z + 0.8)
+const center = new THREE.Vector3()
+/** The diorama is whichever island she's on (blending across the sky bridge). */
+const islandCenter = () => center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-player.position.z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
 
 /**
  * Where the camera looks: between the island's centre and the avatar.
  * `weight` 1 = right on her; the fully zoomed-out diorama view uses ISO.follow.
  */
-export const followTarget = (weight = 1) =>
-  follow.set(player.position.x, player.position.y + 0.6, player.position.z).sub(ISLAND_CENTER).multiplyScalar(weight).add(ISLAND_CENTER)
+export const followTarget = (weight = 1) => {
+  const c = islandCenter()
+  return follow.set(player.position.x, player.position.y + 0.6, player.position.z).sub(c).multiplyScalar(weight).add(c)
+}
 
 /** Try to move from (x, z) by (dx, dz); slides along obstacles. Returns the new [x, z] or null. */
 function step(x, z, dx, dz) {

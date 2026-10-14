@@ -29,7 +29,20 @@ export const partner = {
   avatarId: null,
   view: null,
   session: null,
+  /** the house item they're moving right now (so nobody grabs it at the same time) */
+  editing: null,
 }
+
+/** What I'm doing that the other person should know about (sent with my character). */
+export const presence = { editing: null }
+
+/**
+ * Other features (Our Little Home) listen on the same private room channel.
+ * `attach(channel)` adds their listeners before it's joined; `subscribed()` runs on every (re)join,
+ * so they can catch up on anything missed while offline; `left()` when the room closes.
+ */
+const roomHooks = []
+export const onRoom = (hook) => roomHooks.push(hook)
 
 /**
  * status: 'off' (not configured) | 'signed-out' | 'checking' | 'denied' | 'connected' | 'error'
@@ -122,17 +135,21 @@ async function joinRoom(myId, mateId) {
       partner.target = { x: +payload.x || 0, y: +payload.y || 0, z: +payload.z || 0, yaw: +payload.yaw || 0, speed: +payload.speed || 0 }
       partner.avatarId = typeof payload.avatarId === 'string' ? payload.avatarId : null
       partner.view = typeof payload.view === 'string' ? payload.view : null
+      partner.editing = typeof payload.editing === 'string' ? payload.editing : null
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
     channels.push(theirs)
   }
 
-  // letters that arrive for me (the server only shows me my own)
+  // letters that arrive for me (the server only shows me my own), and changes to our home
   const letters = supabase
     .channel(`couple-letters:${myId}`, { config: { private: true } })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bottles', filter: `recipient=eq.${myId}` }, () => loadLetters(true))
-    .subscribe()
+  roomHooks.forEach((h) => h.attach?.(letters))
+  letters.subscribe((status) => {
+    if (status === 'SUBSCRIBED') roomHooks.forEach((h) => h.subscribed?.())
+  })
   channels.push(letters)
 
   // send my character ~8 times a second while it changes (and a heartbeat otherwise)
@@ -148,6 +165,7 @@ async function joinRoom(myId, mateId) {
       speed: +player.speed.toFixed(2),
       avatarId: s.avatarId || null,
       view: s.phase === 'world' ? s.view : null,
+      editing: presence.editing,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -175,7 +193,9 @@ async function leaveRoom() {
   partner.online = false
   partner.lastSeen = 0
   partner.session = null
+  partner.editing = null
   set({ mateOnline: false })
+  roomHooks.forEach((h) => h.left?.())
   const old = channels
   channels = []
   await Promise.all(old.map((c) => supabase?.removeChannel(c)))

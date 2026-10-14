@@ -25,6 +25,7 @@ import Picnic from './Picnic'
 import Decor from './Decor'
 import Wildlife from './Wildlife'
 import CoupleWorld from './CoupleWorld'
+import HomeIsland from './HomeIsland'
 import { BonusHeart, Envelope, GlowFlowers } from './StoryObjects'
 
 
@@ -78,6 +79,7 @@ export default function World() {
       <Decor />
       <Wildlife />
       <CoupleWorld />
+      <HomeIsland />
       <GlowFlowers />
       <Picnic />
       <Envelope />

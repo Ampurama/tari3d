@@ -167,6 +167,34 @@ feature stays off and the game is single-player as always.
    PASS (outsider lines say SKIP without that account). It leaves a `[test]` letter you can delete
    in Table Editor → `bottles`.
 
+### Our Little Home (Rumah Kita)
+
+A small island of its own north of the main island, reached by a rope bridge across the sky (follow
+the path north from the Love Tree). The two of you build and decorate **one shared house** there:
+
+1. **Lahan kosong**: an empty plot. Press **Bangun Rumah** at the sign.
+2. **Pondok kecil**: walls, a roof, windows and a door. You can walk in; the roof lifts away and the walls
+   facing the camera fold down so the rooms can be seen. **Dekorasi Rumah** opens the catalog
+   (bed, sofa, table, chair, rug, lamps, plant, bookshelf, wall frame, heart lamp, teddy, vase).
+3. **Rumah yang terisi** (after 3 pieces of furniture): warm lights inside, and garden decorations open up.
+4. **Taman yang cantik** (after 2 garden decorations): flowers around the house, an arch by the bridge, and
+   the **memory corner**: a frame with a title, a special date (picked by the owner) and a short message.
+5. **Rumah kita** (once the memory corner has a title): fairy lights and keepsakes.
+
+Decorating: pick something, tap the floor (or move the mouse) to place it, **Putar** turns it, **Tempatkan**
+saves it, **Batalkan** cancels. Tap something already placed to move or remove it. On a keyboard: arrows / WASD
+move it, R turns, Enter places, Esc backs out.
+
+Everything is stored in Supabase and shared live: run `supabase/migrations/002_our_home.sql` once in the SQL
+Editor (after 001). The database checks membership, the allowed furniture types and the placement bounds,
+lets the stage go up only one step at a time (and only once if you both press it), and refuses a move made on
+an outdated copy of an item, so simultaneous edits never overwrite each other silently. While one of you is
+holding an item, the other can't pick it up. Run the verify script again afterwards; it now checks the house too.
+
+Not included yet: **photo frames with your own pictures**. That needs private image uploads (a Supabase Storage
+bucket with policies for the two members, size/type limits, and a `photo_path` column on `house_items`), so the
+frames and the memory corner are text-only for now.
+
 ---
 
 ## How the experience flows

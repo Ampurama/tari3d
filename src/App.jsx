@@ -18,6 +18,7 @@ import AvatarSelect from './components/ui/AvatarSelect'
 import SecretEnding from './components/ui/SecretEnding'
 import PicnicUI from './components/ui/PicnicUI'
 import CouplePanel from './components/ui/CouplePanel'
+import HomePanel from './components/ui/HomePanel'
 
 const Experience = lazy(() => import('./components/three/Experience'))
 
@@ -46,6 +47,7 @@ export default function App() {
         <DistanceOverlay />
         <PicnicUI />
         <CouplePanel />
+        <HomePanel />
         <FinaleOverlay />
         <Hud />
         <Curtain />

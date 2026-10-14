@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { addCollider, edgeRadius, MAIN_RADIUS, SPREAD, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
+import { addCollider, edgeRadius, MAIN_RADIUS, SKY_BRIDGE, SPREAD, isWater, pathDistance, seeded, slope, WATER_LEVEL, worldHeight, zoneDistance, ZONES } from '../../lib/terrain'
 import { envelopeSpot, glowFlowerSpots, littleSpots, loveTree, mochiHome, noteSpots, PICNIC, picnicSpot, spots, viewpointSpot } from '../../lib/layout'
 import { blocksView } from '../../lib/iso'
 import { tier } from '../../lib/device'
@@ -41,6 +41,7 @@ const KEEP_CLEAR = [
   [envelopeSpot.x, envelopeSpot.z, 0.9],
   ...Object.values(noteSpots).map((p) => [p.x, p.z, 1.0]),
   ...Object.values(spots).map((p) => [p.x, p.z, 1.3]),
+  [SKY_BRIDGE.x, SKY_BRIDGE.z0, 2.4], // where the sky bridge to the home island starts
 ]
 /**
  * Everything she has to find or use must stay visible from the 2.5D camera:
