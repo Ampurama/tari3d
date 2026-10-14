@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { CameraControls, CameraControlsImpl } from '@react-three/drei'
 import * as THREE from 'three'
 import { areas, framePose, futurePose, lanePose, loveTree, poses, resolvePose } from '../../lib/layout'
+import { cutsceneCamera } from '../../lib/cutscene'
 import { cine, CINE, CINE_LENGTH, cinematicCamera } from '../../lib/cinematic'
 import { player } from '../../lib/player'
 import { standHeight } from '../../lib/terrain'
@@ -216,7 +217,7 @@ export default function CameraDirector() {
       exploreLimits(dist)
       return
     }
-    if (['intro', 'cinematic'].includes(view)) return
+    if (['intro', 'cinematic', 'cutscene'].includes(view)) return
     const p = poseFor(view)
     if (p) fly(p)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,6 +231,13 @@ export default function CameraDirector() {
     if (Math.abs(camera.fov - fov) > 0.01) {
       camera.fov = reducedMotion ? fov : THREE.MathUtils.damp(camera.fov, fov, 2.6, delta)
       camera.updateProjectionMatrix()
+    }
+    // a cutscene in the western isles drives the camera too (lib/cutscene.js)
+    if (view === 'cutscene') {
+      const shot = cutsceneCamera(size.width / size.height)
+      if (shot) c.setLookAt(shot.pos.x, shot.pos.y, shot.pos.z, shot.tgt.x, shot.tgt.y, shot.tgt.z, false)
+      c.setFocalOffset(0, 0, 0, false)
+      return
     }
     // the final cinematic drives the camera itself
     if (view === 'cinematic') {

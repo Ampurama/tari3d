@@ -6,7 +6,7 @@ import { addCollider, HOPE_BRIDGE, isleDistance, isleHeight, ISLE_A, ISLE_B, onW
 import { player, walkTo } from '../../lib/player'
 import { moonPosition } from '../../lib/layout'
 import { partner, useCouple } from '../../lib/couple'
-import { useSeat } from '../../lib/actions'
+import { SEAT_DROP, seats, useSeat } from '../../lib/actions'
 import { useInteractable } from '../../lib/interactions'
 import { atmosphere } from '../../lib/atmosphere'
 import { openWish } from '../../lib/wish'
@@ -14,7 +14,10 @@ import { withPaint } from '../../lib/paint'
 import { count } from '../../lib/device'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
-import { wishes } from '../../content/config'
+import { cutscenes, wishes } from '../../content/config'
+import { along, BRIDGE_MID, GARDEN, hopeLight, PIER_TIP, SWING, swingBase, swingForward, swingSide, swingState, yawOf } from '../../lib/westLayout'
+import { cut, playCutscene } from '../../lib/cutscene'
+import Ghost, { useMateAvatar } from './Ghost'
 import Furniture, { B, C, mat, PicnicBasket, S } from './HomeFurniture'
 import { Glow, HeartMesh } from './Bits'
 import { DriftParticles, Fireflies } from './Particles'
@@ -30,8 +33,6 @@ import { DriftParticles, Fireflies } from './Particles'
  */
 
 /** A point along a walkway (0 → 1), `side` metres to its left (+) or right (−). */
-const along = (w, t, side = 0) => [w.ax + w.ux * w.len * t - w.uz * side, w.az + w.uz * w.len * t + w.ux * side]
-const yawOf = (w) => Math.atan2(w.ux, w.uz)
 
 function tapWalk(e) {
   const s = useStore.getState()
@@ -231,7 +232,6 @@ function RopeBridge({ w, lightsRef, lightColor = '#ffe2a8' }) {
 }
 
 /** The lights along the arched bridge: dim until you're each at one end, then they come on, end to end. */
-export const hopeLight = { litAt: 0 }
 function HopeBridge() {
   const lights = useRef()
   useFrame(() => {
@@ -429,13 +429,6 @@ function IsleADecor() {
 
 /* ───────── island B: the sunset garden ───────── */
 
-const GARDEN = { x: ISLE_B.x - 0.4, z: ISLE_B.z + 0.3 }
-/** The swing: where it stands and which way it faces (west, out over the sea). */
-const SWING = { x: ISLE_B.x - 1.4, z: ISLE_B.z + 1.2, yaw: -Math.PI / 2, top: 2.25, rope: 1.75 }
-const swingState = { angle: 0, amp: 0 }
-const swingForward = [Math.sin(SWING.yaw), Math.cos(SWING.yaw)]
-const swingSide = [Math.cos(SWING.yaw), -Math.sin(SWING.yaw)]
-const swingBase = () => isleHeight(ISLE_B, SWING.x, SWING.z)
 /** The four little hopes in the garden (and where they are). */
 const HOPES = [
   { id: 'basket', at: [ISLE_B.x + 1.3, ISLE_B.z - 2.3] },
@@ -688,6 +681,183 @@ function Stones() {
   )
 }
 
+/* ───────── more feeling: the dream at the pier's tip, the one who isn't here, lanterns, falling stars ───────── */
+
+/** "Pejamkan mata sebentar" at the tip of the pier: the dreamed beach. */
+function DreamSpot() {
+  useInteractable('pier-dream', {
+    position: PIER_TIP,
+    radius: 1.0,
+    priority: 0.35,
+    enabled: () => !player.seat,
+    label: 'Pejamkan mata sebentar',
+    onInteract: () => playCutscene('beach'),
+  })
+  return (
+    <group position={PIER_TIP}>
+      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.32, 0.4, 32]} />
+        <meshBasicMaterial color={[1.8, 1.6, 2.2]} toneMapped={false} transparent opacity={0.45} depthWrite={false} />
+      </mesh>
+    </group>
+  )
+}
+
+/** How long she has been sitting there alone (seconds), per place. Read by the tracker too. */
+const aloneFor = { swing: 0, pier: 0 }
+
+/**
+ * When she sits alone on the swing or the pier bench, after a little while the other one appears
+ * beside her, in light, on the other seat. They fade away when she gets up, or when the real one arrives.
+ */
+function AloneGhost({ group, seatA, seatB }) {
+  const mate = useMateAvatar()
+  const ref = useRef()
+  const opacity = useRef(0)
+  const told = useRef(false)
+  useFrame((_, delta) => {
+    const mine = player.seat
+    const here = mine === seatA || mine === seatB
+    // (only when the real one isn't sitting there, or anywhere near)
+    const nearby = partner.online && partner.shown.ok && Math.hypot(partner.shown.x - player.position.x, partner.shown.z - player.position.z) < 10
+    const real = partner.online && (partner.seat?.seat === seatA || partner.seat?.seat === seatB)
+    aloneFor[group] = here && !real && !nearby ? aloneFor[group] + delta : 0
+    const show = aloneFor[group] > 6
+    opacity.current = THREE.MathUtils.damp(opacity.current, show ? 0.85 : 0, show ? 0.7 : 3, delta)
+    const def = seats.get(mine === seatA ? seatB : seatA)?.def
+    if (ref.current && def) {
+      ref.current.position.set(def.x, def.y - SEAT_DROP, def.z)
+      ref.current.rotation.y = def.yaw
+    }
+    if (aloneFor[group] > 7.5 && !told.current) {
+      told.current = true
+      useStore.getState().showDiscovery({ kind: 'view', title: '♡', text: cutscenes.alone }, 9000)
+    }
+  })
+  return (
+    <group ref={ref}>
+      <Ghost config={mate} getOpacity={() => opacity.current} getMotion={() => ({ speed: 0, cheer: 0, sit: 'chair' })} />
+    </group>
+  )
+}
+
+/** Paper lanterns drifting up from the sea around the pier, all night. */
+function RisingLanterns() {
+  const ref = useRef()
+  const list = useMemo(() => {
+    const rand = seeded(6262)
+    return Array.from({ length: count(26, 14) }, () => {
+      const a = -Math.PI / 2 - 0.9 + rand() * 1.8 // north and around, out over the water
+      const r = 9 + rand() * 9
+      return { x: ISLE_A.x + Math.cos(a) * r, z: ISLE_A.z + Math.sin(a) * r, phase: rand() * 40, speed: 0.18 + rand() * 0.12, s: 0.18 + rand() * 0.1 }
+    })
+  }, [])
+  const m = useMemo(() => new THREE.Matrix4(), [])
+  const q = useMemo(() => new THREE.Quaternion(), [])
+  const p = useMemo(() => new THREE.Vector3(), [])
+  const sc = useMemo(() => new THREE.Vector3(), [])
+  useFrame(({ clock }) => {
+    const g = ref.current
+    if (!g) return
+    // they only show at night
+    g.visible = atmosphere.day < 0.6
+    if (!g.visible) return
+    const t = clock.elapsedTime
+    list.forEach((l, i) => {
+      const life = (t * l.speed + l.phase) % 9 // rise 9 m, then start again from the water
+      const fade = Math.min(1, life * 2) * Math.min(1, (9 - life) * 0.8)
+      p.set(l.x + Math.sin(t * 0.25 + i) * 0.4, SEA.level + 0.2 + life, l.z)
+      sc.set(l.s * fade, l.s * 1.3 * fade, l.s * fade)
+      m.compose(p, q, sc)
+      g.setMatrixAt(i, m)
+    })
+    g.instanceMatrix.needsUpdate = true
+  })
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, list.length]} frustumCulled={false}>
+      <cylinderGeometry args={[0.8, 1, 1.2, 6]} />
+      <meshBasicMaterial color={[2.4, 1.45, 0.75]} toneMapped={false} />
+    </instancedMesh>
+  )
+}
+
+/** Now and then, a falling star over the sea north of the pier (only at night). */
+function FallingStars() {
+  const ref = useRef()
+  const st = useRef({ next: 4, t: -1, from: new THREE.Vector3(), to: new THREE.Vector3() })
+  useFrame((_, delta) => {
+    const g = ref.current
+    const s = st.current
+    if (!g) return
+    if (atmosphere.day > 0.5) {
+      g.visible = false
+      return
+    }
+    if (s.t < 0) {
+      s.next -= delta
+      if (s.next <= 0) {
+        const x = PIER.bx - 25 + Math.random() * 50
+        s.from.set(x, 26 + Math.random() * 8, PIER.bz - 55 - Math.random() * 20)
+        s.to.copy(s.from).add(new THREE.Vector3(-14 - Math.random() * 10, -7, 0))
+        s.t = 0
+      }
+      g.visible = false
+      return
+    }
+    s.t += delta / 1.3
+    g.visible = s.t < 1
+    g.position.lerpVectors(s.from, s.to, Math.min(1, s.t))
+    g.children[0].material.opacity = Math.sin(Math.PI * Math.min(1, s.t)) * 0.9
+    if (s.t >= 1) {
+      s.t = -1
+      s.next = 7 + Math.random() * 9
+    }
+  })
+  return (
+    <group ref={ref} visible={false}>
+      <Glow color="#fff6d8" size={2.4} opacity={0} />
+    </group>
+  )
+}
+
+/** Tiny blue lights twinkling along island A's shore at night. */
+function ShoreGlow() {
+  const ref = useRef()
+  const dots = useMemo(() => {
+    const rand = seeded(3131)
+    return Array.from({ length: count(70, 36) }, () => {
+      const a = rand() * Math.PI * 2
+      const r = ISLE_A.r * (0.93 + rand() * 0.12)
+      return { x: ISLE_A.x + Math.cos(a) * r, z: ISLE_A.z + Math.sin(a) * r, ph: rand() * 6 }
+    })
+  }, [])
+  const m = useMemo(() => new THREE.Matrix4(), [])
+  const q = useMemo(() => new THREE.Quaternion(), [])
+  const p = useMemo(() => new THREE.Vector3(), [])
+  const sc = useMemo(() => new THREE.Vector3(), [])
+  useFrame(({ clock }) => {
+    const g = ref.current
+    if (!g) return
+    g.visible = atmosphere.day < 0.6
+    if (!g.visible) return
+    const t = clock.elapsedTime
+    dots.forEach((d, i) => {
+      const k = 0.5 + 0.5 * Math.sin(t * 1.6 + d.ph)
+      p.set(d.x, SEA.level + 0.04, d.z)
+      sc.setScalar(0.035 + k * 0.035)
+      m.compose(p, q, sc)
+      g.setMatrixAt(i, m)
+    })
+    g.instanceMatrix.needsUpdate = true
+  })
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, dots.length]} frustumCulled={false}>
+      <sphereGeometry args={[1, 6, 4]} />
+      <meshBasicMaterial color={[0.6, 1.6, 2.4]} toneMapped={false} />
+    </instancedMesh>
+  )
+}
+
 /* ───────── what happens as she walks around ───────── */
 
 const HOPE_A = new THREE.Vector2(HOPE_BRIDGE.ax, HOPE_BRIDGE.az)
@@ -702,8 +872,9 @@ const nearEnd = (x, z, end) => Math.hypot(x - end.x, z - end.y) < 2.6
 function WestTracker({ onNear }) {
   const last = useRef(null)
   const near = useRef(false)
-  const shown = useRef({ sunset: false, swing: false })
-  useFrame(() => {
+  const shown = useRef({ sunset: false, swing: false, meet: false })
+  const swingTogether = useRef(0)
+  useFrame((_, delta) => {
     const s = useStore.getState()
     const { x, z } = player.position
     const exploring = s.phase === 'world' && s.view === 'explore'
@@ -740,27 +911,41 @@ function WestTracker({ onNear }) {
       onNear(isNear)
     }
 
-    // the bridge lights: you at one end, the other person at the other (as both games see it)
-    if (!hopeLight.litAt && useCouple.getState().status === 'connected' && partner.online && partner.shown.ok) {
-      const px = partner.shown.x
-      const pz = partner.shown.z
-      if ((nearEnd(x, z, HOPE_A) && nearEnd(px, pz, HOPE_B)) || (nearEnd(x, z, HOPE_B) && nearEnd(px, pz, HOPE_A))) {
+    if (!exploring || cut.id) return
+    const together = useCouple.getState().status === 'connected' && partner.online && partner.shown.ok
+    const px = partner.shown.x
+    const pz = partner.shown.z
+
+    // the bridge lights: you at one end, the other person at the other (as both games see it);
+    // the cutscene runs along the bridge as they come on (and if it can't play, they simply come on)
+    if (!hopeLight.litAt && together && ((nearEnd(x, z, HOPE_A) && nearEnd(px, pz, HOPE_B)) || (nearEnd(x, z, HOPE_B) && nearEnd(px, pz, HOPE_A)))) {
+      if (!playCutscene('bridge')) {
         hopeLight.litAt = performance.now()
         audio.sparkle()
         s.showToast(wishes.bridge.lit, 5000)
       }
+      return
     }
 
-    // the swing: its little note the first time she sits; the shared sunset when you're both on it
+    // you meet in the middle of the lit bridge (once each time you play)
+    if (hopeLight.litAt && together && !shown.current.meet && Math.hypot(x - BRIDGE_MID.x, z - BRIDGE_MID.z) < 1.5 && Math.hypot(px - BRIDGE_MID.x, pz - BRIDGE_MID.z) < 1.5) {
+      shown.current.meet = true
+      playCutscene('meet')
+      return
+    }
+
+    // the swing: its little note the first time she sits; the sunset when you're both on it
+    // (or, alone, once the glowing one has been sitting beside her for a while)
     const onSwing = player.seat?.startsWith('swing:')
     if (onSwing && !shown.current.swing) {
       shown.current.swing = true
       s.showDiscovery({ kind: 'view', title: wishes.garden.swing.label, text: wishes.garden.swing.text }, 9000)
     }
     const both = onSwing && partner.online && partner.seat?.seat?.startsWith('swing:')
-    if (both && !shown.current.sunset) {
+    swingTogether.current = both ? swingTogether.current + delta : 0
+    if (!shown.current.sunset && ((both && swingTogether.current > 3) || (onSwing && aloneFor.swing > 11))) {
       shown.current.sunset = true
-      setTimeout(() => useStore.getState().showDiscovery({ kind: 'view', title: wishes.sunset.title, text: wishes.sunset.text }, 12000), 4000)
+      playCutscene('sunset')
     }
   })
   return null
@@ -800,6 +985,12 @@ export default function WestIsles() {
       <IsleADecor />
       <Garden />
       <Stones />
+      <DreamSpot />
+      <AloneGhost group="swing" seatA="swing:0" seatB="swing:1" />
+      <AloneGhost group="pier" seatA="pier:0" seatB="pier:1" />
+      <RisingLanterns />
+      <FallingStars />
+      <ShoreGlow />
       <WestTracker onNear={setNear} />
       {near && <Labels />}
     </group>

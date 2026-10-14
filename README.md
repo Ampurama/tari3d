@@ -309,7 +309,20 @@ up in Supabase; it all uses what's already there.
   swings gently when you're both on it, and the sky deepens into a sunset), four little things with short messages
   (a picnic basket, a lantern, a flower, a sign), and a bench at the shore looking out to sea.
 
-All the texts are in `wishes` in `config.js`. Letters open only for the person reading them. The sky changes only
+**Cutscenes** (cinematic bars, the words appearing line by line, the music lifting; **Lewati** or Escape skips):
+
+- **Pejamkan mata sebentar** at the very tip of the pier: the screen turns white and she's on a moonlit beach,
+  alone at the water's edge, until footprints come across the sand and the other one appears beside her in light
+  and takes her hand. Then back on the pier, with the letter.
+- When you're each at one end of the arched bridge, the camera runs along it as its lights come on; when you then
+  meet on the platform in the middle, a second short scene.
+- On the swing: a sunset scene (when you're both on it, or after a while alone).
+- Sitting alone on the swing or the pier bench, after a few seconds the other one appears on the seat beside her,
+  as a soft glowing figure (not when the real one is nearby).
+
+At night around island A: paper lanterns rising from the sea, falling stars, little blue lights along the shore.
+
+All the texts are in `wishes` and `cutscenes` in `config.js`. Letters open only for the person reading them. The sky changes only
 for whoever is there (night on the pier, sunset in the garden). Not stored anywhere: whether the bridge lights have
 been lit (they light up again each time you meet at its two ends) and which messages have been seen.
 

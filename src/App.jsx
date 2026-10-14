@@ -23,6 +23,7 @@ import DatePanel from './components/ui/DatePanel'
 import PetPanel from './components/ui/PetPanel'
 import SkyPanel from './components/ui/SkyPanel'
 import WishLetter from './components/ui/WishLetter'
+import CutsceneOverlay from './components/ui/CutsceneOverlay'
 
 const Experience = lazy(() => import('./components/three/Experience'))
 
@@ -56,6 +57,7 @@ export default function App() {
         <PetPanel />
         <SkyPanel />
         <WishLetter />
+        <CutsceneOverlay />
         <FinaleOverlay />
         <Hud />
         <Curtain />

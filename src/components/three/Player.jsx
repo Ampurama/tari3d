@@ -130,8 +130,9 @@ export function PlayerController() {
     // a panel or a dialog on screen has her attention: the avatar waits
     const exploring = s.phase === 'world' && s.view === 'explore' && !s.curtain && !player.frozen && !s.panel && !s.dialog
     if (!exploring) {
-      // leaving the island for a story moment: stand up first
-      if (player.seat && s.view !== 'explore') standUp()
+      // leaving the island for a story moment: stand up first (a cutscene lets her stay seated)
+      if (player.seat && s.view === 'cutscene') holdSeat()
+      else if (player.seat && s.view !== 'explore') standUp()
       // in the balloon she rides along even with a menu open
       if (player.balloon) holdBalloon(delta)
       // a menu opened mid-jump: come down where she is (or back to safety over the clouds)

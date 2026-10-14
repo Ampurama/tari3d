@@ -41,7 +41,7 @@ function Partner() {
     const t = partner.target
     const view = useStore.getState().view
     // visible only when both of you are on the island
-    const here = partner.online && ['explore', 'picnic'].includes(partner.view) && ['explore', 'picnic'].includes(view)
+    const here = partner.online && ['explore', 'picnic', 'cutscene'].includes(partner.view) && ['explore', 'picnic', 'cutscene'].includes(view)
     g.visible = here
     partner.shown.ok = here
     if (!here) return
@@ -237,7 +237,7 @@ function HandKeeper() {
   const view = useStore((s) => s.view)
   const at = useRef(new THREE.Vector3())
   useEffect(() => {
-    if (view !== 'explore') releaseHand('self')
+    if (view !== 'explore' && view !== 'cutscene') releaseHand('self')
   }, [view])
   // leaving the room (signed out, disconnected): let go, and forget where they were drawn
   useEffect(

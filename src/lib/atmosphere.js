@@ -9,7 +9,7 @@ import { journeyProgress } from './story'
  * turns golden at the picnic's sunset, and is a pastel golden dusk for the finale.
  * The sky writes these every frame (eased); everything else reads them.
  */
-export const atmosphere = { day: 1, sunset: 0, mood: null, place: null, travel: null }
+export const atmosphere = { day: 1, sunset: 0, mood: null, place: null, travel: null, scene: null }
 
 /** Places that are meant to be seen at night: the constellation, the old heart finale, the secret room. */
 const NIGHT_VIEWS = new Set(['constellation', 'finale', 'finalRoom'])
@@ -24,6 +24,8 @@ export function atmosphereTarget(s, clockSeconds) {
   else if (s.mainEndingSeen) sunset = 0.5
   // morning → warm afternoon over the journey (never darker, only warmer)
   else sunset = journeyProgress(s) * 0.4
+  // a cutscene paints its own sky
+  if (s.view === 'cutscene' && atmosphere.scene) return { day: atmosphere.scene.day ?? day, sunset: atmosphere.scene.sunset ?? sunset }
   // a date can ask for its own sky while it's on (a sunset picnic, a night of camping),
   // and so can a place (golden hour up on Sky Island, a starry sky at its telescope)
   const m = s.view === 'explore' && (atmosphere.mood || atmosphere.travel || atmosphere.place)

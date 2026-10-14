@@ -31,6 +31,7 @@ import Pet from './Pet'
 import SkyIsland from './SkyIsland'
 import Balloon from './Balloon'
 import WestIsles from './WestIsles'
+import CutsceneWorld from './CutsceneWorld'
 import { BonusHeart, Envelope, GlowFlowers } from './StoryObjects'
 
 
@@ -90,6 +91,7 @@ export default function World() {
       <SkyIsland />
       <Balloon />
       <WestIsles />
+      <CutsceneWorld />
       <GlowFlowers />
       <Picnic />
       <Envelope />

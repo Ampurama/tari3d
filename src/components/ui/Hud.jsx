@@ -270,7 +270,7 @@ export default function Hud({ flat = false }) {
       const v = st.view
       // on the island, Escape pauses: the settings (sound, help) open and the avatar waits
       if (v === 'explore' && st.phase === 'world') return st.setPanel('settings')
-      if (['explore', 'intro', 'avatar', 'finale', 'cinematic', 'ending', 'finalRoom', 'epilogue'].includes(v)) return
+      if (['explore', 'intro', 'avatar', 'finale', 'cinematic', 'ending', 'finalRoom', 'epilogue', 'cutscene'].includes(v)) return
       if (v === 'memories' && st.selectedMemory !== null) return
       if (v === 'capsule' && st.capsuleLetter) return
       if (v === 'constellation' && st.activeStar !== null) return st.closeStar()
@@ -284,8 +284,8 @@ export default function Hud({ flat = false }) {
 
   if (phase === 'loading') return null
   const cinematic = view === 'cinematic'
-  const quiet = cinematic || view === 'epilogue' || view === 'ending' || (view === 'finalRoom' && Boolean(secretStage)) || view === 'avatar'
-  const focused = inWorld && !['explore', 'finale', 'finalRoom', 'epilogue', 'cinematic', 'ending', 'avatar'].includes(view)
+  const quiet = cinematic || view === 'cutscene' || view === 'epilogue' || view === 'ending' || (view === 'finalRoom' && Boolean(secretStage)) || view === 'avatar'
+  const focused = inWorld && !['explore', 'finale', 'finalRoom', 'epilogue', 'cinematic', 'ending', 'avatar', 'cutscene'].includes(view)
   // while decorating the house, its own bar takes the bottom of the screen
   const exploring = inWorld && view === 'explore' && !decorating
 

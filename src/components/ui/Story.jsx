@@ -18,6 +18,7 @@ import { companion, couple, secretEnding, story } from '../../content/config'
 import { CHAPTER_COUNT, chapterStatus, completedCount, currentChapter, fillNames } from '../../lib/story'
 import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
+import { cutsceneMusic } from '../../lib/cutscene'
 
 const speakerName = (speaker) =>
   speaker === 'me' ? couple.me.name : speaker === 'you' ? couple.you.name : speaker === 'pet' ? companion.name : story.narrator
@@ -170,6 +171,7 @@ export function StoryDirector() {
     else if (view === 'finalRoom' || view === 'epilogue') audio.setMood('quiet')
     else if (view === 'distance') audio.setMood('miles')
     else if (view === 'picnic') audio.setMood('future')
+    else if (view === 'cutscene') audio.setMood(cutsceneMusic())
     else audio.setMood(doneCount >= 3 ? 'future' : 'little')
   }, [view, doneCount])
   useEffect(() => audio.setWarmth(connections / 5), [connections])

@@ -952,3 +952,51 @@ Sampai hari itu datang, saya mau tetap belajar berjalan bersama. Bukan karena se
     text: 'sayangg rinduunyaa ke panboss berduaa, nda pakee sendall, calla orang bikin vidio, duduk dibatu batu sambil liat matahari terbenam. ♡',
   },
 }
+
+/**
+ * CUTSCENES di pulau-pulau barat. Setiap baris muncul pelan-pelan di layar, satu per satu.
+ * `at` = detik ke berapa baris itu muncul, `to` = kapan menghilang. Teksnya boleh kamu ganti.
+ */
+export const cutscenes = {
+  /** dari ujung dermaga: "Pejamkan mata sebentar" → pantai yang dibayangkan */
+  beach: {
+    lines: [
+      { at: 0.6, to: 3.0, text: 'Kadang saya pejamkan mata…' },
+      { at: 4.2, to: 8.4, text: '…dan membayangkan kita ada di tempat yang sama.' },
+      { at: 9.2, to: 12.6, text: 'Bukan lewat layar. Bukan dari jauh.' },
+      { at: 13.6, to: 18.2, text: 'Saya jalan pelan-pelan ke arah ki…' },
+      { at: 21.0, to: 25.4, text: '…sampai akhirnya bisa berdiri di samping ki.' },
+      { at: 26.4, to: 30.4, text: 'Di sini, jarak nda pernah ada.' },
+      { at: 31.4, to: 36.4, text: 'Cuma ada kita, dan malam yang nda perlu lagi dilewati sendiri-sendiri.' },
+      { at: 38.6, to: 43.6, text: 'Suatu hari nanti, ini bukan cuma bayangan lagi. 🤍' },
+    ],
+  },
+  /** saat kalian berdua ada di dua ujung jembatan */
+  bridge: {
+    lines: [
+      { at: 0.8, to: 4.4, text: 'Dua pulau.' },
+      { at: 5.2, to: 9.4, text: 'Dua kota. Dua kehidupan yang berbeda.' },
+      { at: 10.4, to: 15.4, text: 'Tapi satu jembatan, dan satu tujuan yang sama.' },
+      { at: 16.4, to: 20.6, text: 'Ayo ketemu di tengah. 🤍' },
+    ],
+  },
+  /** saat kalian bertemu di tengah jembatan */
+  meet: {
+    lines: [
+      { at: 1.0, to: 5.0, text: 'Akhirnya ketemu di tengah.' },
+      { at: 6.0, to: 11.0, text: 'Di antara dua pulau ta, selalu ada satu tempat yang jadi milik kita berdua.' },
+    ],
+  },
+  /** di ayunan, saat matahari terbenam */
+  sunset: {
+    lines: [
+      { at: 1.0, to: 6.4, text: 'Saya nda tau semua hal yang menunggu kita nanti, sayang.' },
+      { at: 7.4, to: 13.4, text: 'Tapi saya berharap masih banyak sore…' },
+      { at: 14.4, to: 20.4, text: '…yang bisa kita habiskan sama-sama,' },
+      { at: 21.4, to: 27.4, text: 'bukan cuma di dunia kecil ini, tapi juga di dunia nyata. ♡' },
+    ],
+    title: 'The Little Things I Look Forward To',
+  },
+  /** saat main sendirian: sosok bercahaya duduk di kursi sebelahnya */
+  alone: 'Kursi di samping ki selalu saya simpan untuk ki, meskipun saya belum bisa ada di sini. 🤍',
+}

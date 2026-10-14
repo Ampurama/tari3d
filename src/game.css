@@ -2564,3 +2564,99 @@
     line-height: 1.68;
   }
 }
+
+/* ───────── cutscenes ───────── */
+
+.cutscene {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+
+.cutscene-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #05040c;
+}
+
+.cutscene-bar.is-top {
+  top: 0;
+}
+
+.cutscene-bar.is-bottom {
+  bottom: 0;
+}
+
+.cutscene-flash {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.18s linear;
+}
+
+.cutscene-words {
+  position: absolute;
+  left: 50%;
+  bottom: calc(11vh + 26px);
+  width: min(760px, calc(100vw - 40px));
+  translate: -50% 0;
+  text-align: center;
+}
+
+.cutscene-words p {
+  margin: 0;
+  color: #fff6f0;
+  font-family: var(--serif);
+  font-size: clamp(1.15rem, 2.6vw, 1.7rem);
+  font-style: italic;
+  line-height: 1.5;
+  text-shadow:
+    0 1px 3px rgba(10, 6, 30, 0.9),
+    0 0 22px rgba(10, 6, 30, 0.6);
+}
+
+.cutscene-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(100vw - 40px);
+  margin: 0;
+  translate: -50% -50%;
+  color: #fff6f0;
+  font-family: var(--serif);
+  font-size: clamp(1.4rem, 4vw, 2.6rem);
+  font-weight: 500;
+  text-align: center;
+  text-shadow: 0 0 30px rgba(255, 180, 210, 0.6);
+}
+
+.cutscene-skip {
+  position: absolute;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(11vh + 14px);
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(10, 8, 30, 0.35);
+  color: rgba(255, 246, 240, 0.8);
+  font: inherit;
+  font-size: 0.8rem;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .cutscene-bar {
+    height: 8vh;
+  }
+
+  .cutscene-words {
+    bottom: calc(8vh + 52px);
+  }
+
+  .cutscene-skip {
+    bottom: calc(8vh + 10px);
+  }
+}
