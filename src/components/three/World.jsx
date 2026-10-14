@@ -30,6 +30,7 @@ import DateWorld from './DateWorld'
 import Pet from './Pet'
 import SkyIsland from './SkyIsland'
 import Balloon from './Balloon'
+import WestIsles from './WestIsles'
 import { BonusHeart, Envelope, GlowFlowers } from './StoryObjects'
 
 
@@ -88,6 +89,7 @@ export default function World() {
       <Pet />
       <SkyIsland />
       <Balloon />
+      <WestIsles />
       <GlowFlowers />
       <Picnic />
       <Envelope />

@@ -119,6 +119,8 @@ export const PATHS = [
   [[-0.3, 7.6], [-1.9, 7.5], [-3.1, 7.2]],
   // tree → the sky bridge to Our Little Home (north coast)
   [[0.3, -2.0], [0.15, -5.0], [0.0, -8.0], [0.0, -11.1]],
+  // the end of the forest path → the west shore, where the bridge to the western isles starts
+  [[-5.6, -6.4], [-7.6, -5.4], [-9.2, -4.1], [-10.4, -3.2]],
 ].map((path) => path.map(([x, z]) => [x * SPREAD, z * SPREAD]))
 
 const segDist = (px, pz, ax, az, bx, bz) => {
@@ -192,8 +194,79 @@ export function platformAt(x, z, k = 1) {
   return null
 }
 
+/* ───────── the western isles, over a calm sea: a night pier, two islands, one bridge, a garden ───────── */
+
+/** A calm sea around the two little islands west of the main island (below everything else). */
+export const SEA = { x: -38, z: -11, r: 19, level: -0.55 }
+/** Island A: "The Place I Wish I Could Be" (its pier looks out at the moon). Island B: the destination, with the garden. */
+export const ISLE_A = { x: -29, z: -9, r: 5.5, level: 0.35, seed: 1.3 }
+export const ISLE_B = { x: -47, z: -13, r: 7, level: 0.45, seed: 2.1 }
+const isleOutline = (isle, theta) => 1 + 0.06 * Math.sin(3 * theta + isle.seed) + 0.03 * Math.sin(5 * theta - isle.seed * 2)
+/** 0 at an isle's centre, 1 at its shoreline. */
+export const isleDistance = (isle, x, z) => Math.hypot(x - isle.x, z - isle.z) / (isle.r * isleOutline(isle, Math.atan2(z - isle.z, x - isle.x)))
+/** Gentle grassy humps, sloping into the sea at the shore. */
+export function isleHeight(isle, x, z) {
+  const d = isleDistance(isle, x, z)
+  return isle.level + 0.1 * Math.sin(x * 0.9) * Math.cos(z * 0.8) * (1 - smooth(0.5, 0.85, d)) - (isle.level - SEA.level + 0.25) * smooth(0.78, 1.0, d)
+}
+const ISLES = [ISLE_A, ISLE_B]
+const isleAt = (x, z) => ISLES.find((i) => isleDistance(i, x, z) < 1) || null
+
+/**
+ * Straight walkways (rope bridges, the pier). `height(t)` gives the deck height along it (0 → 1);
+ * `wide` makes it wider over part of its length (the little platform in the middle of the arched bridge).
+ */
+function walkway(ax, az, bx, bz, halfWidth, height, wide = null) {
+  const dx = bx - ax
+  const dz = bz - az
+  const len = Math.hypot(dx, dz)
+  return { ax, az, bx, bz, halfWidth, height, wide, ux: dx / len, uz: dz / len, len }
+}
+export function walkwayAt(w, x, z) {
+  const px = x - w.ax
+  const pz = z - w.az
+  return { t: (px * w.ux + pz * w.uz) / w.len, off: Math.abs(-px * w.uz + pz * w.ux) }
+}
+const halfWidthAt = (w, t) => (w.wide && t > w.wide[0] && t < w.wide[1] ? w.wide[2] : w.halfWidth)
+export const onWalkway = (w, x, z) => {
+  const { t, off } = walkwayAt(w, x, z)
+  return t > 0 && t < 1 && off < halfWidthAt(w, t)
+}
+let westStart = null
+/** From the main island's west shore (past the forest) across the sea to island A. */
+export const WEST_BRIDGE = walkway(-12.7, -3.9, -24.8, -7.7, 0.6, (t) => {
+  westStart ??= worldHeight(-12.7, -3.9)
+  const k = Math.min(1, Math.max(0, t))
+  return westStart + (ISLE_A.level - westStart) * k - 0.3 * Math.sin(Math.PI * k) + 0.04
+})
+/** "Two Islands, One Destination": an arched bridge from island A to island B, with a little platform at its top. */
+export const HOPE_BRIDGE = walkway(
+  -33.3,
+  -9.95,
+  -41.5,
+  -11.8,
+  0.65,
+  (t) => {
+    const k = Math.min(1, Math.max(0, t))
+    return ISLE_A.level + (ISLE_B.level - ISLE_A.level) * k + 0.55 * Math.sin(Math.PI * k) + 0.04
+  },
+  [0.42, 0.58, 1.2],
+)
+/** "The Place I Wish I Could Be": a wooden pier off island A's north shore, toward the moon. */
+export const PIER = walkway(-30.3, -13.0, -31.7, -19.4, 0.72, () => 0.16)
+const WALKWAYS = [WEST_BRIDGE, HOPE_BRIDGE, PIER]
+
 /** Height of the ground that isn't the main island (bridges, the home island, Sky Island, clouds), or null. */
 function otherGround(x, z) {
+  for (const w of WALKWAYS) {
+    if (!onWalkway(w, x, z)) continue
+    const deck = w.height(walkwayAt(w, x, z).t)
+    const isle = isleAt(x, z)
+    if (isle) return Math.max(deck, isleHeight(isle, x, z))
+    return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
+  }
+  const isle = isleAt(x, z)
+  if (isle) return isleHeight(isle, x, z)
   if (onSkyBridge(x, z)) {
     const deck = skyBridgeHeight(z)
     if (onHomeIsland(x, z)) return Math.max(deck, homeHeight(x, z))
@@ -241,8 +314,11 @@ export function addCollider(x, z, r) {
  * Blocks the island edge, deep water, steep cliff faces and solid objects.
  */
 export function walkable(x, z, fromY) {
-  if (onSkyBridge(x, z) || platformAt(x, z, 0.92)) {
-    // a bridge deck or a cloud platform
+  const isle = isleAt(x, z)
+  if (onSkyBridge(x, z) || platformAt(x, z, 0.92) || WALKWAYS.some((w) => onWalkway(w, x, z))) {
+    // a bridge deck, the pier, or a cloud platform
+  } else if (isle) {
+    if (isleDistance(isle, x, z) > 0.86) return false
   } else if (onHomeIsland(x, z)) {
     if (homeDistance(x, z) > 0.86) return false
   } else if (onSkyIsland(x, z)) {

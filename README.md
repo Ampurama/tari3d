@@ -295,6 +295,24 @@ never sent: both games compute it from the take-off time on the server's clock a
 person's character is placed in their spot in the basket. If someone drops offline mid-flight, the balloon still
 lands on time; they're still aboard when they come back (and can get out then).
 
+### The western isles
+
+Past the Heartwood Forest the path ends at a rope bridge over a calm sea, to two small islands. Nothing new to set
+up in Supabase; it all uses what's already there.
+
+- **The Place I Wish I Could Be** (island A): a wooden pier at night, the moon's path on the water, warm lanterns.
+  **Duduk sebentar** on the bench (the two of you side by side), and **Baca surat** at the little letter box.
+- **Two Islands, One Destination**: an arched bridge from island A to island B. When you're each at one end of it,
+  its lights come on one by one from end to end (both games see it the same way, from your positions on the private
+  channel). It's always walkable, alone too. **Baca surat** on the platform at its top.
+- **The Little Things I Look Forward To** (island B): a sunset garden with a swing for two (**Duduk di ayunan**; it
+  swings gently when you're both on it, and the sky deepens into a sunset), four little things with short messages
+  (a picnic basket, a lantern, a flower, a sign), and a bench at the shore looking out to sea.
+
+All the texts are in `wishes` in `config.js`. Letters open only for the person reading them. The sky changes only
+for whoever is there (night on the pier, sunset in the garden). Not stored anywhere: whether the bridge lights have
+been lit (they light up again each time you meet at its two ends) and which messages have been seen.
+
 Not included yet: **photo frames with your own pictures**. That needs private image uploads (a Supabase Storage
 bucket with policies for the two members, size/type limits, and a `photo_path` column on `house_items`), so the
 frames and the memory corner are text-only for now.

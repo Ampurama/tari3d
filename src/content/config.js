@@ -907,3 +907,48 @@ export const dates = {
     postcard: 'Kartu pos danau',
   },
 }
+
+/**
+ * THE WESTERN ISLES — tiga tempat di barat pulau utama (lewat jembatan dari ujung hutan).
+ * Semua teks di sini boleh kamu ganti kapan saja.
+ */
+export const wishes = {
+  /** "The Place I Wish I Could Be" — dermaga malam di pulau pertama */
+  pier: {
+    place: 'The Place I Wish I Could Be',
+    title: 'Dari dermaga ini',
+    text: `Sayang, ada kalanya saya juga berharap bisa ada di sampingta sekarang.
+
+Bukan cuma lewat chat, bukan cuma lewat telepon, tapi betul-betul duduk di sampingta, dengar cerita ta, dan lihat ki senyum secara langsung.
+
+Kadang sedihka karena nda semua hal bisa saya lakukan dari jauh. Tapi meskipun saya belum bisa ada di sana setiap kali kita butuhka, saya harap kita tau kalau perasaan saya ke kita bukan sesuatu yang cuma ada saat kita lagi bersama.
+
+Semoga suatu hari nanti, malam-malam begini nda perlu lagi kita lewati dari dua tempat yang berbeda. 🤍`,
+  },
+  /** "Two Islands, One Destination" — surat di tengah jembatan */
+  bridge: {
+    place: 'Two Islands, One Destination',
+    title: 'Di tengah jembatan',
+    text: `Lucu di', sayang. Kita punya kehidupan masing-masing, punya kesibukan masing-masing, dan kadang cuma bisa melihat satu sama lain dari layar.
+
+Tapi saya suka membayangkan kalau suatu hari nanti, jarak yang sekarang terasa jauh ini nda lagi jadi bagian dari keseharianta.
+
+Sampai hari itu datang, saya mau tetap belajar berjalan bersama. Bukan karena semuanya selalu gampang, tapi karena cerita ini berarti buat saya. 🤍`,
+    /** shown when the bridge lights up because you're both at its two ends */
+    lit: 'Lampu jembatan menyala, dari ujungmu sampai ujungnya ✦',
+  },
+  /** "The Little Things I Look Forward To" — taman senja di pulau kedua */
+  garden: {
+    place: 'The Little Things I Look Forward To',
+    basket: { label: 'Keranjang piknik', text: 'Saya mau nanti bisa makan sama kita tanpa buru-buru, cerita banyak hal, dan ketawa sama-sama karena hal kecil.' },
+    lantern: { label: 'Lentera', text: 'Saya mau belajar jadi seseorang yang bisa kita percaya, bukan cuma saat semuanya baik-baik saja, tapi juga saat harita terasa berat.' },
+    flower: { label: 'Bunga', text: 'Saya mau masih banyak explore sama kita, lihat tempat baru, dan bikin kenangan sederhana yang nantinya bisa kita ingat sama-sama sampai tua.' },
+    sign: { label: 'Papan kayu', text: "Saya nda minta hal yang terlalu besar sayang. Saya cuma mau punya lebih banyak kesempatan untuk menikmati hal-hal sederhana sama kita." },
+    swing: { label: 'Ayunan', text: 'Kadang saya cuma mau duduk di sampingta, dengar cerita ta, dan menikmati waktu bersama tanpa harus memikirkan kapan kita harus berpisah lagi.' },
+  },
+  /** when you're both sitting on the swing */
+  sunset: {
+    title: 'Senja berdua',
+    text: 'sayangg rinduunyaa ke panboss berduaa, nda pakee sendall, calla orang bikin vidio, duduk dibatu batu sambil liat matahari terbenam. ♡',
+  },
+}

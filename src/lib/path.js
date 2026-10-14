@@ -1,4 +1,4 @@
-import { colliders, HOME_ISLAND, MAIN_RADIUS, obstacles, SKY, slope, standHeight, walkable } from './terrain'
+import { colliders, HOME_ISLAND, MAIN_RADIUS, obstacles, SEA, SKY, slope, standHeight, walkable } from './terrain'
 
 /*
  * PATHFINDING for tap-to-walk and "Take me there". A small A* over a grid of walkable cells
@@ -8,7 +8,7 @@ import { colliders, HOME_ISLAND, MAIN_RADIUS, obstacles, SKY, slope, standHeight
 
 const CELL = 0.3
 // the grid covers the main island, the home island to the north and Sky Island to the east
-const MIN_X = -(MAIN_RADIUS + 1.2)
+const MIN_X = Math.min(-(MAIN_RADIUS + 1.2), SEA.x - SEA.r - 1) // …and the western isles
 const MAX_X = SKY.x + SKY.r * 1.6
 const MIN_Z = HOME_ISLAND.z - HOME_ISLAND.r * 1.1 - 1
 const NX = Math.ceil((MAX_X - MIN_X) / CELL)

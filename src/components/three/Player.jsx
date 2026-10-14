@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { currentAvatar, useStore } from '../../store'
 import { input, player, readMove } from '../../lib/player'
-import { groundAt, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
+import { groundAt, HOPE_BRIDGE, isleDistance, ISLE_A, ISLE_B, onWalkway, PIER, walkwayAt, WEST_BRIDGE, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
@@ -38,6 +38,8 @@ const MAIN_CENTER = new THREE.Vector3(0, 0.4, 0.8)
 const HOME_CENTER = new THREE.Vector3(HOME_ISLAND.x, HOME_ISLAND.level + 0.4, HOME_ISLAND.z + 0.8)
 /** …and of Sky Island. */
 const SKY_CENTER = new THREE.Vector3(SKY.x + 1.5, SKY.level + 0.4, SKY.z + 2)
+const ISLE_A_CENTER = new THREE.Vector3(ISLE_A.x - 1, ISLE_A.level + 0.4, ISLE_A.z - 2.5)
+const ISLE_B_CENTER = new THREE.Vector3(ISLE_B.x, ISLE_B.level + 0.4, ISLE_B.z + 0.5)
 const center = new THREE.Vector3()
 /** The diorama is whichever island she's on (blending across the bridges). */
 const islandCenter = () => {
@@ -45,6 +47,11 @@ const islandCenter = () => {
   // riding the balloon: the camera stays with the basket all the way
   if (player.balloon) return center.set(x, y - 0.6, z)
   if (skyDistance(x, z) < 1.6) return center.copy(SKY_CENTER)
+  // the western isles: island A (and its pier), island B, and the bridges between
+  if (onWalkway(HOPE_BRIDGE, x, z)) return center.lerpVectors(ISLE_A_CENTER, ISLE_B_CENTER, THREE.MathUtils.smoothstep(walkwayAt(HOPE_BRIDGE, x, z).t, 0.1, 0.9))
+  if (onWalkway(WEST_BRIDGE, x, z)) return center.lerpVectors(MAIN_CENTER, ISLE_A_CENTER, THREE.MathUtils.smoothstep(walkwayAt(WEST_BRIDGE, x, z).t, 0.15, 0.85))
+  if (isleDistance(ISLE_A, x, z) < 1.3 || onWalkway(PIER, x, z)) return center.copy(ISLE_A_CENTER)
+  if (isleDistance(ISLE_B, x, z) < 1.3) return center.copy(ISLE_B_CENTER)
   return center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
 }
 

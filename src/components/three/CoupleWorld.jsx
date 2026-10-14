@@ -13,7 +13,7 @@ import Avatar from './Avatar'
 import Tappable from './Interact'
 import { Glow } from './Bits'
 import EmoteFx from './EmoteFx'
-import { partnerEmote, sitStyle } from '../../lib/actions'
+import { partnerEmote, SEAT_DROP, seats, sitStyle } from '../../lib/actions'
 import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from '../../lib/hand'
 import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
 
@@ -50,7 +50,12 @@ function Partner() {
       g.userData.placed = true
     }
     const riding = mateSeat()
-    if (riding) {
+    const seated = partner.seat && seats.get(partner.seat.seat)?.def
+    if (seated && !riding) {
+      // sitting: exactly on their seat (it may be moving, like the swing), not from slower broadcasts
+      g.position.set(seated.x, seated.y - SEAT_DROP, seated.z)
+      g.rotation.y = seated.yaw
+    } else if (riding) {
       // in the balloon: exactly in their spot in the basket, flown here the same as ours
       const pose = balloonPose()
       g.position.copy(seatPosition(riding, pose))
