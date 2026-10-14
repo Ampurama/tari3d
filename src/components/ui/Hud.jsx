@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BookHeart, House, LayoutGrid, Lightbulb, Music, Settings, UserRound, VolumeX, Wind, X } from 'lucide-react'
+import { ArrowLeft, BookHeart, House, LayoutGrid, Lightbulb, Music, Settings, UserRound, VolumeX, Wind, X, Heart } from 'lucide-react'
 import { couple, hints } from '../../content/config'
 import { daysSince, isTouch } from '../../lib/device'
 import { input } from '../../lib/player'
 import { useStore } from '../../store'
+import { coupleAvailable } from '../../lib/couple'
 import { audio } from '../../audio/engine'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
@@ -76,6 +77,11 @@ function SettingsPanel() {
             <button type="button" className="btn-glow small settings-resume" onClick={() => setPanel(null)}>
               Resume ♡
             </button>
+            {coupleAvailable && (
+              <button type="button" className="btn-ghost settings-couple" onClick={() => setPanel('couple')}>
+                <Heart size={15} /> Main berdua ♡
+              </button>
+            )}
             <h2>Sound</h2>
             <div className="setting-row">
               <span>

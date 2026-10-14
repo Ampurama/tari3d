@@ -1604,3 +1604,142 @@
     animation: none;
   }
 }
+
+/* ───────── playing together ───────── */
+
+.partner-tag {
+  display: block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 247, 251, 0.9);
+  color: #8a2f5f;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(40, 15, 60, 0.3);
+}
+
+.settings-couple {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px 8px;
+}
+
+.couple-panel {
+  width: min(440px, calc(100vw - 32px));
+  text-align: left;
+}
+
+.couple-panel h2 {
+  margin: 8px 0 6px;
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.couple-status {
+  margin: 0 0 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.couple-error {
+  margin: 6px 0;
+  color: #ffb3b3;
+  font-size: 0.85rem;
+}
+
+.couple-form {
+  display: grid;
+  gap: 10px;
+}
+
+.couple-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.couple-form input,
+.bottle-write {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+}
+
+.bottle-write {
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.5;
+}
+
+.couple-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.couple-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.couple-actions small {
+  color: var(--muted);
+}
+
+.bottle-letter .bottle-date {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.bottle-body {
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.bottle-list-title {
+  margin: 18px 0 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.bottle-list {
+  display: grid;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bottle-list button {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bottle-list small {
+  color: var(--muted);
+}

@@ -68,6 +68,18 @@ export const PICNIC = {
   seatPet: at(0.35, 0.45),
 }
 
+/* ───────── letters in a bottle (playing together) ───────── */
+
+/** The little river from Reflection Lake to the waterfall. */
+export const RIVER_DIR = new THREE.Vector3(0.72, 0, -0.69).normalize()
+const riverSide = new THREE.Vector3(-RIVER_DIR.z, 0, RIVER_DIR.x)
+/** Where the river starts (a sent bottle floats from here to the waterfall). */
+export const riverStart = v(ZONES.lake.x + RIVER_DIR.x * 2.9, WATER_LEVEL + 0.06, ZONES.lake.z + RIVER_DIR.z * 2.9)
+/** The little dock on the riverbank where letters are put into bottles. */
+export const bottleDock = ground(ZONES.lake.x + RIVER_DIR.x * 3.6 + riverSide.x * 0.8, ZONES.lake.z + RIVER_DIR.z * 3.6 + riverSide.z * 0.8)
+/** Where letters for her float in the lake, close to the south shore. */
+export const bottleHarbour = (i) => v(ZONES.lake.x - 0.9 + (i % 4) * 0.6, WATER_LEVEL + 0.05, ZONES.lake.z + 1.95 + Math.floor(i / 4) * 0.25)
+
 /* ───────── Chapter 5 + the secret ───────── */
 
 /** The envelope lies at the foot of the Love Tree, on the side the camera starts on. */

@@ -17,6 +17,7 @@ import { CinematicOverlay, EndingLetter } from './components/ui/Ending'
 import AvatarSelect from './components/ui/AvatarSelect'
 import SecretEnding from './components/ui/SecretEnding'
 import PicnicUI from './components/ui/PicnicUI'
+import CouplePanel from './components/ui/CouplePanel'
 
 const Experience = lazy(() => import('./components/three/Experience'))
 
@@ -44,6 +45,7 @@ export default function App() {
         <LetterOverlay />
         <DistanceOverlay />
         <PicnicUI />
+        <CouplePanel />
         <FinaleOverlay />
         <Hud />
         <Curtain />

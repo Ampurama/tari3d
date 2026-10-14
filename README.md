@@ -140,6 +140,35 @@ constellation, hidden hearts, the letter on the meadow table and the heart arch 
 
 ---
 
+## Playing together (private, for exactly two people)
+
+**Main berdua ♡** (in the pause menu) lets you and Tari see each other's characters on the island in
+real time, and send **letters in a bottle**: write one at the little dock on the river by Reflection
+Lake, and it washes up in the other person's lake. It is invite-only and enforced on the server
+(Supabase Auth + Row Level Security + Realtime authorization) — see
+`supabase/migrations/001_private_couple.sql`. Without the two environment variables below the
+feature stays off and the game is single-player as always.
+
+**Setup (once):**
+1. Create a project at [supabase.com](https://supabase.com).
+2. **Authentication → Providers → Email**: keep it on, and turn **off** "Allow new users to sign up".
+   **Authentication → Users → Add user**: create your account and Tari's (email + password, auto-confirm).
+   Optionally, for step 6, also create a third throw-away "outsider" account.
+3. **SQL Editor**: paste and run `supabase/migrations/001_private_couple.sql`, then run the two
+   `insert into public.couple_members …` lines at the bottom of that file with your two emails.
+4. **Realtime → Settings**: turn **off** "Allow public access" (private channels only).
+5. Copy `.env.example` to `.env.local` and fill in the Project URL and the **publishable** key
+   (`sb_publishable_…`, or the legacy **anon** key as `VITE_SUPABASE_ANON_KEY`) from
+   Project Settings → API. Add the same two variables in Vercel → Project → Settings → Environment
+   Variables and redeploy. Never use the `service_role` / secret key in the website.
+6. Verify it's really private (signs in as both of you, and as the outsider if you made one, and
+   tries to get in): create `scripts/verify.env` (see the top of `scripts/verify-private-room.mjs`)
+   and run `node --env-file=scripts/verify.env scripts/verify-private-room.mjs`. Every line must say
+   PASS (outsider lines say SKIP without that account). It leaves a `[test]` letter you can delete
+   in Table Editor → `bottles`.
+
+---
+
 ## How the experience flows
 
 1. **Loading**: a heart fills up while textures and fonts load.

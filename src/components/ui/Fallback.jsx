@@ -22,6 +22,7 @@ import SecretEnding from './SecretEnding'
 import AvatarSelect from './AvatarSelect'
 import { FlatChapterSheets, FlatPicnic } from './FlatStory'
 import PicnicUI from './PicnicUI'
+import CouplePanel from './CouplePanel'
 
 export class ErrorBoundary extends Component {
   state = { failed: false }
@@ -168,6 +169,7 @@ export default function Fallback() {
       <DistanceOverlay flat />
       <FlatPicnic />
       <PicnicUI />
+      <CouplePanel />
       <FinaleOverlay flat />
       <FlatHiddenHearts />
       <Hud flat />
