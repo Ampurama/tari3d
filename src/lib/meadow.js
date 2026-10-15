@@ -98,6 +98,31 @@ export function crossingAt(x, z) {
   return null
 }
 
+/**
+ * Footpaths through the meadow (soil worn into the grass, lanterns along them): from the main meadow
+ * down to the pond, over the stepping stones to the giant tree, over the east footbridge toward
+ * Chapter 2's hills, over the west footbridge up to the home garden, and from the garden to the tree.
+ */
+export const MEADOW_PATHS = [
+  [[10.8, 12.4], [16, 17], [22, 21], [27.5, 27]],
+  [[8.8, -14.2], [10.6, -16.4], [12.6, -18.8], [17, -23], [22.6, -27.4]],
+  [[15.5, -2.5], [21, -3], [27, -4.5], [36, -9], [46, -16], [56, -26], [60.5, -30]],
+  [[-9, -12], [-10.2, -16.5], [-11.2, -20.6], [-10.5, -25], [-8.5, -29]],
+  [[9.2, -33], [15, -31.5], [21.6, -30.4]],
+]
+const segDistance = (px, pz, ax, az, bx, bz) => {
+  const vx = bx - ax
+  const vz = bz - az
+  const t = Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz || 1)))
+  return Math.hypot(px - (ax + vx * t), pz - (az + vz * t))
+}
+/** Distance to the nearest meadow footpath. */
+export function meadowPathDistance(x, z) {
+  let best = Infinity
+  for (const p of MEADOW_PATHS) for (let i = 0; i < p.length - 1; i++) best = Math.min(best, segDistance(x, z, p[i][0], p[i][1], p[i + 1][0], p[i + 1][1]))
+  return best
+}
+
 /** Distance to the river and its water level there. */
 const riverOut = { d: Infinity, level: 0, t: 0 }
 export function riverAt(x, z) {
@@ -243,6 +268,7 @@ const COL = {
   deep: new THREE.Color('#4f9a6a'),
   lilac: new THREE.Color('#b3b4e6'),
   sand: new THREE.Color('#ecd9bf'),
+  soil: new THREE.Color('#dcc29f'),
   rock: new THREE.Color('#b9aecb'),
   far: new THREE.Color('#9fb3d6'),
 }
@@ -263,6 +289,8 @@ export function meadowColor(out, x, z, h, steep) {
   out.lerp(COL.sand, (1 - smooth(1.0, 1.1, dl)) * 0.8)
   const dp = Math.hypot(x - POND.x, z - POND.z) / POND.r
   out.lerp(COL.sand, (1 - smooth(1.0, 1.22, dp)) * 0.8)
+  // the footpaths, worn soft into the grass
+  out.lerp(COL.soil, (1 - smooth(0.4, 0.95, meadowPathDistance(x, z))) * 0.8)
   // bare lavender stone on the steepest faces (Sky Island's bluff)
   out.lerp(COL.rock, smooth(0.9, 1.5, steep))
   // far hills take on the blue of distance

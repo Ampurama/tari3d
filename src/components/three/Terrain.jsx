@@ -384,11 +384,12 @@ export function PathLanterns() {
     const s = useStore.getState()
     const lit = s.view === 'cinematic' ? windowAt(CINE.lanterns, cineTime(t)) : s.mainEndingSeen ? 1 : 0.3 + 0.7 * journeyProgress(s)
     items.forEach((l, i) => {
-      const on = (i + 0.5) / items.length <= lit
+      // at night every lantern burns
+      const on = (i + 0.5) / items.length <= lit || atmosphere.day < 0.5
       const flicker = reducedMotion ? 1 : 0.88 + 0.12 * Math.sin(t * 3 + l.phase) * Math.sin(t * 1.7 + l.phase * 0.5)
       // by day a soft warm bulb, glowing more as evening comes, and a little brighter when she walks by
       const near = Math.max(0, 1 - Math.hypot(l.x - player.position.x, l.z - player.position.z) / 3.5)
-      const k = on ? flicker * (0.45 + 0.55 * atmosphere.sunset + near * 0.25) : 0.3
+      const k = on ? flicker * (0.45 + 0.55 * Math.max(atmosphere.sunset, 1 - atmosphere.day) + near * 0.25) : 0.3
       lights.current.setColorAt(i, color.setRGB(2.8 * k, 1.9 * k, 1.05 * k))
     })
     lights.current.instanceColor.needsUpdate = true

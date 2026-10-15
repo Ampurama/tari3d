@@ -6,7 +6,7 @@ import { cloudTexture, glowTexture, moonTexture } from '../../lib/textures'
 import { moonPosition } from '../../lib/layout'
 import { seeded } from '../../lib/island'
 import { count } from '../../lib/device'
-import { atmosphere, atmosphereTarget } from '../../lib/atmosphere'
+import { atmosphere, atmosphereTarget, targetLightDir } from '../../lib/atmosphere'
 import { StarDome } from './Particles'
 
 /*
@@ -112,6 +112,8 @@ function Haze() {
   return null
 }
 
+const lightGoal = new THREE.Vector3()
+
 /** Direction toward the sun (it lights the island from the upper right, behind the camera's shoulder). */
 export const SUN_DIR = new THREE.Vector3(0.55, 0.62, 0.56).normalize()
 
@@ -125,7 +127,7 @@ function SkyGradient() {
           uSunset: { value: 0 },
           uDim: { value: 1 },
           uTime: { value: 0 },
-          uSunDir: { value: SUN_DIR },
+          uSunDir: { value: atmosphere.sunDir },
           uDayHorizon: { value: DAY_SKY.horizon },
           uDayMid: { value: DAY_SKY.mid },
           uDayTop: { value: DAY_SKY.top },
@@ -145,6 +147,8 @@ function SkyGradient() {
     const goal = atmosphereTarget(s, state.clock.elapsedTime)
     atmosphere.day = THREE.MathUtils.damp(atmosphere.day, goal.day, 1.2, delta)
     atmosphere.sunset = THREE.MathUtils.damp(atmosphere.sunset, goal.sunset, 0.8, delta)
+    // the sun crosses the sky with the hours (and the moon takes over at night)
+    atmosphere.sunDir.lerp(targetLightDir(s, lightGoal), 1 - Math.exp(-delta * 0.9)).normalize()
     const u = material.uniforms
     u.uDay.value = atmosphere.day
     u.uSunset.value = atmosphere.sunset

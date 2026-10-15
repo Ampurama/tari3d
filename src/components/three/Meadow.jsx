@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { buildMeadowGeometry, buildRiverGeometry, buildSkyCliffGeometry, CROSSINGS, crossingAt, DISTANCE_SITE, GIANT_TREE, KNOLL, meadowHeight, POND, RIVER_HALF_WIDTH, riverAt } from '../../lib/meadow'
+import { buildMeadowGeometry, buildRiverGeometry, buildSkyCliffGeometry, CROSSINGS, crossingAt, DISTANCE_SITE, GIANT_TREE, KNOLL, MEADOW_PATHS, meadowHeight, meadowPathDistance, POND, RIVER_HALF_WIDTH, riverAt } from '../../lib/meadow'
 import { addCollider, edgeRadius, HOME_ISLAND, homeDistance, SEA, seeded, SKY, SKY_BRIDGE, skyDistance, standHeight, WEST_BRIDGE } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
 import { tier } from '../../lib/device'
@@ -12,6 +12,9 @@ import { atmosphere } from '../../lib/atmosphere'
 import { useStore } from '../../store'
 import { bladeGeometry, FLOWER_SETS, Rocks, TreeKind } from './Vegetation'
 import { Glow } from './Bits'
+import { Bench } from './Props'
+import { Butterflies } from './Wildlife'
+import { Fireflies } from './Particles'
 
 /*
  * DREAMCORE MEADOW — the landscape all the places now stand in (see lib/meadow.js):
@@ -35,6 +38,8 @@ function openMeadow(x, z, { tall = false, water = 0.5 } = {}) {
   if (Math.hypot(x, z) - edgeRadius(x, z) < (tall ? 2 : 0)) return false
   if ((homeDistance(x, z) - 1) * HOME_ISLAND.r < (tall ? 1.5 : 0)) return false
   if (crossingAt(x, z)) return false
+  // the footpaths stay clear (flowers may line them; trees keep a step back)
+  if (meadowPathDistance(x, z) < (tall ? 1.8 : 0.55)) return false
   // Chapter 2's hilltops and ravine stay as they are
   if (Math.abs(x - DISTANCE_SITE.x) < (tall ? 16 : 7) && Math.abs(z - DISTANCE_SITE.z) < (tall ? 13 : 11)) return false
   if ((skyDistance(x, z) - 1) * SKY.r < 3.5) return false
@@ -226,11 +231,24 @@ function MeadowFlowers() {
       addPatch(POND.x + Math.cos(a) * (POND.r + 2.5 + rand() * 3), POND.z + Math.sin(a) * (POND.r + 2.5 + rand() * 3), 1.6 + rand(), true)
     }
     // drifts all over the meadow around the places
-    for (let i = 0; i < (HIGH ? 70 : 40); i++) {
+    for (let i = 0; i < (HIGH ? 130 : 70); i++) {
       const a = rand() * Math.PI * 2
-      const r = 18 + rand() * 46
-      addPatch(Math.cos(a) * r + 6, Math.sin(a) * r - 10, 1 + rand() * 1.8, false)
+      const r = 17 + rand() * 50
+      addPatch(Math.cos(a) * r + 6, Math.sin(a) * r - 10, 1 + rand() * 2, rand() < 0.35)
     }
+    // borders of flowers along the footpaths
+    for (const path of MEADOW_PATHS)
+      for (let i = 0; i < path.length - 1; i++) {
+        const [ax, az] = path[i]
+        const [bx, bz] = path[i + 1]
+        const l = Math.hypot(bx - ax, bz - az)
+        for (let d = 1; d < l; d += 2.6) {
+          const t = d / l
+          const side = rand() < 0.5 ? -1 : 1
+          const off = 1.2 + rand() * 0.6
+          addPatch(ax + (bx - ax) * t - ((bz - az) / l) * off * side, az + (bz - az) * t + ((bx - ax) / l) * off * side, 0.7 + rand() * 0.5, true)
+        }
+      }
     const list = []
     for (const p of patches)
       for (let k = 0; k < p.n; k++) {
@@ -242,7 +260,7 @@ function MeadowFlowers() {
         const s = 0.05 + rand() * 0.035
         list.push({ x, z, y: meadowHeight(x, z), s, color: rand() > 0.35 ? p.a : p.b, rot: rand() * Math.PI })
       }
-    return list.slice(0, HIGH ? 4200 : 1800)
+    return list.slice(0, HIGH ? 9000 : 3600)
   }, [])
   useLayoutEffect(() => {
     const m = new THREE.Matrix4()
@@ -263,11 +281,12 @@ function MeadowFlowers() {
   }, [items])
   return (
     <group>
+      {/* low-poly blooms: twice as many flowers for the same cost */}
       <instancedMesh ref={petals} args={[null, petalMat, items.length]}>
-        <icosahedronGeometry args={[1, 1]} />
+        <icosahedronGeometry args={[1, 0]} />
       </instancedMesh>
       <instancedMesh ref={centres} args={[null, centreMat, items.length]}>
-        <sphereGeometry args={[1, 8, 6]} />
+        <octahedronGeometry args={[1, 0]} />
       </instancedMesh>
     </group>
   )
@@ -281,7 +300,7 @@ function MeadowGrass() {
   const items = useMemo(() => {
     const rand = seeded(9090)
     const list = []
-    const max = HIGH ? 3600 : 1400
+    const max = HIGH ? 6500 : 2400
     for (let i = 0; i < max * 3 && list.length < max; i++) {
       const a = rand() * Math.PI * 2
       const r = 15 + Math.sqrt(rand()) * 50
@@ -311,7 +330,7 @@ function useMeadowTrees() {
   return useMemo(() => {
     const rand = seeded(5151)
     const kinds = { round: [], tall: [], blossom: [] }
-    const copses = HIGH ? 22 : 13
+    const copses = HIGH ? 36 : 20
     for (let c = 0; c < copses; c++) {
       const a = rand() * Math.PI * 2
       const r = 24 + rand() * 60
@@ -537,6 +556,289 @@ function Crossings() {
   )
 }
 
+/* ───────── more life: lanterns, lupins, bushes, mushrooms, benches, butterflies, fireflies ───────── */
+
+/** Little lanterns along the footpaths: a soft bulb by day, warm and bright as evening and night come. */
+function MeadowLanterns() {
+  const posts = useRef()
+  const bulbs = useRef()
+  const reducedMotion = useStore((s) => s.reducedMotion)
+  const items = useMemo(() => {
+    const list = []
+    MEADOW_PATHS.forEach((path, k) => {
+      for (let i = 0; i < path.length - 1; i++) {
+        const [ax, az] = path[i]
+        const [bx, bz] = path[i + 1]
+        const l = Math.hypot(bx - ax, bz - az)
+        for (let d = 1.5; d < l; d += 5) {
+          const t = d / l
+          const side = (i + k + Math.round(d)) % 2 ? 0.85 : -0.85
+          const x = ax + (bx - ax) * t - ((bz - az) / l) * side
+          const z = az + (bz - az) * t + ((bx - ax) / l) * side
+          if (riverAt(x, z).d < RIVER_HALF_WIDTH + 0.6 || crossingAt(x, z)) continue
+          list.push({ x, z, y: meadowHeight(x, z), phase: list.length * 1.7 })
+        }
+      }
+    })
+    return list
+  }, [])
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    items.forEach((l, i) => {
+      m.compose(new THREE.Vector3(l.x, l.y + 0.45, l.z), q, new THREE.Vector3(1, 1, 1))
+      posts.current.setMatrixAt(i, m)
+      m.compose(new THREE.Vector3(l.x, l.y + 0.98, l.z), q, new THREE.Vector3(1, 1, 1))
+      bulbs.current.setMatrixAt(i, m)
+    })
+    posts.current.instanceMatrix.needsUpdate = true
+    bulbs.current.instanceMatrix.needsUpdate = true
+    posts.current.computeBoundingSphere()
+    bulbs.current.computeBoundingSphere()
+  }, [items])
+  const color = useMemo(() => new THREE.Color(), [])
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime
+    const glow = 0.4 + 0.6 * Math.max(atmosphere.sunset * 0.8, 1 - atmosphere.day)
+    items.forEach((l, i) => {
+      const flicker = reducedMotion ? 1 : 0.9 + 0.1 * Math.sin(t * 3 + l.phase)
+      const k = glow * flicker
+      bulbs.current.setColorAt(i, color.setRGB(2.8 * k, 1.9 * k, 1.1 * k))
+    })
+    bulbs.current.instanceColor.needsUpdate = true
+  })
+  return (
+    <group>
+      <instancedMesh ref={posts} args={[null, null, items.length]} castShadow>
+        <cylinderGeometry args={[0.035, 0.05, 0.9, 6]} />
+        <meshStandardMaterial color="#8d6a58" roughness={0.8} />
+      </instancedMesh>
+      <instancedMesh ref={bulbs} args={[null, null, items.length]}>
+        <sphereGeometry args={[0.09, 10, 8]} />
+        <meshBasicMaterial toneMapped={false} />
+      </instancedMesh>
+    </group>
+  )
+}
+
+/** Tall spires of lupins: lavender, pink and white, in a few dense, dreamy drifts. */
+function Lupins() {
+  const ref = useRef()
+  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.16, roughness: 0.6, emissive: '#c9a8ff', emissiveIntensity: 0.05 }), [])
+  const items = useMemo(() => {
+    const rand = seeded(1717)
+    const colors = ['#c9b0ff', '#e3c6ff', '#ffb3d6', '#ffffff', '#b59cf2', '#ffd1e8']
+    const centres = [
+      [KNOLL.x - 9, KNOLL.z + 6],
+      [KNOLL.x + 7, KNOLL.z + 8],
+      [POND.x - 9, POND.z - 6],
+      [POND.x + 3, POND.z - 10],
+      [18, 26],
+      [-20, -28],
+      [38, 10],
+      [-22, 14],
+      [30, -18],
+      [8, 30],
+    ]
+    const list = []
+    for (const [cx, cz] of centres)
+      for (let k = 0; k < (HIGH ? 70 : 32); k++) {
+        const a = rand() * Math.PI * 2
+        const rr = Math.sqrt(rand()) * 3.2
+        const x = cx + Math.cos(a) * rr
+        const z = cz + Math.sin(a) * rr
+        if (!openMeadow(x, z, { water: 0.3 })) continue
+        list.push({ x, z, y: meadowHeight(x, z), h: 0.35 + rand() * 0.4, color: colors[Math.floor(rand() * colors.length)] })
+      }
+    return list
+  }, [])
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    const c = new THREE.Color()
+    items.forEach((it, i) => {
+      m.compose(new THREE.Vector3(it.x, it.y + it.h * 0.5 + 0.12, it.z), q, new THREE.Vector3(it.h * 0.16, it.h, it.h * 0.16))
+      ref.current.setMatrixAt(i, m)
+      ref.current.setColorAt(i, c.set(it.color))
+    })
+    ref.current.instanceMatrix.needsUpdate = true
+    ref.current.instanceColor.needsUpdate = true
+    ref.current.computeBoundingSphere()
+  }, [items])
+  return (
+    <instancedMesh ref={ref} args={[null, material, items.length]}>
+      <coneGeometry args={[1, 1, 6]} />
+    </instancedMesh>
+  )
+}
+
+/** Round bushes, some of them in blossom, scattered through the meadow and along the paths. */
+function Bushes() {
+  const ref = useRef()
+  const material = useMemo(() => withPaint(new THREE.MeshStandardMaterial({ roughness: 0.85 }), 'foliage'), [])
+  const items = useMemo(() => {
+    const rand = seeded(2323)
+    const colors = ['#79c27c', '#8fd18a', '#6db382', '#a6d98c', '#f4b6cf', '#e6c6f2']
+    const list = []
+    for (let i = 0; i < (HIGH ? 600 : 300) && list.length < (HIGH ? 190 : 90); i++) {
+      const a = rand() * Math.PI * 2
+      const r = 17 + rand() * 52
+      const x = Math.cos(a) * r + 6
+      const z = Math.sin(a) * r - 10
+      if (!openMeadow(x, z, { water: 0.6 }) || meadowPathDistance(x, z) < 1.2) continue
+      const sz = 0.35 + rand() * 0.45
+      // a bush is two or three soft blobs
+      const n = 2 + Math.floor(rand() * 2)
+      const color = colors[Math.floor(rand() * colors.length)]
+      for (let k = 0; k < n; k++)
+        list.push({ x: x + (rand() - 0.5) * sz, z: z + (rand() - 0.5) * sz, y: meadowHeight(x, z) + sz * 0.45, s: sz * (0.7 + rand() * 0.4), color })
+      addCollider(x, z, sz * 0.8)
+    }
+    return list
+  }, [])
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    const c = new THREE.Color()
+    items.forEach((it, i) => {
+      m.compose(new THREE.Vector3(it.x, it.y, it.z), q, new THREE.Vector3(it.s, it.s * 0.82, it.s))
+      ref.current.setMatrixAt(i, m)
+      ref.current.setColorAt(i, c.set(it.color))
+    })
+    ref.current.instanceMatrix.needsUpdate = true
+    ref.current.instanceColor.needsUpdate = true
+    ref.current.computeBoundingSphere()
+  }, [items])
+  return (
+    <instancedMesh ref={ref} args={[null, material, items.length]} castShadow receiveShadow>
+      <icosahedronGeometry args={[1, 1]} />
+    </instancedMesh>
+  )
+}
+
+/** Little rings of mushrooms in the shade (soft pinks, lilac and cream). */
+function Mushrooms() {
+  const stems = useRef()
+  const caps = useRef()
+  const items = useMemo(() => {
+    const rand = seeded(3131)
+    const caps = ['#ff9fbf', '#f7c6dd', '#d9c2ff', '#fff1d6', '#ff8fa8']
+    const list = []
+    const rings = HIGH ? 34 : 18
+    for (let i = 0; i < rings * 4 && list.length < rings * 6; i++) {
+      const a = rand() * Math.PI * 2
+      const r = 18 + rand() * 48
+      const cx = Math.cos(a) * r + 6
+      const cz = Math.sin(a) * r - 10
+      if (!openMeadow(cx, cz, { water: 0.3 })) continue
+      const n = 3 + Math.floor(rand() * 5)
+      const color = caps[Math.floor(rand() * caps.length)]
+      for (let k = 0; k < n; k++) {
+        const b = (k / n) * Math.PI * 2 + rand() * 0.4
+        const x = cx + Math.cos(b) * 0.35
+        const z = cz + Math.sin(b) * 0.35
+        list.push({ x, z, y: meadowHeight(x, z), s: 0.06 + rand() * 0.07, color })
+      }
+    }
+    return list
+  }, [])
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    const c = new THREE.Color()
+    items.forEach((it, i) => {
+      m.compose(new THREE.Vector3(it.x, it.y + it.s * 0.9, it.z), q, new THREE.Vector3(it.s * 0.35, it.s * 1.8, it.s * 0.35))
+      stems.current.setMatrixAt(i, m)
+      m.compose(new THREE.Vector3(it.x, it.y + it.s * 1.8, it.z), q, new THREE.Vector3(it.s, it.s * 0.7, it.s))
+      caps.current.setMatrixAt(i, m)
+      caps.current.setColorAt(i, c.set(it.color))
+    })
+    ;[stems.current, caps.current].forEach((mesh) => {
+      mesh.instanceMatrix.needsUpdate = true
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      mesh.computeBoundingSphere()
+    })
+  }, [items])
+  return (
+    <group>
+      <instancedMesh ref={stems} args={[null, null, items.length]}>
+        <cylinderGeometry args={[1, 1, 1, 6]} />
+        <meshStandardMaterial color="#fff6ea" roughness={0.7} />
+      </instancedMesh>
+      <instancedMesh ref={caps} args={[null, null, items.length]}>
+        <sphereGeometry args={[1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial roughness={0.5} emissive="#ff9fc8" emissiveIntensity={0.06} />
+      </instancedMesh>
+    </group>
+  )
+}
+
+/** Benches to sit and look: by the pond, under the giant tree, and where a path meets the river. */
+function MeadowBenches() {
+  const benches = useMemo(() => {
+    const at = (x, z, faceX, faceZ) => ({ x, z, y: meadowHeight(x, z), yaw: Math.atan2(faceX - x, faceZ - z) })
+    const list = [
+      at(POND.x - POND.r - 1.6, POND.z - 1.5, POND.x, POND.z),
+      at(POND.x + 0.5, POND.z - POND.r - 1.7, POND.x, POND.z),
+      at(GIANT_TREE.x - 2.8, GIANT_TREE.z + 3.2, GIANT_TREE.x - 8, GIANT_TREE.z + 10),
+      at(GIANT_TREE.x + 3.4, GIANT_TREE.z + 2.4, GIANT_TREE.x + 9, GIANT_TREE.z + 9),
+    ]
+    list.forEach((b) => addCollider(b.x, b.z, 0.55))
+    return list
+  }, [])
+  return benches.map((b, i) => <Bench key={i} position={[b.x, b.y, b.z]} rotation={[0, b.yaw, 0]} />)
+}
+
+/** Fireflies over the meadow once the sun is down: by the pond, the river, the giant tree, the paths. */
+function NightFireflies() {
+  const night = useNight()
+  if (!night) return null
+  const spots = [
+    [POND.x, meadowHeight(POND.x, POND.z) + 0.8, POND.z, 16],
+    [GIANT_TREE.x, meadowHeight(GIANT_TREE.x, GIANT_TREE.z) + 1.2, GIANT_TREE.z, 18],
+    [7, -1.2, -19, 20],
+    [21, -1.2, -3, 14],
+    [-11, -1, -21, 14],
+    [18, -0.8, 18, 18],
+  ]
+  return spots.map(([x, y, z, size], i) => (
+    <Fireflies key={i} count={HIGH ? 40 : 18} area={[size, 3, size]} center={[x, y, z]} size={0.14} seed={700 + i} colors={['#fff1a8', '#ffe0f0', '#d8ffcf']} />
+  ))
+}
+/** True while it's night (read from the shared time of day; re-renders only when that changes). */
+function useNight() {
+  const [night, setNight] = useState(false)
+  const last = useRef(false)
+  useFrame(() => {
+    const n = atmosphere.day < 0.45
+    if (n !== last.current) {
+      last.current = n
+      setNight(n)
+    }
+  })
+  return night
+}
+
+/** Butterflies over the flower fields (asleep at night). */
+function MeadowButterflies() {
+  const homes = useMemo(
+    () => [
+      { x: KNOLL.x - 8, z: KNOLL.z + 6 },
+      { x: KNOLL.x + 6, z: KNOLL.z + 7 },
+      { x: POND.x - 8, z: POND.z - 5 },
+      { x: POND.x + 2, z: POND.z - 9 },
+      { x: 18, z: 24 },
+      { x: -18, z: -27 },
+      { x: 36, z: 8 },
+      { x: 26, z: -8 },
+      { x: -20, z: 12 },
+      { x: 10, z: 28 },
+    ],
+    [],
+  )
+  return <Butterflies homes={homes} amount={HIGH ? 22 : 11} seed={909} />
+}
+
 /** The whole meadow. */
 export default function Meadow() {
   const trees = useMeadowTrees()
@@ -554,6 +856,13 @@ export default function Meadow() {
       <TreeKind kind="tall" items={trees.tall} />
       <TreeKind kind="blossom" items={trees.blossom} />
       <GiantTree />
+      <MeadowLanterns />
+      <Lupins />
+      <Bushes />
+      <Mushrooms />
+      <MeadowBenches />
+      <MeadowButterflies />
+      <NightFireflies />
     </group>
   )
 }

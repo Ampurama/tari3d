@@ -6,6 +6,7 @@ import { seeded } from '../../lib/island'
 import { tier } from '../../lib/device'
 import { useStore } from '../../store'
 import { DriftParticles } from './Particles'
+import { atmosphere } from '../../lib/atmosphere'
 
 /*
  * LITTLE LIVES — butterflies over the flowers, a few bees, birds far away, leaves falling in the
@@ -25,23 +26,29 @@ const wingGeometry = (() => {
   return g
 })()
 
-/** Colourful butterflies looping lazily around the meadow, the garden and the cliff flowers. */
-function Butterflies() {
+const ISLAND_HOMES = [ZONES.meadow, ZONES.meadow, ZONES.garden, ZONES.garden, ZONES.cliff, ZONES.cove, ZONES.lake, ZONES.gallery]
+
+/**
+ * Colourful butterflies looping lazily around flowers (by default the island's meadow, garden and
+ * cliff). They're off to sleep at night.
+ */
+export function Butterflies({ homes = ISLAND_HOMES, amount = HIGH ? 12 : 7, seed = 404 }) {
   const wings = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
   const list = useMemo(() => {
-    const rand = seeded(404)
-    const homes = [ZONES.meadow, ZONES.meadow, ZONES.garden, ZONES.garden, ZONES.cliff, ZONES.cove, ZONES.lake, ZONES.gallery]
+    const rand = seeded(seed)
     const colors = ['#ff9cc4', '#fff0a6', '#d9c2ff', '#ffb59e', '#ffffff', '#a8d8ff', '#ffd1e3', '#c9f2a0']
-    return Array.from({ length: HIGH ? 12 : 7 }, (_, i) => {
+    return Array.from({ length: amount }, (_, i) => {
       const h = homes[i % homes.length]
       return { cx: h.x + (rand() - 0.5) * 3, cz: h.z + (rand() - 0.5) * 3, r: 0.8 + rand() * 1.6, speed: 0.25 + rand() * 0.25, phase: rand() * 10, flap: 14 + rand() * 6, color: colors[i % colors.length], size: 0.06 + rand() * 0.03 }
     })
-  }, [])
+  }, [homes, amount, seed])
   const material = useMemo(() => new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), [])
   useFrame(({ clock }) => {
     const t = clock.elapsedTime
     const w = wings.current
+    w.visible = atmosphere.day > 0.45
+    if (!w.visible) return
     list.forEach((b, i) => {
       const u = t * b.speed + b.phase
       const x = b.cx + Math.sin(u) * b.r

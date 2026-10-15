@@ -45,7 +45,6 @@ const blend = (set, day, sunset) => tmp.copy(set.day).lerp(set.sunset, sunset).l
  * soft (never black) shadows, and a locally-generated environment for gentle reflections (no downloads).
  * Everything follows the shared time of day: bright day → golden afternoon/sunset → (rare) night.
  */
-const sunDir = new THREE.Vector3()
 const focus = new THREE.Vector3()
 
 export function Lights() {
@@ -75,9 +74,8 @@ export function Lights() {
     focus.x = THREE.MathUtils.damp(focus.x, target.x, 3, delta)
     focus.y = THREE.MathUtils.damp(focus.y, target.y, 3, delta)
     focus.z = THREE.MathUtils.damp(focus.z, target.z, 3, delta)
-    // lower in the sky toward sunset: longer, warmer shadows (golden hour)
-    sunDir.set(SUN_DIR.x, SUN_DIR.y * (1 - 0.45 * sunset * day), SUN_DIR.z).normalize()
-    sun.current.position.copy(focus).addScaledVector(sunDir, 26)
+    // the sun crosses the sky with the hours: long golden shadows morning and evening, the moon at night
+    sun.current.position.copy(focus).addScaledVector(atmosphere.sunDir, 26)
     sun.current.target.position.copy(focus)
     sun.current.target.updateMatrixWorld()
   })

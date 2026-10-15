@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, BookHeart, House, LayoutGrid, Lightbulb, Music, Settings, UserRound, VolumeX, Wind, X, Heart } from 'lucide-react'
+import { ArrowLeft, BookHeart, House, LayoutGrid, Lightbulb, Moon, Music, Settings, Sun, Sunrise, Sunset, UserRound, VolumeX, Wind, X, Heart } from 'lucide-react'
 import { couple, hints } from '../../content/config'
 import { daysSince, isTouch } from '../../lib/device'
 import { input } from '../../lib/player'
@@ -8,6 +8,7 @@ import { useStore } from '../../store'
 import { coupleAvailable } from '../../lib/couple'
 import { useHome } from '../../lib/home'
 import { audio } from '../../audio/engine'
+import { currentHour, partOfDay, TIME_LABELS, TIME_MODES, useTimeOfDay } from '../../lib/timeOfDay'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
 import { DialogBox, ObjectivePill, PlacesSheet, StoryDirector, StoryPanel } from './Story'
@@ -50,6 +51,40 @@ export function AudioControls() {
 }
 
 /** Sound settings + "change character". */
+const PART_ICONS = { pagi: Sunrise, siang: Sun, sore: Sunset, malam: Moon }
+
+/** Morning, midday, afternoon, night: let the day go by, follow the clock, or hold one. */
+function TimeSettings() {
+  const mode = useTimeOfDay((s) => s.mode)
+  const setMode = useTimeOfDay((s) => s.setMode)
+  const [now, setNow] = useState(() => partOfDay(currentHour()))
+  useEffect(() => {
+    const id = setInterval(() => setNow(partOfDay(currentHour())), 2000)
+    return () => clearInterval(id)
+  }, [])
+  const Icon = PART_ICONS[now]
+  return (
+    <>
+      <h2>Waktu</h2>
+      <p className="time-now">
+        <Icon size={15} /> Sekarang {TIME_LABELS[now].toLowerCase()}
+        {mode === 'cycle' ? ' · hari berjalan sendiri' : mode === 'real' ? ' · ikut jam HP-mu' : ''}
+      </p>
+      <div className="time-chips" role="radiogroup" aria-label="Waktu">
+        {TIME_MODES.map((m) => {
+          const ChipIcon = PART_ICONS[m]
+          return (
+            <button key={m} type="button" role="radio" aria-checked={mode === m} className={`time-chip${mode === m ? ' is-on' : ''}`} onClick={() => setMode(m)}>
+              {ChipIcon && <ChipIcon size={14} />}
+              {TIME_LABELS[m]}
+            </button>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
 function SettingsPanel() {
   const panel = useStore((s) => s.panel)
   const setPanel = useStore((s) => s.setPanel)
@@ -83,6 +118,7 @@ function SettingsPanel() {
                 <Heart size={15} /> Main berdua ♡
               </button>
             )}
+            <TimeSettings />
             <h2>Sound</h2>
             <div className="setting-row">
               <span>
