@@ -8,27 +8,21 @@ import {
   buildTerrainGeometry,
   outline,
   walkable,
-  buildUndersideGeometry,
   edgeRadius,
-  HOME_ISLAND,
-  SEA,
-  SKY,
   PATHS,
-  seeded,
   standHeight,
   WATER_LEVEL,
   worldHeight,
   ZONES,
 } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
+import { riverAt, WATERFALL_FOOT } from '../../lib/meadow'
 import { tier } from '../../lib/device'
 import { CINE, cineTime, windowAt } from '../../lib/cinematic'
 import { atmosphere } from '../../lib/atmosphere'
 import { journeyProgress } from '../../lib/story'
 import { placeNames } from '../../content/config'
-import { withPaint } from '../../lib/paint'
 import { useChapterUnlocked, useStore } from '../../store'
-import { IslandBody } from './Island'
 import { Glow } from './Bits'
 
 /*
@@ -79,8 +73,6 @@ groundMaterial.onBeforeCompile = (shader) => {
 }
 groundMaterial.customProgramCacheKey = () => 'island-ground'
 
-/** The soil and stone under the island, in soft strata. */
-const EARTH = withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.02, flatShading: true }), 'earth')
 
 /** Names of the places, written softly on the map (only while exploring). */
 const PLACE_SPOTS = {
@@ -109,14 +101,7 @@ export function PlaceNames() {
 /** The main island ground. Tapping it walks the avatar there. */
 export function IslandGround() {
   const top = useMemo(() => buildTerrainGeometry(tier === 'high' ? { rows: 60, segments: 240 } : { rows: 42, segments: 160 }), [])
-  const under = useMemo(() => buildUndersideGeometry({ segments: tier === 'high' ? 72 : 48 }), [])
-  useEffect(
-    () => () => {
-      top.dispose()
-      under.dispose()
-    },
-    [top, under],
-  )
+  useEffect(() => () => top.dispose(), [top])
   return (
     <group>
       <mesh
@@ -132,7 +117,6 @@ export function IslandGround() {
       >
         <primitive object={groundMaterial} attach="material" />
       </mesh>
-      <mesh geometry={under} castShadow material={EARTH} />
     </group>
   )
 }
@@ -281,11 +265,13 @@ export function Waterfall() {
       return g
     }
     const stream = ribbon(pts, 0.32)
-    // falling sheet: curves outward and down past the rock underside
+    // falling sheet: tumbling down the meadow's slope into the river below
+    const [fx, fz] = WATERFALL_FOOT
+    const footY = riverAt(fx, fz).level
     const fallPts = []
     for (let i = 0; i <= 20; i++) {
       const t = i / 20
-      fallPts.push(new THREE.Vector3(last.x + dir.x * (0.2 + t * 1.6), last.y - t * t * 9, last.z + dir.y * (0.2 + t * 1.6)))
+      fallPts.push(new THREE.Vector3(last.x + (fx - last.x) * t, last.y - (last.y - footY) * t * t, last.z + (fz - last.z) * t))
     }
     const fall = ribbon(fallPts, 0.3)
     return { stream, fall, lip: fallPts[fallPts.length - 1] }
@@ -352,35 +338,6 @@ export function LuminousPaths() {
       <cylinderGeometry args={[1, 1, 1, 12]} />
       <meshBasicMaterial toneMapped={false} />
     </instancedMesh>
-  )
-}
-
-/** Small floating islands far away — they make the world feel bigger than it is. */
-export function DistantIslands() {
-  const group = useRef()
-  const reducedMotion = useStore((s) => s.reducedMotion)
-  const islands = useMemo(() => {
-    const rand = seeded(303)
-    return Array.from({ length: tier === 'high' ? 7 : 4 }, (_, i) => {
-      const a = (i / 7) * Math.PI * 2 + rand() * 0.5
-      const r = 34 + rand() * 26
-      return { position: [Math.cos(a) * r, -3 + rand() * 12, Math.sin(a) * r], radius: 1.2 + rand() * 2.2, seed: 20 + i }
-    }).filter(({ position: [x, , z] }) => Math.hypot(x - HOME_ISLAND.x, z - HOME_ISLAND.z) > HOME_ISLAND.r + 12 && Math.hypot(x - SKY.x, z - SKY.z) > SKY.r + 16 && Math.hypot(x - SEA.x, z - SEA.z) > SEA.r + 10) // the home island's and Sky Island's patches of sky stay open
-  }, [])
-  useFrame(({ clock }) => {
-    if (reducedMotion) return
-    group.current.children.forEach((c, i) => {
-      c.position.y = islands[i].position[1] + Math.sin(clock.elapsedTime * 0.25 + i) * 0.4
-    })
-  })
-  return (
-    <group ref={group}>
-      {islands.map((isl, i) => (
-        <group key={i} position={isl.position}>
-          <IslandBody radius={isl.radius} seed={isl.seed} crystals={false} />
-        </group>
-      ))}
-    </group>
   )
 }
 

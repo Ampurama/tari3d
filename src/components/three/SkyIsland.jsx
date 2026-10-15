@@ -61,7 +61,7 @@ function tapWalk(e) {
 /* ───────── the island ───────── */
 
 function SkyGround() {
-  const { top, under } = useMemo(() => {
+  const { top } = useMemo(() => {
     const rows = 20
     const segs = 80
     const pos = []
@@ -97,61 +97,13 @@ function SkyGround() {
     top.setIndex(idx)
     top.computeVertexNormals()
 
-    const profile = [
-      [1.03, -0.3],
-      [0.94, -1.3],
-      [0.78, -2.6],
-      [0.56, -4.0],
-      [0.34, -5.4],
-      [0.14, -6.8],
-      [0.0001, -7.8],
-    ]
-    const upos = []
-    const ucol = []
-    const uidx = []
-    const a0 = new THREE.Color('#d4a87c')
-    const a1 = new THREE.Color('#8a6a5a')
-    profile.forEach(([f, y], row) => {
-      for (let s = 0; s <= 44; s++) {
-        const a = (s / 44) * Math.PI * 2
-        const j = row === 0 || row === profile.length - 1 ? 0 : 0.09 * Math.sin(a * 5 + row * 1.3)
-        const R = SKY.r * f * (1 + j)
-        upos.push(SKY.x + Math.cos(a) * R, SKY.level + y, SKY.z + Math.sin(a) * R)
-        c.copy(a0).lerp(a1, row / (profile.length - 1))
-        ucol.push(c.r, c.g, c.b)
-      }
-    })
-    for (let r = 0; r < profile.length - 1; r++)
-      for (let s = 0; s < 44; s++) {
-        const a = r * 45 + s
-        const b = a + 45
-        uidx.push(a, a + 1, b, b, a + 1, b + 1)
-      }
-    const under = new THREE.BufferGeometry()
-    under.setAttribute('position', new THREE.Float32BufferAttribute(upos, 3))
-    under.setAttribute('color', new THREE.Float32BufferAttribute(ucol, 3))
-    under.setIndex(uidx)
-    under.computeVertexNormals()
-    return { top, under }
+    return { top }
   }, [])
-  const materials = useMemo(
-    () => ({
-      top: withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), 'foliage'),
-      under: withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }), 'earth'),
-    }),
-    [],
-  )
-  useEffect(
-    () => () => {
-      top.dispose()
-      under.dispose()
-    },
-    [top, under],
-  )
+  const materials = useMemo(() => ({ top: withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), 'foliage') }), [])
+  useEffect(() => () => top.dispose(), [top])
   return (
     <group>
       <mesh geometry={top} material={materials.top} onClick={tapWalk} />
-      <mesh geometry={under} material={materials.under} />
     </group>
   )
 }
@@ -599,74 +551,7 @@ const CLEAR = [
 ]
 const isClear = (x, z, pad = 0) => CLEAR.every(([cx, cz, r]) => Math.hypot(x - cx, z - cz) > r + pad) && pathDist(x, z) > 0.55 + pad
 
-/** A soft sea of clouds below and around the island (one instanced draw). */
-function CloudSea() {
-  const ref = useRef()
-  const puffs = useMemo(() => {
-    const rand = seeded(5150)
-    const n = count(70, 36)
-    return Array.from({ length: n }, (_, i) => {
-      const a = (i / n) * Math.PI * 2 + rand() * 0.2
-      const r = SKY.r * (1.0 + rand() * 1.4)
-      return { x: Math.cos(a) * r, z: Math.sin(a) * r, y: -5.5 + rand() * 2.5 - (r - SKY.r) * 0.1, s: 1.6 + rand() * 2.4 }
-    })
-  }, [])
-  useLayoutEffect(() => {
-    const m = new THREE.Matrix4()
-    const q = new THREE.Quaternion()
-    puffs.forEach((p, i) => {
-      m.compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.s * 1.4, p.s * 0.5, p.s))
-      ref.current.setMatrixAt(i, m)
-    })
-    ref.current.instanceMatrix.needsUpdate = true
-  }, [puffs])
-  useFrame(({ clock }) => {
-    if (ref.current) ref.current.rotation.y = clock.elapsedTime * 0.006
-  })
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, puffs.length]} position={[SKY.x, SKY.level, SKY.z]} material={mat('#ffffff', 0.08, 1)}>
-      <icosahedronGeometry args={[1, 1]} />
-    </instancedMesh>
-  )
-}
 
-const ISLETS = [
-  { a: 0.6, r: 15.5, y: 1.2, s: 1.0, tree: true },
-  { a: 1.9, r: 17.5, y: -1.4, s: 0.8, tree: false },
-  { a: 2.9, r: 14.5, y: 2.6, s: 0.7, tree: true },
-  { a: 4.1, r: 16.5, y: -0.6, s: 1.1, tree: false },
-  { a: 5.3, r: 15.0, y: 1.9, s: 0.85, tree: true },
-]
-/** Little floating islands drifting around Sky Island, each with a tree or a few flowers. */
-function Islets() {
-  const ref = useRef()
-  useFrame(({ clock }) => {
-    const g = ref.current
-    if (!g) return
-    g.rotation.y = clock.elapsedTime * 0.01
-    g.children.forEach((c, i) => (c.position.y = SKY.level + ISLETS[i].y + Math.sin(clock.elapsedTime * 0.4 + i) * 0.25))
-  })
-  return (
-    <group ref={ref} position={[SKY.x, 0, SKY.z]}>
-      {ISLETS.map((it, i) => (
-        <group key={i} position={[Math.cos(it.a) * it.r, SKY.level + it.y, Math.sin(it.a) * it.r]} scale={it.s}>
-          <mesh position={[0, -0.9, 0]} rotation={[Math.PI, 0, 0]} material={mat('#b58a68', 0, 1)}>
-            <coneGeometry args={[1.3, 2.0, 7]} />
-          </mesh>
-          <C p={[0, 0.05, 0]} rt={1.32} rb={1.3} h={0.16} c="#8fcc66" seg={10} />
-          {it.tree ? (
-            <group>
-              <C p={[0, 0.6, 0]} rt={0.07} rb={0.1} h={0.9} c="#9a6b4a" seg={6} />
-              <S p={[0, 1.25, 0]} s={[0.55, 0.48, 0.55]} c={i % 2 ? '#ffc2d9' : '#93cf7c'} />
-            </group>
-          ) : (
-            [0, 1, 2, 3].map((k) => <S key={k} p={[Math.cos(k * 1.6) * 0.6, 0.2, Math.sin(k * 1.6) * 0.6]} s={0.08} c={['#ff8fbf', '#ffd27f', '#f7f2ff', '#b9a5e8'][k]} />)
-          )}
-        </group>
-      ))}
-    </group>
-  )
-}
 
 /** Flowers and tufts of grass all over the island, kept off the paths and the five places (two instanced draws). */
 function Meadow() {
@@ -899,8 +784,6 @@ export default function SkyIsland() {
       <Moment />
       <Waterfall />
       <Scenery />
-      <CloudSea />
-      <Islets />
       <Meadow />
       <SkyPaths />
       <Rainbow />

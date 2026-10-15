@@ -97,37 +97,3 @@ export function Flowers({ radius = ISLAND_RADIUS, amount = count(420, 200), seed
     </group>
   )
 }
-
-/** Small rocks orbiting the island lazily. */
-export function FloatingRocks({ amount = 7 }) {
-  const ref = useRef()
-  const reducedMotion = useStore((s) => s.reducedMotion)
-  const rocks = useMemo(() => {
-    const rand = seeded(77)
-    return Array.from({ length: amount }, (_, i) => ({
-      a: (i / amount) * Math.PI * 2,
-      r: 19.5 + rand() * 4,
-      y: ((y) => (y > -1 ? (y < 0.75 ? -1.4 : 3.9) : y))(-1.5 + rand() * 4), // never at the height of the sky bridges
-      s: 0.18 + rand() * 0.35,
-    }))
-  }, [amount])
-  useFrame((_, delta) => {
-    if (!reducedMotion) ref.current.rotation.y += delta * 0.02
-  })
-  return (
-    <group ref={ref}>
-      {rocks.map((r, i) => (
-        <group key={i} position={[Math.cos(r.a) * r.r, r.y, Math.sin(r.a) * r.r]}>
-          <mesh scale={r.s} rotation={[i, i * 2, 0]} castShadow>
-            <dodecahedronGeometry args={[1, 0]} />
-            <meshStandardMaterial color="#d6cdbd" roughness={0.75} flatShading />
-          </mesh>
-          <mesh scale={[r.s * 1.05, r.s * 0.35, r.s * 1.05]} position={[0, r.s * 0.55, 0]}>
-            <sphereGeometry args={[1, 12, 8]} />
-            <meshStandardMaterial color="#8fd47a" roughness={0.9} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  )
-}

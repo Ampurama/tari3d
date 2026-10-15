@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { beyondMeadow, meadowHeight, meadowStand, meadowWater } from './meadow'
 
 /*
  * The expanded main island: one continuous terrain with distinct zones.
@@ -49,9 +50,27 @@ export function outline(theta) {
     0.03 * Math.sin(9 * theta + 2.1) +
     // a little peninsula toward the cove, and a broad bay on the north-west
     0.06 * Math.exp(-((theta - 0.86) ** 2) * 9) -
-    0.04 * Math.exp(-((theta + 2.2) ** 2) * 6)
+    0.04 * Math.exp(-((theta + 2.2) ** 2) * 6) +
+    // two headlands reaching out into the sky (south-west past Our Memories, north-east past the
+    // lake); they only add land, and stay clear of where the bridges leave the coast
+    0.08 * Math.exp(-((theta - 2.35) ** 2) * 14) +
+    0.07 * Math.exp(-((theta + 1.05) ** 2) * 16)
   )
 }
+
+/**
+ * Soft hills in the open ground between the places (found by keeping clear of every path, place
+ * and thing to reach). [x, z, height, radius]: gentle enough to walk over (steepest ≈ 0.7).
+ */
+const HILLS = [
+  [-4.0, -12.0, 1.4, 3.0], // Moonrise Knoll, north of the forest
+  [3.5, -11.0, 1.1, 2.6], // beside the way to the sky bridge
+  [-5.0, -1.0, 0.9, 2.4], // between the garden and the forest
+  [-10.5, -2.0, 1.0, 2.2], // the west shore
+  [11.5, -2.0, 1.0, 2.0], // behind Starfall Cliff
+  [12.0, 6.5, 0.8, 1.8], // above the Secret Cove
+  [-11.0, 6.0, 0.7, 2.0], // past Our Memories
+]
 
 export const edgeRadius = (x, z) => MAIN_RADIUS * outline(Math.atan2(z, x))
 
@@ -62,7 +81,9 @@ let picnicLevel = null
 export function worldHeight(x, z, skipPicnic = false) {
   const r = Math.hypot(x, z)
   const t = r / edgeRadius(x, z)
-  let h = 0.55 * (1 - Math.min(1.2, t) ** 2)
+  // a fuller dome: the island swells toward its middle
+  let h = 0.75 * (1 - Math.min(1.2, t) ** 2)
+  for (const [hx, hz, hh, hr] of HILLS) h += hh * (1 - smooth(0, hr, Math.hypot(x - hx, z - hz)))
   // rolling hills
   h += 0.22 * Math.sin(x * 0.42 + 1.1) * Math.cos(z * 0.37 - 0.4) + 0.12 * Math.sin(x * 0.9 - z * 0.7 + 2.0) + 0.05 * Math.sin(x * 1.9 + z * 1.6)
   // the meadow is gentle and open
@@ -76,8 +97,8 @@ export function worldHeight(x, z, skipPicnic = false) {
   // the forest floor rolls a bit more
   h += 0.18 * bump(x, z, ZONES.forest, 4.2) * Math.sin(x * 1.3 + z * 0.8)
   // lake basin
-  h -= 1.55 * bump(x, z, ZONES.lake, 3.9)
-  // the cove dips toward the sea of clouds
+  h -= 1.75 * bump(x, z, ZONES.lake, 3.9)
+  // the cove dips toward the meadow below
   h -= 0.3 * bump(x, z, ZONES.cove, 2.6)
   // Starfall Cliff: a plateau with a gentle ramp on its west side
   const c = ZONES.cliff
@@ -95,8 +116,6 @@ export function worldHeight(x, z, skipPicnic = false) {
       h = h * (1 - pq) + picnicLevel * pq
     }
   }
-  // edges roll off before the rock face
-  h -= 0.55 * smooth(0.86, 1.0, t)
   return h
 }
 
@@ -151,8 +170,8 @@ const homeOutline = (theta) => 1 + 0.05 * Math.sin(3 * theta + 1.0) + 0.03 * Mat
 export const homeDistance = (x, z) =>
   Math.hypot(x - HOME_ISLAND.x, z - HOME_ISLAND.z) / (HOME_ISLAND.r * homeOutline(Math.atan2(z - HOME_ISLAND.z, x - HOME_ISLAND.x)))
 export const onHomeIsland = (x, z) => homeDistance(x, z) < 1
-/** The home island is flat (it's a garden), rolling off only at the coast. */
-export const homeHeight = (x, z) => HOME_ISLAND.level - 0.45 * smooth(0.84, 1.0, homeDistance(x, z))
+/** The home garden is flat, right out to where it meets the meadow. */
+export const homeHeight = () => HOME_ISLAND.level
 
 /** A rope bridge across the sky, straight north from the main island's coast to the home island. */
 export const SKY_BRIDGE = { x: 0, z0: -13.4, z1: -27.0, halfWidth: 0.6 }
@@ -162,10 +181,12 @@ let skyStart = null
 export function skyBridgeHeight(z) {
   skyStart ??= worldHeight(SKY_BRIDGE.x, SKY_BRIDGE.z0)
   const t = Math.min(1, Math.max(0, (SKY_BRIDGE.z0 - z) / (SKY_BRIDGE.z0 - SKY_BRIDGE.z1)))
-  return skyStart + (HOME_ISLAND.level - skyStart) * t - 0.3 * Math.sin(Math.PI * t) + 0.04
+  const deck = skyStart + (HOME_ISLAND.level - skyStart) * t - 0.3 * Math.sin(Math.PI * t) + 0.04
+  // where it leaves the coast it rides over the meadow's slope, never into it
+  return Math.max(deck, meadowHeight(SKY_BRIDGE.x, z) + 0.12)
 }
 
-/* ───────── Sky Island: a higher island to the east, over the sea of clouds (reached by hot air balloon) ───────── */
+/* ───────── Sky Island: high on a bluff to the east, over the meadow (reached by hot air balloon) ───────── */
 
 export const SKY = { x: 64, z: -6, r: 10, level: 7.5 }
 const skyOutline = (theta) => 1 + 0.05 * Math.sin(3 * theta + 0.4) + 0.03 * Math.sin(7 * theta - 1.0)
@@ -257,17 +278,20 @@ export const PIER = walkway(-30.3, -13.0, -31.7, -19.4, 0.72, () => 0.16)
 const WALKWAYS = [WEST_BRIDGE, HOPE_BRIDGE, PIER]
 
 /** Height of the ground that isn't the main island (bridges, the home island, Sky Island, clouds), or null. */
-function otherGround(x, z) {
+const below = (deck, fromY) => fromY !== undefined && fromY < deck - 0.9
+
+function otherGround(x, z, fromY) {
   for (const w of WALKWAYS) {
     if (!onWalkway(w, x, z)) continue
     const deck = w.height(walkwayAt(w, x, z).t)
+    if (below(deck, fromY) && !isleAt(x, z)) continue
     const isle = isleAt(x, z)
     if (isle) return Math.max(deck, isleHeight(isle, x, z))
     return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
   }
   const isle = isleAt(x, z)
   if (isle) return isleHeight(isle, x, z)
-  if (onSkyBridge(x, z)) {
+  if (onSkyBridge(x, z) && !below(skyBridgeHeight(z), fromY)) {
     const deck = skyBridgeHeight(z)
     if (onHomeIsland(x, z)) return Math.max(deck, homeHeight(x, z))
     return Math.hypot(x, z) < edgeRadius(x, z) ? Math.max(deck, worldHeight(x, z)) : deck
@@ -282,24 +306,30 @@ function otherGround(x, z) {
  * Ground under (x, z) for something in the air (a jump), or null over the void.
  * Same as standHeight wherever there's land.
  */
-export function groundAt(x, z) {
-  const other = otherGround(x, z)
+export function groundAt(x, z, fromY) {
+  const other = otherGround(x, z, fromY)
   if (other !== null) return other
-  return Math.hypot(x, z) < edgeRadius(x, z) ? standHeight(x, z) : null
+  return standHeight(x, z, fromY)
 }
 
 /** Is this Sky Island (or its clouds)? Jumping only works up there. */
 export const inSkyArea = (x, z) => skyDistance(x, z) < 1.02 || Boolean(platformAt(x, z, 1.05))
 
 /** Height the player stands at (terrain, or the bridge deck over the lake). */
-export function standHeight(x, z) {
-  const other = otherGround(x, z)
+export function standHeight(x, z, fromY) {
+  const other = otherGround(x, z, fromY)
   if (other !== null) return other
+  // out past the main meadow's edge: the wider meadow around everything
+  if (Math.hypot(x, z) >= edgeRadius(x, z)) return meadowStand(x, z)
   const h = worldHeight(x, z)
   return onBridge(x, z) ? Math.max(h, BRIDGE.deck) : h
 }
 
-export const isWater = (x, z) => worldHeight(x, z) < WATER_LEVEL - 0.02 && !onBridge(x, z)
+/** Water: Reflection Lake on the main meadow, and the river, the western lake and the pond around it. */
+export const isWater = (x, z) => {
+  if (Math.hypot(x, z) >= edgeRadius(x, z)) return meadowWater(x, z)
+  return dist(x, z, ZONES.lake) < 4.4 && worldHeight(x, z) < WATER_LEVEL - 0.02 && !onBridge(x, z)
+}
 
 /* ───────── colliders ───────── */
 
@@ -307,6 +337,27 @@ export const isWater = (x, z) => worldHeight(x, z) < WATER_LEVEL - 0.02 && !onBr
 export const colliders = []
 export function addCollider(x, z, r) {
   colliders.push({ x, z, r })
+}
+
+/* the colliders sorted into 4 m buckets, so a check only looks at the few nearby (rebuilt when they change) */
+const BUCKET = 4
+const NONE = []
+let buckets = null
+let bucketsFor = -1
+const bucketKey = (i, j) => i * 100003 + j
+function collidersAround(x, z) {
+  if (bucketsFor !== colliders.length) {
+    buckets = new Map()
+    for (const c of colliders)
+      for (let i = Math.floor((c.x - c.r) / BUCKET); i <= Math.floor((c.x + c.r) / BUCKET); i++)
+        for (let j = Math.floor((c.z - c.r) / BUCKET); j <= Math.floor((c.z + c.r) / BUCKET); j++) {
+          const k = bucketKey(i, j)
+          if (!buckets.has(k)) buckets.set(k, [])
+          buckets.get(k).push(c)
+        }
+    bucketsFor = colliders.length
+  }
+  return buckets.get(bucketKey(Math.floor(x / BUCKET), Math.floor(z / BUCKET))) || NONE
 }
 
 /**
@@ -319,23 +370,24 @@ export function walkable(x, z, fromY) {
     // a bridge deck, the pier, or a cloud platform
   } else if (isle) {
     if (isleDistance(isle, x, z) > 0.86) return false
-  } else if (onHomeIsland(x, z)) {
-    if (homeDistance(x, z) > 0.86) return false
   } else if (onSkyIsland(x, z)) {
-    if (skyDistance(x, z) > 0.86) return false
+    if (skyDistance(x, z) > 0.86) return false // Sky Island stands on a bluff: the balloon is the way up
+  } else if ((skyDistance(x, z) - 1) * SKY.r < 0.6) {
+    return false // the foot of the bluff, right under Sky Island's edge
   } else {
-    if (Math.hypot(x, z) > edgeRadius(x, z) * 0.9) return false
+    // the main meadow, the home garden and the wide meadow around them are all one land
+    if (beyondMeadow(x, z)) return false
     if (isWater(x, z)) return false
   }
-  if (fromY !== undefined && standHeight(x, z) - fromY > 0.32) return false // too steep to climb
-  for (const c of colliders) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return false
+  if (fromY !== undefined && standHeight(x, z, fromY) - fromY > 0.32) return false // too steep to climb
+  for (const c of collidersAround(x, z)) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return false
   for (const b of blockers) if (b(x, z)) return false
   return true
 }
 
 /** Is something solid in the way at (x, z) (trees, props, walls) — for moving through the air. */
 export function solidAt(x, z) {
-  for (const c of colliders) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return true
+  for (const c of collidersAround(x, z)) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return true
   for (const b of blockers) if (b(x, z)) return true
   return false
 }
@@ -355,9 +407,10 @@ export function seeded(seed = 1) {
 
 /** Ground slope (rise per unit) — used to keep grass and trees off cliff faces. */
 export function slope(x, z) {
-  if (otherGround(x, z) !== null) return 0 // the bridge and the home island are gentle everywhere
+  if (otherGround(x, z) !== null) return 0 // the bridges and the home garden are gentle everywhere
   const e = 0.25
-  return Math.hypot(worldHeight(x + e, z) - worldHeight(x - e, z), worldHeight(x, z + e) - worldHeight(x, z - e)) / (2 * e)
+  const g = (px, pz) => (Math.hypot(px, pz) < edgeRadius(px, pz) ? worldHeight(px, pz) : meadowHeight(px, pz))
+  return Math.hypot(g(x + e, z) - g(x - e, z), g(x, z + e) - g(x, z - e)) / (2 * e)
 }
 
 export const inZone = (x, z, name, extra = 0) => dist(x, z, ZONES[name]) < ZONES[name].r + extra
@@ -395,9 +448,10 @@ export function groundColor(out, x, z, h) {
     out.lerp(C.stone, paving * 0.35).lerp(C.sand, paving * (0.45 + ring * 0.2))
   }
   // shore and cove sand
-  const shore = 1 - smooth(WATER_LEVEL + 0.05, WATER_LEVEL + 0.45, h)
+  const nearLake = 1 - smooth(4.0, 4.9, dist(x, z, ZONES.lake))
+  const shore = (1 - smooth(WATER_LEVEL + 0.05, WATER_LEVEL + 0.45, h)) * nearLake
   out.lerp(C.sand, Math.max(shore * 0.9, bump(x, z, ZONES.cove, 2.4) * 0.6))
-  out.lerp(C.lakebed, 1 - smooth(WATER_LEVEL - 0.5, WATER_LEVEL - 0.05, h))
+  out.lerp(C.lakebed, (1 - smooth(WATER_LEVEL - 0.5, WATER_LEVEL - 0.05, h)) * nearLake)
   // steep faces are bare stone
   out.lerp(C.stone, smooth(0.9, 1.5, slope(x, z)))
   return out
@@ -419,7 +473,7 @@ export function buildTerrainGeometry({ rows = 56, segments = 220 } = {}) {
       const x = Math.cos(theta) * R
       const z = Math.sin(theta) * R
       let y = worldHeight(x, z)
-      if (row === rowFactors.length - 1) y -= 0.25
+      if (row === rowFactors.length - 1) y = meadowHeight(x, z)
       positions.push(x, y, z)
       groundColor(color, x, z, y)
       colors.push(color.r, color.g, color.b)
@@ -442,52 +496,3 @@ export function buildTerrainGeometry({ rows = 56, segments = 220 } = {}) {
 }
 
 /** The faceted rock underside of the main island, following the same coastline. */
-export function buildUndersideGeometry({ segments = 64 } = {}) {
-  const profile = [
-    [1.02, -0.3],
-    [0.97, -1.2],
-    [0.88, -2.4],
-    [0.74, -3.8],
-    [0.57, -5.4],
-    [0.4, -7.0],
-    [0.24, -8.6],
-    [0.1, -10.2],
-    [0.0001, -11.2],
-  ]
-  // floating rock in dream colours: warm peach sandstone fading through rose clay into lavender
-  const top = new THREE.Color('#d8a888')
-  const mid = new THREE.Color('#b48486')
-  const bottom = new THREE.Color('#77699a')
-  const positions = []
-  const colors = []
-  const indices = []
-  const color = new THREE.Color()
-  profile.forEach(([rf, y], row) => {
-    for (let s = 0; s <= segments; s++) {
-      const theta = (s / segments) * Math.PI * 2
-      const jitter = row === 0 || row === profile.length - 1 ? 0 : 0.08 * Math.sin(theta * 5 + row * 1.7) + 0.05 * Math.sin(theta * 13 - row * 2.3)
-      const R = MAIN_RADIUS * outline(theta) * rf * (1 + jitter)
-      const x = Math.cos(theta) * R
-      const z = Math.sin(theta) * R
-      positions.push(x, row === 0 ? worldHeight(x, z) - 0.3 : y, z)
-      const t = row / (profile.length - 1)
-      if (t < 0.4) color.copy(top).lerp(mid, t / 0.4)
-      else color.copy(mid).lerp(bottom, (t - 0.4) / 0.6)
-      colors.push(color.r, color.g, color.b)
-    }
-  })
-  const stride = segments + 1
-  for (let row = 0; row < profile.length - 1; row++) {
-    for (let s = 0; s < segments; s++) {
-      const a = row * stride + s
-      const b = a + stride
-      indices.push(a, a + 1, b, b, a + 1, b + 1)
-    }
-  }
-  const g = new THREE.BufferGeometry()
-  g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-  g.setIndex(indices)
-  g.computeVertexNormals()
-  return g
-}

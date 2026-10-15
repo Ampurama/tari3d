@@ -1,3 +1,4 @@
+import { DISTANCE_SITE } from './meadow'
 import * as THREE from 'three'
 import { PATHS, SPREAD, WATER_LEVEL, worldHeight, ZONES } from './terrain'
 import { connections, constellation, futureWorlds, glowFlowers, littleThings, memories, memoryLane } from '../content/config'
@@ -148,7 +149,8 @@ export const albumSpot = ground(gallery.x + Math.cos(GALLERY_ENTRANCE) * 1.55, g
 
 export const areas = {
   intro: v(0, 70, 60),
-  distance: v(72, 14, -34),
+  // Chapter 2 stands on two hilltops in the east meadow (lib/meadow.js)
+  distance: v(DISTANCE_SITE.x, DISTANCE_SITE.y, DISTANCE_SITE.z),
   finale: v(0, 230, 0),
   constellation: v(34, 40, -62),
   future: v(-84, 22, -36),
@@ -199,8 +201,8 @@ export const hiddenHeartSpots = [
 
 /* ───────── Chapter 2: the bridge between two islands (local to areas.distance) ───────── */
 
-export const ISLAND_SPREAD = 9
-export const ISLAND_LIFT = 0.75
+export const ISLAND_SPREAD = DISTANCE_SITE.spread
+export const ISLAND_LIFT = DISTANCE_SITE.lift
 const CONNECTION_SPOTS = {
   trust: v(-9.9, ISLAND_LIFT + 0.05, 0.9),
   communication: v(-8.2, ISLAND_LIFT + 0.05, 1.3), // the answering one sits on her island (mirrored)

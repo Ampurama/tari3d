@@ -105,8 +105,8 @@ function Pad({ at, name }) {
 }
 
 /**
- * Clouds along the way: some at the balloon's height to drift past (never right on the path),
- * and a soft layer far below, so the flight feels high above everything.
+ * Clouds along the way, at the balloon's height, to drift past (never right on the path, never over
+ * the main meadow).
  */
 function RouteClouds() {
   const ref = useRef()
@@ -120,12 +120,6 @@ function RouteClouds() {
       const side = i % 2 ? 1 : -1
       // beside the route (3–7 m off it), a little above or below
       list.push([p.x + side * (3 + rand() * 4), p.y + (rand() - 0.5) * 5, p.z + (rand() - 0.5) * 6, 1.2 + rand() * 1.4])
-    }
-    const below = count(22, 12)
-    for (let i = 0; i < below; i++) {
-      const t = i / (below - 1)
-      const p = ROUTE_CURVE.getPointAt(0.15 + t * 0.7)
-      list.push([p.x + (rand() - 0.5) * 16, 1.5 + rand() * 3, p.z + (rand() - 0.5) * 16, 2.2 + rand() * 2])
     }
     // never over the main island: from the high three-quarter camera a cloud there would sit on
     // top of the lake and the paths (the higher it floats, the more of the island it can cover)

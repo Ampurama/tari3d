@@ -3,13 +3,14 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { currentAvatar, useStore } from '../../store'
 import { input, player, readMove } from '../../lib/player'
-import { groundAt, HOPE_BRIDGE, isleDistance, ISLE_A, ISLE_B, onWalkway, PIER, walkwayAt, WEST_BRIDGE, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
+import { edgeRadius, homeDistance, groundAt, HOPE_BRIDGE, isleDistance, ISLE_A, ISLE_B, onWalkway, PIER, walkwayAt, WEST_BRIDGE, HOME_ISLAND, inSkyArea, SKY, SKY_BRIDGE, skyDistance, slope, solidAt, standHeight, walkable } from '../../lib/terrain'
 import { holdState, interactables, interactNearest, nearestInteractable } from '../../lib/interactions'
 import { ISO, polarFor, rig } from '../../lib/iso'
 import { viewpointSpot } from '../../lib/layout'
 import { holdSeat, sitStyle, standUp } from '../../lib/actions'
 import { followBlocked, handFollow, holding, myHand, releaseHand } from '../../lib/hand'
 import { respawnPoint } from '../../lib/sky'
+import { warmPaths } from '../../lib/path'
 import { holdBalloon } from '../../lib/balloon'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
@@ -52,8 +53,13 @@ export const islandCenter = () => {
   if (onWalkway(WEST_BRIDGE, x, z)) return center.lerpVectors(MAIN_CENTER, ISLE_A_CENTER, THREE.MathUtils.smoothstep(walkwayAt(WEST_BRIDGE, x, z).t, 0.15, 0.85))
   if (isleDistance(ISLE_A, x, z) < 1.3 || onWalkway(PIER, x, z)) return center.copy(ISLE_A_CENTER)
   if (isleDistance(ISLE_B, x, z) < 1.3) return center.copy(ISLE_B_CENTER)
-  return center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
+  const places = center.lerpVectors(MAIN_CENTER, HOME_CENTER, THREE.MathUtils.smoothstep(-z, -SKY_BRIDGE.z0, -SKY_BRIDGE.z1))
+  // out in the wide meadow (away from the main meadow and the home garden), the view goes with her
+  const away = Math.min(Math.hypot(x, z) - edgeRadius(x, z), (homeDistance(x, z) - 1) * HOME_ISLAND.r)
+  const k = THREE.MathUtils.smoothstep(away, 1, 9)
+  return k > 0 ? places.lerp(meadowFocus.set(x, y, z), k) : places
 }
+const meadowFocus = new THREE.Vector3()
 
 /** Jumping (only on Sky Island and its clouds): about a metre high, three and a half metres at a run. */
 const JUMP_SPEED = 5.6
@@ -64,7 +70,7 @@ function stepAir(x, z, dx, dz) {
   const y = player.position.y
   const ok = (nx, nz) => {
     if (solidAt(nx, nz)) return false
-    const g = groundAt(nx, nz)
+    const g = groundAt(nx, nz, y)
     return g === null || g <= y + 0.25 // can't fly into the side of something higher
   }
   if (ok(x + dx, z + dz)) return [x + dx, z + dz]
@@ -100,7 +106,9 @@ function step(x, z, dx, dz) {
   const ok = (nx, nz) => {
     if (!walkable(nx, nz)) return false
     // cliff faces: can walk down, can't climb anything steep
-    const rise = standHeight(nx, nz) - y
+    const rise = standHeight(nx, nz, y) - y
+    // and no popping up onto a bridge from underneath it (or dropping off its side)
+    if (Math.abs(rise) > 0.5) return false
     return !(rise > 0.02 && slope(nx, nz) > 1.1)
   }
   if (ok(x + dx, z + dz)) return [x + dx, z + dz]
@@ -157,6 +165,7 @@ export function PlayerController() {
     if (!wasExploring.current) {
       smoothFollow.current.copy(followTarget(weight))
       wasExploring.current = true
+      warmPaths() // get tap-to-walk's grid ready in the background
     }
 
     // ── movement intent: keyboard / joystick, or tap-to-walk
@@ -271,7 +280,7 @@ export function PlayerController() {
         player.vy = 0
       } else if (player.position.y < SKY.level - 4.5) recover()
     } else {
-      player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z), 18, delta)
+      player.position.y = THREE.MathUtils.damp(player.position.y, standHeight(player.position.x, player.position.z, player.position.y), 18, delta)
       // remember the last safe ground (for coming back after a fall)
       if (walkable(player.position.x, player.position.z)) {
         player.safe.x = player.position.x

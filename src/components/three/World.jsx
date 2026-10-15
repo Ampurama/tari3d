@@ -4,7 +4,6 @@ import { count } from '../../lib/device'
 import { useInteractable } from '../../lib/interactions'
 import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
-import { FloatingRocks } from './Island'
 import { Bench, BlossomTree, SecretArch, Telescope } from './Props'
 import { Interactive } from './Bits'
 import { DriftParticles, Fireflies } from './Particles'
@@ -15,8 +14,9 @@ import LoveCapsule from './LoveCapsule'
 import HiddenHearts from './HiddenHearts'
 import TimeMachine from './TimeMachine'
 import FuturePortal from './FuturePortal'
-import { DistantIslands, IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, ShoreGlow, Waterfall } from './Terrain'
+import { IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, ShoreGlow, Waterfall } from './Terrain'
 import Vegetation from './Vegetation'
+import Meadow from './Meadow'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
 import Discoveries from './Discoveries'
@@ -41,7 +41,7 @@ function Station({ id, position, label, radius = 1.8, onUse }) {
   return null
 }
 
-/** The main floating island — the expanded world — and everything on it. */
+/** The main meadow — the expanded world — the landscape around it, and everything on it. */
 export default function World() {
   const goTo = useStore((s) => s.goTo)
   const startFinale = useStore((s) => s.startFinale)
@@ -75,8 +75,7 @@ export default function World() {
       <PathLanterns />
       <ShoreGlow />
       <Vegetation />
-      <DistantIslands />
-      <FloatingRocks />
+      <Meadow />
       <LoveTree />
 
       {/* the story */}

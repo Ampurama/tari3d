@@ -7,13 +7,17 @@ import { colliders, HOME_ISLAND, MAIN_RADIUS, obstacles, SEA, SKY, slope, standH
  */
 
 const CELL = 0.3
-// the grid covers the main island, the home island to the north and Sky Island to the east
-const MIN_X = Math.min(-(MAIN_RADIUS + 1.2), SEA.x - SEA.r - 1) // …and the western isles
+// the grid covers the main meadow, the home garden to the north, Sky Island to the east, the
+// western isles, and the wide meadow between them (south as far as the pond)
+const MIN_X = Math.min(-(MAIN_RADIUS + 1.2), SEA.x - SEA.r - 1)
 const MAX_X = SKY.x + SKY.r * 1.6
 const MIN_Z = HOME_ISLAND.z - HOME_ISLAND.r * 1.1 - 1
+const MAX_Z = 40
 const NX = Math.ceil((MAX_X - MIN_X) / CELL)
-const NZ = Math.ceil((MAIN_RADIUS + 1.2 - MIN_Z) / CELL)
+const NZ = Math.ceil((MAX_Z - MIN_Z) / CELL)
 let grid = null
+/** stand height of every walkable cell */
+let heights = null
 let builtFor = ''
 const gridKey = () => `${colliders.length}:${obstacles.version}`
 
@@ -26,13 +30,67 @@ const toCellZ = (v) => Math.max(0, Math.min(NZ - 1, Math.floor((v - MIN_Z) / CEL
 function canStep(ax, az, bx, bz) {
   if (!walkable(bx, bz)) return false
   const rise = standHeight(bx, bz) - standHeight(ax, az)
+  if (Math.abs(rise) > 0.5) return false // onto (or off the side of) a bridge
   return !(rise > 0.02 && slope(bx, bz) > 1.1)
 }
 
-function build() {
+/** Fill rows [from, to) of the grid. */
+function buildRows(from, to) {
+  for (let j = from; j < to; j++)
+    for (let i = 0; i < NX; i++) {
+      const k = j * NX + i
+      const x = toWorldX(i)
+      const z = toWorldZ(j)
+      const ok = walkable(x, z)
+      grid[k] = ok ? 1 : 0
+      if (ok) heights[k] = standHeight(x, z)
+    }
+}
+function start() {
   grid = new Uint8Array(NX * NZ)
-  for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) grid[j * NX + i] = walkable(toWorldX(i), toWorldZ(j)) ? 1 : 0
+  heights = new Float32Array(NX * NZ)
+}
+let warmRow = -1
+/** what the grid looked like when the warm-up started (if colliders change meanwhile, it's rebuilt) */
+let warmKey = ''
+function build() {
+  start()
+  buildRows(0, NZ)
   builtFor = gridKey()
+  warmRow = -1
+}
+
+/**
+ * Build the walking grid a few rows at a time while the browser is idle, so the first tap rarely
+ * has to wait for it (the meadow is big). Safe to call more than once.
+ */
+export function warmPaths() {
+  if (typeof window === 'undefined' || (grid && builtFor === gridKey()) || warmRow >= 0) return
+  start()
+  builtFor = ''
+  warmRow = 0
+  warmKey = gridKey()
+  const idle = window.requestIdleCallback || ((cb) => setTimeout(() => cb({ timeRemaining: () => 8 }), 30))
+  const step = (deadline) => {
+    if (warmRow < 0) return // finished (or built in one go by a tap meanwhile)
+    while (warmRow < NZ && deadline.timeRemaining() > 2) {
+      buildRows(warmRow, Math.min(NZ, warmRow + 4))
+      warmRow += 4
+    }
+    if (warmRow >= NZ) {
+      builtFor = warmKey
+      warmRow = -1
+    } else idle(step)
+  }
+  idle(step)
+}
+
+/** Can she step between neighbouring cells (read off the grid: the same rule as canStep, with the
+ * slope taken from the step itself)? */
+function cellStep(a, b, diagonal) {
+  const rise = heights[b] - heights[a]
+  if (Math.abs(rise) > 0.5) return false
+  return !(rise > 0.02 && rise / (diagonal ? CELL * Math.SQRT2 : CELL) > 1.1)
 }
 
 /** Is the straight segment walkable (sampled finely)? */
@@ -71,7 +129,15 @@ function nearestOpen(i, j) {
  */
 export function findPath(sx, sz, tx, tz) {
   if (clearLine(sx, sz, tx, tz)) return [[tx, tz]]
-  if (!grid || builtFor !== gridKey()) build()
+  if (!grid || builtFor !== gridKey()) {
+    // a warm-up still in progress: finish it now; otherwise (or if things changed) build afresh
+    if (warmRow >= 0 && builtFor === '') {
+      buildRows(warmRow, NZ)
+      builtFor = warmKey
+      warmRow = -1
+    }
+    if (builtFor !== gridKey()) build()
+  }
   const start = nearestOpen(toCellX(sx), toCellZ(sz))
   const goal = nearestOpen(toCellX(tx), toCellZ(tz))
   if (!start || !goal) return null
@@ -80,20 +146,46 @@ export function findPath(sx, sz, tx, tz) {
   const g = new Float32Array(NX * NZ).fill(Infinity)
   const from = new Int32Array(NX * NZ).fill(-1)
   const closed = new Uint8Array(NX * NZ)
-  const open = [si]
   const f = new Float32Array(NX * NZ).fill(Infinity)
+  // the open list as a binary heap on f (the meadow is big: a linear scan got slow)
+  const heap = [si]
+  const less = (a, b) => f[heap[a]] < f[heap[b]]
+  const swap = (a, b) => ([heap[a], heap[b]] = [heap[b], heap[a]])
+  const push = (k) => {
+    heap.push(k)
+    for (let i = heap.length - 1; i > 0; ) {
+      const p = (i - 1) >> 1
+      if (!less(i, p)) break
+      swap(i, p)
+      i = p
+    }
+  }
+  const pop = () => {
+    const top = heap[0]
+    const last = heap.pop()
+    if (heap.length) {
+      heap[0] = last
+      for (let i = 0; ; ) {
+        const l = i * 2 + 1
+        const r = l + 1
+        let m = i
+        if (l < heap.length && less(l, m)) m = l
+        if (r < heap.length && less(r, m)) m = r
+        if (m === i) break
+        swap(i, m)
+        i = m
+      }
+    }
+    return top
+  }
   const h = (k) => Math.hypot((k % NX) - goal[0], Math.floor(k / NX) - goal[1])
   g[si] = 0
   f[si] = h(si)
   let found = false
   let guard = 0
-  while (open.length && guard++ < 60000) {
-    // small open lists: a linear scan is fast enough here
-    let best = 0
-    for (let k = 1; k < open.length; k++) if (f[open[k]] < f[open[best]]) best = k
-    const cur = open[best]
-    open[best] = open[open.length - 1]
-    open.pop()
+  while (heap.length && guard++ < 120000) {
+    const cur = pop()
+    if (closed[cur]) continue // a stale entry (it was improved and pushed again)
     if (cur === gi) {
       found = true
       break
@@ -111,13 +203,13 @@ export function findPath(sx, sz, tx, tz) {
         if (closed[nk] || !grid[nk]) continue
         // no cutting corners past obstacles
         if (di && dj && (!grid[cj * NX + ni] || !grid[nj * NX + ci])) continue
-        if (!canStep(toWorldX(ci), toWorldZ(cj), toWorldX(ni), toWorldZ(nj))) continue
+        if (!cellStep(cur, nk, di && dj)) continue
         const cost = g[cur] + (di && dj ? Math.SQRT2 : 1)
         if (cost < g[nk]) {
-          if (g[nk] === Infinity) open.push(nk)
           g[nk] = cost
           f[nk] = cost + h(nk)
           from[nk] = cur
+          push(nk)
         }
       }
   }
@@ -135,7 +227,8 @@ export function findPath(sx, sz, tx, tz) {
   let k = 0
   while (k < cells.length) {
     let far = k
-    for (let m = cells.length - 1; m > k; m--)
+    // look a limited way ahead (straight-line checks are costly over a long meadow walk)
+    for (let m = Math.min(cells.length - 1, k + 30); m > k; m--)
       if (clearLine(ax, az, cells[m][0], cells[m][1])) {
         far = m
         break

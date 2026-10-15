@@ -38,7 +38,7 @@ const skyFragment = /* glsl */ `
     vec3 d = normalize(vDir);
     float h = d.y;
     // day (dreamcore): a warm peach-pink glow at the horizon, lavender above it, a deep celestial
-    // blue overhead, and a soft lilac haze below (the sea of clouds the islands float on)
+    // blue overhead, and a soft lilac haze below the horizon
     vec3 dayCol = mix(uDayHorizon, uDayMid, smoothstep(0.0, 0.3, h));
     dayCol = mix(dayCol, uDayTop, smoothstep(0.3, 0.9, h));
     dayCol = mix(dayCol, uDayBelow, smoothstep(0.0, -0.35, h));
@@ -247,23 +247,12 @@ function Planet() {
 }
 
 /**
- * Clouds: a soft sea of white clouds below the island, and a few slow ones drifting across the sky
+ * Clouds: big soft cumulus drifting high over the meadow, all around the horizon
  * (they turn peach and pink at sunset).
  */
 function Clouds() {
-  const below = useRef()
   const above = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
-  const sea = useMemo(() => {
-    const rand = seeded(21)
-    // a thick, bright sea of clouds under the island (big soft heaps, like a painted background)
-    return Array.from({ length: count(26, 14) }, (_, i) => {
-      const a = (i / 26) * Math.PI * 2 + rand() * 0.4
-      const r = 19 + rand() * 22
-      const s = 16 + rand() * 14
-      return { position: [Math.cos(a) * r, -5 - rand() * 5, Math.sin(a) * r], scale: [s * 1.5, s * 0.8, 1], opacity: 0.85 + rand() * 0.15, seed: (i % 4) + 1, pink: i % 6 === 0 }
-    })
-  }, [])
   const sky = useMemo(() => {
     const rand = seeded(57)
     // big cumulus clouds around the horizon, each one a few overlapping puffs
@@ -271,7 +260,7 @@ function Clouds() {
     for (let i = 0; i < count(9, 6); i++) {
       const a = (i / 9) * Math.PI * 2 + rand() * 0.5
       const r = 46 + rand() * 22
-      const base = [Math.cos(a) * r, 3 + rand() * 9, Math.sin(a) * r]
+      const base = [Math.cos(a) * r, 14 + rand() * 10, Math.sin(a) * r]
       const s = 11 + rand() * 9
       ;[
         [0, 0, s * 1.6, s * 0.9],
@@ -292,12 +281,11 @@ function Clouds() {
   const gold = useMemo(() => new THREE.Color('#ffc9a8'), [])
   useFrame((_, delta) => {
     if (!reducedMotion) {
-      below.current.rotation.y += delta * 0.006
       above.current.rotation.y -= delta * 0.004
     }
     // white by day, warming at sunset, dim at night
     const k = 0.35 + 0.65 * atmosphere.day
-    ;[below.current, above.current].forEach((g) =>
+    ;[above.current].forEach((g) =>
       g.children.forEach((sp, i) => {
         tint.copy(sp.userData.pink ? blush : [white, lavender, cream, white][i % 4]).lerp(gold, atmosphere.sunset * 0.55).multiplyScalar(k)
         sp.material.color.copy(tint)
@@ -312,7 +300,6 @@ function Clouds() {
     ))
   return (
     <>
-      <group ref={below}>{draw(sea)}</group>
       <group ref={above}>{draw(sky)}</group>
     </>
   )

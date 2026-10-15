@@ -89,7 +89,7 @@ function useInstances(ref, items, apply) {
 /* ───────── grass ───────── */
 
 /** A soft tuft: five wide, slightly curved blades fanned out (reads as lush grass, not as lines). */
-function bladeGeometry() {
+export function bladeGeometry() {
   const pos = []
   const col = []
   const nor = []
@@ -144,7 +144,8 @@ function Grass() {
       for (let z = -R; z < R; z += stepSize) {
         const px = x + (rand() - 0.5) * stepSize
         const pz = z + (rand() - 0.5) * stepSize
-        if (!onLand(px, pz, 0.93) || slope(px, pz) > 0.85 || pathDistance(px, pz) < 0.42) continue
+        // right out to the edge, where the wide meadow's own grass takes over
+        if (Math.hypot(px, pz) > edgeRadius(px, pz) * 0.995 || isWater(px, pz) || slope(px, pz) > 0.85 || pathDistance(px, pz) < 0.42) continue
         if (zoneDistance(px, pz, 'gallery') < ZONES.gallery.r + 0.2) continue // paved
         const density =
           zoneDistance(px, pz, 'meadow') < 4.4 ? 0.7 : zoneDistance(px, pz, 'forest') < 4.2 ? 0.25 : zoneDistance(px, pz, 'cove') < 2.6 ? 0.2 : zoneDistance(px, pz, 'tree') < 3.2 ? 0.1 : 0.4
@@ -168,7 +169,7 @@ function Grass() {
 
 /* ───────── flowers ───────── */
 
-const FLOWER_SETS = {
+export const FLOWER_SETS = {
   meadow: ['#ff9cc4', '#fff0a6', '#ffffff', '#d9c2ff', '#ff9f8a', '#ffcf9e', '#ffd1e3'],
   garden: ['#ff8fb8', '#ffc4dc', '#e6cfff', '#ffffff', '#fff1a8', '#ffb59e'],
   forest: ['#c9b5ff', '#fff0a6', '#ffffff', '#ffc4dc'],
@@ -353,7 +354,7 @@ function placeTrees() {
   return out
 }
 
-function TreeKind({ kind, items }) {
+export function TreeKind({ kind, items }) {
   const ref = useRef()
   const geometry = useMemo(() => treeGeometry(kind), [kind])
   const material = useMemo(() => withPaint(windMaterial({ bendFrom: kind === 'tall' ? 2.0 : 1.2, amount: 0.018, vertexColors: true, roughness: 0.8, flatShading: false }), 'foliage'), [kind])
@@ -394,7 +395,7 @@ function placeRocks() {
   return list
 }
 
-function Rocks({ items }) {
+export function Rocks({ items }) {
   const ref = useRef()
   const material = useMemo(() => withPaint(new THREE.MeshStandardMaterial({ roughness: 0.85, flatShading: true }), 'rock'), [])
   useInstances(ref, items, (m, r) => m.compose(new THREE.Vector3(r.x, r.y, r.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(r.r * 0.3, r.r, r.r * 0.2)), new THREE.Vector3(r.s * (r.sx || 1), r.s * (r.sy || 0.8), r.s)))

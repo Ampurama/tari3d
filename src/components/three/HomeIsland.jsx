@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
+import { meadowHeight } from '../../lib/meadow'
 import { HOME_ISLAND, homeDistance, homeHeight, onSkyBridge, SKY_BRIDGE, skyBridgeHeight } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
 import { useInteractable } from '../../lib/interactions'
@@ -58,7 +59,7 @@ function tapWalk(e) {
 /* ───────── the island and the bridge ───────── */
 
 function HomeGround() {
-  const { top, under } = useMemo(() => {
+  const { top } = useMemo(() => {
     const rows = 18
     const segs = 72
     const pos = []
@@ -76,7 +77,7 @@ function HomeGround() {
         for (let k = 0; k < 8; k++) R = (R / homeDistance(HOME_ISLAND.x + Math.cos(a) * R, HOME_ISLAND.z + Math.sin(a) * R)) * 0.999
         const x = HOME_ISLAND.x + Math.cos(a) * R * f
         const z = HOME_ISLAND.z + Math.sin(a) * R * f
-        pos.push(x, r <= rows ? homeHeight(x, z) : homeHeight(x, z) - 0.25, z)
+        pos.push(x, r <= rows ? homeHeight(x, z) : meadowHeight(x, z), z)
         const n = 0.5 + 0.5 * Math.sin(x * 1.3) * Math.cos(z * 1.1)
         c.copy(grass).lerp(light, (1 - f) * 0.5 + n * 0.15)
         col.push(c.r, c.g, c.b)
@@ -94,62 +95,13 @@ function HomeGround() {
     top.setIndex(idx)
     top.computeVertexNormals()
 
-    // the rock underneath: a rough cone, warm soil on top, darker stone below
-    const profile = [
-      [1.03, -0.3],
-      [0.95, -1.1],
-      [0.8, -2.2],
-      [0.6, -3.4],
-      [0.38, -4.6],
-      [0.16, -5.8],
-      [0.0001, -6.6],
-    ]
-    const upos = []
-    const ucol = []
-    const uidx = []
-    const topC = new THREE.Color('#c99b6c')
-    const botC = new THREE.Color('#7a5c4b')
-    profile.forEach(([f, y], row) => {
-      for (let s = 0; s <= 40; s++) {
-        const a = (s / 40) * Math.PI * 2
-        const j = row === 0 || row === profile.length - 1 ? 0 : 0.08 * Math.sin(a * 5 + row * 1.7)
-        const R = HOME_ISLAND.r * f * (1 + j)
-        upos.push(HOME_ISLAND.x + Math.cos(a) * R, HOME_ISLAND.level + y, HOME_ISLAND.z + Math.sin(a) * R)
-        c.copy(topC).lerp(botC, row / (profile.length - 1))
-        ucol.push(c.r, c.g, c.b)
-      }
-    })
-    for (let r = 0; r < profile.length - 1; r++)
-      for (let s = 0; s < 40; s++) {
-        const a = r * 41 + s
-        const b = a + 41
-        uidx.push(a, a + 1, b, b, a + 1, b + 1)
-      }
-    const under = new THREE.BufferGeometry()
-    under.setAttribute('position', new THREE.Float32BufferAttribute(upos, 3))
-    under.setAttribute('color', new THREE.Float32BufferAttribute(ucol, 3))
-    under.setIndex(uidx)
-    under.computeVertexNormals()
-    return { top, under }
+    return { top }
   }, [])
-  const materials = useMemo(
-    () => ({
-      top: withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), 'foliage'),
-      under: withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }), 'earth'),
-    }),
-    [],
-  )
-  useEffect(
-    () => () => {
-      top.dispose()
-      under.dispose()
-    },
-    [top, under],
-  )
+  const materials = useMemo(() => ({ top: withPaint(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), 'foliage') }), [])
+  useEffect(() => () => top.dispose(), [top])
   return (
     <group>
       <mesh geometry={top} material={materials.top} onClick={tapWalk} receiveShadow />
-      <mesh geometry={under} material={materials.under} />
     </group>
   )
 }
