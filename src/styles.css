@@ -275,8 +275,9 @@ button:focus-visible {
   font-family: var(--serif);
   font-style: italic;
   font-size: clamp(1.25rem, 2.6vw, 1.7rem);
-  color: var(--pink);
-  text-shadow: 0 0 22px rgba(255, 143, 196, 0.5);
+  color: #ffd1e6;
+  /* a soft plum shadow under the glow: readable on the pale dreamy sky */
+  text-shadow: 0 1px 10px rgba(70, 30, 90, 0.55), 0 0 22px rgba(255, 143, 196, 0.5);
 }
 
 .intro-line2 {
@@ -286,7 +287,7 @@ button:focus-visible {
   font-size: clamp(1.9rem, 5vw, 3.3rem);
   line-height: 1.12;
   max-width: 18ch;
-  text-shadow: 0 0 30px rgba(201, 182, 255, 0.45);
+  text-shadow: 0 2px 14px rgba(60, 30, 90, 0.4), 0 0 30px rgba(201, 182, 255, 0.45);
 }
 
 .intro-cta {

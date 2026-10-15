@@ -16,7 +16,7 @@ const NIGHT_VIEWS = new Set(['constellation', 'finale', 'finalRoom'])
 
 /** Where the time of day wants to be, for the current state. */
 export function atmosphereTarget(s, clockSeconds) {
-  const day = NIGHT_VIEWS.has(s.view) ? 0 : s.view === 'intro' || s.view === 'avatar' ? 0.55 : 1
+  const day = NIGHT_VIEWS.has(s.view) ? 0 : s.view === 'intro' || s.view === 'avatar' ? 0.4 : 1
   let sunset
   if (s.view === 'cinematic') sunset = 0.15 + 0.85 * windowAt(CINE.sunset, cineTime(clockSeconds))
   else if (s.view === 'ending' || s.view === 'epilogue') sunset = 0.9

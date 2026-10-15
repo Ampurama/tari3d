@@ -33,9 +33,10 @@ function ShadowThrottle() {
 const c = (hex) => new THREE.Color(hex)
 /** Light colours for day, sunset and night (the time of day blends between them). */
 // night is a deep, clear blue lit by the moon (not a flat purple)
-const SKY = { day: c('#bfe0ff'), sunset: c('#ffd2c0'), night: c('#a9b8ff') }
-const GROUND = { day: c('#a9cf7e'), sunset: c('#e8c9a0'), night: c('#1e2450') }
-const SUN = { day: c('#ffe6bd'), sunset: c('#ffad70'), night: c('#c7d4ff') }
+// dreamcore daylight: a lavender sky light, a mint-green bounce from the ground, pearly sunshine
+const SKY = { day: c('#d4d0ff'), sunset: c('#ffcfd6'), night: c('#a9b8ff') }
+const GROUND = { day: c('#b4d6a0'), sunset: c('#eac6b0'), night: c('#1e2450') }
+const SUN = { day: c('#fff0dc'), sunset: c('#ffa87a'), night: c('#c7d4ff') }
 const tmp = new THREE.Color()
 const blend = (set, day, sunset) => tmp.copy(set.day).lerp(set.sunset, sunset).lerp(set.night, 1 - day)
 
@@ -104,8 +105,8 @@ export function Lights() {
         shadow-camera-near={1}
         shadow-camera-far={60}
       />
-      {/* a soft warm fill from the other side, so nothing goes flat */}
-      <directionalLight position={[-10, 6, 8]} intensity={0.35} color="#ffe2ef" />
+      {/* a soft rose fill from the other side, so nothing goes flat (and everything feels a little in love) */}
+      <directionalLight position={[-10, 6, 8]} intensity={0.45} color="#ffd6ea" />
       <Environment resolution={64} frames={1} environmentIntensity={0.5}>
         <Lightformer form="ring" intensity={2} color="#fff4e6" position={[0, 6, 6]} scale={6} />
         <Lightformer form="rect" intensity={1.4} color="#dff0ff" position={[-8, 3, -4]} scale={[6, 3, 1]} />

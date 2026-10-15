@@ -69,7 +69,7 @@ const seaMaterial = new THREE.ShaderMaterial({
     void main() {
       // slow, overlapping swells
       float w = sin(vWorld.x * 0.9 + uTime * 0.7) * 0.5 + sin(vWorld.y * 1.3 - uTime * 0.5) * 0.35 + sin((vWorld.x + vWorld.y) * 2.3 + uTime * 1.1) * 0.15;
-      vec3 day = vec3(0.36, 0.71, 0.84);
+      vec3 day = vec3(0.2, 0.72, 0.78);
       vec3 night = vec3(0.04, 0.10, 0.24);
       vec3 col = mix(day, night, uNight);
       col = mix(col, vec3(0.95, 0.62, 0.52), uSunset * 0.35 * (1.0 - uNight));

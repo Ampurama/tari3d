@@ -366,15 +366,15 @@ export const zoneDistance = (x, z, name) => dist(x, z, ZONES[name])
 /* ───────── ground colour ───────── */
 
 const C = {
-  grass: new THREE.Color('#78b955'),
-  grassLight: new THREE.Color('#a6d264'),
-  lilac: new THREE.Color('#8fc06c'), // a soft sage, for variety
+  grass: new THREE.Color('#72bd6e'),
+  grassLight: new THREE.Color('#ade08a'),
+  lilac: new THREE.Color('#a9b9e6'), // soft drifts of lilac through the green (dreamy, not a flat lawn)
   pink: new THREE.Color('#f6b3cc'),
-  moss: new THREE.Color('#4c9250'),
-  soil: new THREE.Color('#d9bf8f'),
-  sand: new THREE.Color('#ecdcb2'),
-  stone: new THREE.Color('#c9bfae'),
-  lakebed: new THREE.Color('#62cfc8'),
+  moss: new THREE.Color('#3f8e66'),
+  soil: new THREE.Color('#e3c4a2'),
+  sand: new THREE.Color('#f4e0cd'),
+  stone: new THREE.Color('#c9c1d4'),
+  lakebed: new THREE.Color('#5fd3cc'),
 }
 
 /** Colour of the ground at a point (written into vertex colours). */
@@ -454,10 +454,10 @@ export function buildUndersideGeometry({ segments = 64 } = {}) {
     [0.1, -10.2],
     [0.0001, -11.2],
   ]
-  // layered earth under the miniature island: a grassy lip, warm soil, then darker stone
-  const top = new THREE.Color('#c99b6c')
-  const mid = new THREE.Color('#a77856')
-  const bottom = new THREE.Color('#7a5c4b')
+  // floating rock in dream colours: warm peach sandstone fading through rose clay into lavender
+  const top = new THREE.Color('#d8a888')
+  const mid = new THREE.Color('#b48486')
+  const bottom = new THREE.Color('#77699a')
   const positions = []
   const colors = []
   const indices = []

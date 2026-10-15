@@ -186,7 +186,7 @@ export function Lake() {
           uTime: { value: 0 },
           uDeep: { value: new THREE.Color('#1aa3b5') },
           uShallow: { value: new THREE.Color('#72e2d6') },
-          uSky: { value: new THREE.Color('#dff6ff') },
+          uSky: { value: new THREE.Color('#efe4ff') },
           uCenter: { value: new THREE.Vector2(ZONES.lake.x, ZONES.lake.z) },
           uRadius: { value: 3.6 },
         },
