@@ -7,6 +7,9 @@ import * as THREE from 'three'
 import { atmosphere } from '../../lib/atmosphere'
 import { SUN_DIR } from './Sky'
 import { tier } from '../../lib/device'
+import { islandCenter } from './Player'
+
+const ORIGIN = new THREE.Vector3()
 import { useStore } from '../../store'
 
 /** Shadows are redrawn every other frame: half the cost, no visible difference at this pace. */
@@ -29,9 +32,10 @@ function ShadowThrottle() {
 
 const c = (hex) => new THREE.Color(hex)
 /** Light colours for day, sunset and night (the time of day blends between them). */
-const SKY = { day: c('#bfe0ff'), sunset: c('#ffd2c0'), night: c('#c4b0ff') }
-const GROUND = { day: c('#a9cf7e'), sunset: c('#e8c9a0'), night: c('#2c1f5c') }
-const SUN = { day: c('#ffe6bd'), sunset: c('#ffad70'), night: c('#d8d0ff') }
+// night is a deep, clear blue lit by the moon (not a flat purple)
+const SKY = { day: c('#bfe0ff'), sunset: c('#ffd2c0'), night: c('#a9b8ff') }
+const GROUND = { day: c('#a9cf7e'), sunset: c('#e8c9a0'), night: c('#1e2450') }
+const SUN = { day: c('#ffe6bd'), sunset: c('#ffad70'), night: c('#c7d4ff') }
 const tmp = new THREE.Color()
 const blend = (set, day, sunset) => tmp.copy(set.day).lerp(set.sunset, sunset).lerp(set.night, 1 - day)
 
@@ -40,12 +44,22 @@ const blend = (set, day, sunset) => tmp.copy(set.day).lerp(set.sunset, sunset).l
  * soft (never black) shadows, and a locally-generated environment for gentle reflections (no downloads).
  * Everything follows the shared time of day: bright day → golden afternoon/sunset → (rare) night.
  */
+const sunDir = new THREE.Vector3()
+const focus = new THREE.Vector3()
+
 export function Lights() {
   const shadowSize = tier === 'high' ? 2048 : 1024
   const hemi = useRef()
   const ambient = useRef()
   const sun = useRef()
-  useFrame(() => {
+  const scene = useThree((s) => s.scene)
+  // the sun's target has to be in the scene for its direction (and its shadows) to follow it around
+  useEffect(() => {
+    const target = sun.current.target
+    scene.add(target)
+    return () => scene.remove(target)
+  }, [scene])
+  useFrame((_, delta) => {
     const { day, sunset } = atmosphere
     hemi.current.color.copy(blend(SKY, day, sunset))
     hemi.current.groundColor.copy(blend(GROUND, day, sunset))
@@ -53,6 +67,18 @@ export function Lights() {
     ambient.current.intensity = THREE.MathUtils.lerp(0.08, 0.15, day)
     sun.current.color.copy(blend(SUN, day, sunset))
     sun.current.intensity = THREE.MathUtils.lerp(1.1, 3.4 - sunset * 1.0, day)
+    // the sun (and its shadows) goes wherever she is: the home island, Sky Island, the western isles
+    // all get the same soft shadows as the main island
+    const s = useStore.getState()
+    const target = s.phase === 'world' ? islandCenter() : ORIGIN
+    focus.x = THREE.MathUtils.damp(focus.x, target.x, 3, delta)
+    focus.y = THREE.MathUtils.damp(focus.y, target.y, 3, delta)
+    focus.z = THREE.MathUtils.damp(focus.z, target.z, 3, delta)
+    // lower in the sky toward sunset: longer, warmer shadows (golden hour)
+    sunDir.set(SUN_DIR.x, SUN_DIR.y * (1 - 0.45 * sunset * day), SUN_DIR.z).normalize()
+    sun.current.position.copy(focus).addScaledVector(sunDir, 26)
+    sun.current.target.position.copy(focus)
+    sun.current.target.updateMatrixWorld()
   })
   const sunPos = SUN_DIR.clone().multiplyScalar(26)
   return (

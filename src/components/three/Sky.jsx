@@ -47,8 +47,9 @@ const skyFragment = /* glsl */ `
     dusk = mix(dusk, vec3(1.0, 0.66, 0.72), low * low * 0.6);
     dayCol = mix(dayCol, dusk, uSunset * 0.85);
     // night: deep blue with two soft nebulae (only for the star-gazing places)
-    vec3 night = mix(vec3(0.15, 0.11, 0.33), vec3(0.02, 0.02, 0.1), smoothstep(0.0, 0.65, h));
-    night = mix(night, vec3(0.04, 0.03, 0.13), smoothstep(0.0, -0.6, h));
+    // night: a deep clear blue, a little lighter (and faintly violet) toward the horizon
+    vec3 night = mix(vec3(0.12, 0.14, 0.38), vec3(0.02, 0.03, 0.12), smoothstep(0.0, 0.65, h));
+    night = mix(night, vec3(0.03, 0.04, 0.15), smoothstep(0.0, -0.6, h));
     float n1 = pow(max(dot(d, normalize(vec3(-0.5, 0.35, -0.8))), 0.0), 6.0);
     float n2 = pow(max(dot(d, normalize(vec3(0.75, 0.1, -0.4))), 0.0), 9.0);
     night += vec3(1.0, 0.56, 0.76) * n1 * 0.5 + vec3(0.55, 0.42, 1.0) * n2 * 0.55;

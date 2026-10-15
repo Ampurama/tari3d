@@ -41,8 +41,8 @@ const SKY_CENTER = new THREE.Vector3(SKY.x + 1.5, SKY.level + 0.4, SKY.z + 2)
 const ISLE_A_CENTER = new THREE.Vector3(ISLE_A.x - 1, ISLE_A.level + 0.4, ISLE_A.z - 2.5)
 const ISLE_B_CENTER = new THREE.Vector3(ISLE_B.x, ISLE_B.level + 0.4, ISLE_B.z + 0.5)
 const center = new THREE.Vector3()
-/** The diorama is whichever island she's on (blending across the bridges). */
-const islandCenter = () => {
+/** The diorama is whichever island she's on (blending across the bridges). Shared vector: copy it. */
+export const islandCenter = () => {
   const { x, y, z } = player.position
   // riding the balloon: the camera stays with the basket all the way
   if (player.balloon) return center.set(x, y - 0.6, z)
@@ -296,6 +296,13 @@ export function PlayerController() {
     smoothFollow.current.lerp(followTarget(weight), 1 - Math.exp(-delta * 4))
     const f = smoothFollow.current
     controls?.moveTo(f.x, f.y, f.z, false)
+    // never inside a hill or a cliff: zoomed in and tilted low, if the ground under the camera comes
+    // up to meet it, the view lifts a little until it's clear (her own tilt is kept otherwise)
+    if (controls) {
+      const g = groundAt(camera.position.x, camera.position.z)
+      if (g !== null && camera.position.y < g + 0.9 && controls.polarAngle > polarFor(ISO.maxElevation))
+        controls.rotatePolarTo(controls.polarAngle - delta * 1.2, false)
+    }
 
     // ── interaction prompt + the interact key/button
     const near = nearestInteractable()

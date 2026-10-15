@@ -24,6 +24,7 @@ const groupOrigin = {
 export default function DebugBridge() {
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
+  const controls = useThree((s) => s.controls)
   useEffect(() => {
     if (!enabled) return
     const project = (v) => {
@@ -52,7 +53,12 @@ export default function DebugBridge() {
         return it ? project(it.position.clone()) : null
       },
       project: (x, y, z) => project(new THREE.Vector3(x, y, z)),
+      /** zoom / tilt / turn the island camera like a pinch or a drag would (tests only) */
+      zoom: (distance) => controls?.dollyTo(distance, false),
+      tilt: (elevationDeg) => controls?.rotatePolarTo(((90 - elevationDeg) * Math.PI) / 180, false),
+      turn: (radians) => controls?.rotate(radians, 0, false),
+      cameraDistance: () => controls?.distance,
     }
-  }, [camera, size])
+  }, [camera, size, controls])
   return null
 }

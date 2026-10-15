@@ -2,6 +2,8 @@ import { forwardRef, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../store'
+import { atmosphere } from '../../lib/atmosphere'
+import { shadowTexture } from '../../lib/textures'
 
 /*
  * A small, stylised, fully procedural character (no model files to download or fail).
@@ -12,14 +14,52 @@ import { useStore } from '../../store'
  * and a happy "cheer" when something is found.
  */
 
+/**
+ * A soft rim of light around the silhouette (a view-facing fresnel), shared by every character:
+ * warm white by day, peach at sunset, moonlit lavender at night. It keeps the little souls readable
+ * against the grass and the dark, and makes them feel lit by the same sky as everything else.
+ */
+const rim = { uRimColor: { value: new THREE.Color('#fff1e0') }, uRimStrength: { value: 0.22 } }
+const RIM_DAY = new THREE.Color('#fff1e0')
+const RIM_SUNSET = new THREE.Color('#ffb98f')
+const RIM_NIGHT = new THREE.Color('#b8b4ff')
+let rimFrame = -1
+function updateRim(frame) {
+  if (frame === rimFrame) return // once per frame, however many characters are on screen
+  rimFrame = frame
+  const { day, sunset } = atmosphere
+  rim.uRimColor.value.copy(RIM_DAY).lerp(RIM_SUNSET, sunset).lerp(RIM_NIGHT, 1 - day)
+  rim.uRimStrength.value = 0.2 + sunset * 0.14 + (1 - day) * 0.32
+}
+function withRim(material) {
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, rim)
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRimColor;\nuniform float uRimStrength;')
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        {
+          float facing = max(dot(normal, normalize(vViewPosition)), 0.0);
+          totalEmissiveRadiance += uRimColor * pow(1.0 - facing, 3.0) * uRimStrength;
+        }`,
+      )
+  }
+  material.customProgramCacheKey = () => 'avatar-rim'
+  return material
+}
+
 function useMats(look) {
   return useMemo(() => {
-    const m = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra })
+    const m = (color, extra = {}) => withRim(new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra }))
     return {
-      skin: m(look.skin),
-      hair: m(look.hair, { roughness: 0.5 }),
-      top: m(look.top),
-      bottom: m(look.bottom),
+      // skin: soft and matte, with a whisper of its own warmth (light seems to glow through it)
+      skin: m(look.skin, { roughness: 0.62, emissive: look.skin, emissiveIntensity: 0.07 }),
+      // hair: a little glossier, so it catches a highlight
+      hair: m(look.hair, { roughness: 0.42 }),
+      // clothes: fabric, not plastic
+      top: m(look.top, { roughness: 0.86 }),
+      bottom: m(look.bottom, { roughness: 0.86 }),
       shoes: m(look.shoes, { roughness: 0.5 }),
       accent: m(look.accent, { emissive: look.accent, emissiveIntensity: 0.25 }),
       eye: new THREE.MeshBasicMaterial({ color: '#2a1f3d' }),
@@ -45,17 +85,29 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
   const eyes = useRef()
   const phase = useRef(0)
   const blink = useRef(2)
+  const swingNow = useRef(0)
+  const pose = useRef(null)
   const reducedMotion = useStore((s) => s.reducedMotion)
   const dress = look.outfit === 'dress'
   const longHair = look.hairStyle === 'long'
 
   useFrame(({ clock }, delta) => {
+    updateRim(clock.elapsedTime)
     const motion = getMotion?.() || { speed: 0, cheer: 0 }
     const t = clock.elapsedTime
     const speed = Math.min(motion.speed, 6)
-    const moving = speed > 0.15
-    phase.current += delta * (moving ? 4 + speed * 1.8 : 0)
-    const swing = moving ? Math.min(1, speed / 2.2) * (speed > 3 ? 0.95 : 0.7) : 0
+    // the stride eases in and out instead of switching on and off
+    const stride = speed > 0.15 ? Math.min(1, speed / 2.2) * (speed > 3 ? 0.95 : 0.7) : 0
+    swingNow.current = THREE.MathUtils.damp(swingNow.current, stride, 9, delta)
+    const swing = swingNow.current < 0.01 ? 0 : swingNow.current
+    const moving = swing > 0.05
+    phase.current += delta * (swing > 0 ? 4 + speed * 1.8 : 0)
+    const joints = [legL.current, legR.current, kneeL.current, kneeR.current, armL.current, armR.current, elbowL.current, elbowR.current, head.current]
+    // last frame's pose (joint angles, body bob and lean), to ease from
+    const prev = pose.current || (pose.current = { r: joints.map(() => new THREE.Euler()), y: 0, lean: 0, first: true })
+    joints.forEach((j, i) => prev.r[i].copy(j.rotation))
+    prev.y = body.current.position.y
+    prev.lean = body.current.rotation.x
     const s = Math.sin(phase.current)
     const c = Math.cos(phase.current)
     const aL = armL.current
@@ -69,8 +121,9 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
     kneeR.current.rotation.x = swing * (0.15 + 0.85 * Math.max(0, -c))
     // arms: swing opposite to the legs, hanging a little away from the body, elbows soft
     const cheer = Math.min(1, motion.cheer || 0)
-    aL.rotation.set(-s * swing * 0.8 - cheer * 2.6, 0, -0.09 - cheer * 0.3)
-    aR.rotation.set(s * swing * 0.8 - cheer * 2.6, 0, 0.09 + cheer * 0.3)
+    const out = dress ? 0.2 : 0.09 // a little further out over a skirt, so the hands never sink into it
+    aL.rotation.set(-s * swing * 0.8 - cheer * 2.6, 0, -out - cheer * 0.3)
+    aR.rotation.set(s * swing * 0.8 - cheer * 2.6, 0, out + cheer * 0.3)
     eL.rotation.set(-0.18 - swing * 0.3 * Math.max(0, s), 0, 0)
     eR.rotation.set(-0.18 - swing * 0.3 * Math.max(0, -s), 0, 0)
     // bob while walking, breathe while standing
@@ -138,6 +191,19 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
         head.current.rotation.y = 0
       }
     }
+    // ease every joint from where it was toward this frame's pose: starting and stopping, sitting
+    // down, reaching for a hand or a wave all blend instead of snapping (quick enough to keep
+    // the walk crisp and the held hands together)
+    if (!prev.first) {
+      const k = 1 - Math.exp(-(swing > 0.3 ? 30 : 16) * delta)
+      joints.forEach((j, i) => {
+        const p = prev.r[i]
+        j.rotation.set(p.x + (j.rotation.x - p.x) * k, p.y + (j.rotation.y - p.y) * k, p.z + (j.rotation.z - p.z) * k)
+      })
+      body.current.position.y = prev.y + (body.current.position.y - prev.y) * k
+      body.current.rotation.x = prev.lean + (body.current.rotation.x - prev.lean) * k
+    }
+    prev.first = false
     // blink every few seconds
     blink.current -= delta
     const closed = blink.current < 0.12
@@ -282,10 +348,10 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
           </mesh>
         </group>
       </group>
-      {/* soft contact shadow so it never looks like it's floating */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <circleGeometry args={[0.24, 20]} />
-        <meshBasicMaterial color="#1a1030" transparent opacity={0.28} depthWrite={false} />
+      {/* soft contact shadow, darkest right under the feet, so she's always standing on something */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.014, 0]} renderOrder={2}>
+        <planeGeometry args={[0.72, 0.72]} />
+        <meshBasicMaterial color="#24143a" alphaMap={shadowTexture()} transparent opacity={0.5} depthWrite={false} />
       </mesh>
     </group>
   )

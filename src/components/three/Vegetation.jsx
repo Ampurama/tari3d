@@ -99,7 +99,7 @@ function bladeGeometry() {
   for (let b = 0; b < 5; b++) {
     const a = (b / 5) * Math.PI * 2 + 0.3
     const lean = 0.35 + (b % 2) * 0.15
-    const w = 0.075
+    const w = 0.11
     const start = pos.length / 3
     // three rows: base, middle, tip — each blade leans outward
     ;[0, 0.55, 1].forEach((t, row) => {
@@ -156,7 +156,12 @@ function Grass() {
     }
     return list
   }, [])
-  useInstances(ref, items, (m, it) => m.compose(new THREE.Vector3(it.x, it.y, it.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, it.r, 0)), new THREE.Vector3(1, it.h, 1)))
+  // the tuft keeps its proportions (only squashing the height laid every blade nearly flat, like a
+  // spiky star): a soft, upright clump a little wider than it is tall
+  useInstances(ref, items, (m, it) => {
+    const spread = 0.45 + it.h
+    m.compose(new THREE.Vector3(it.x, it.y, it.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, it.r, 0)), new THREE.Vector3(spread, it.h, spread))
+  })
   useEffect(() => () => geometry.dispose(), [geometry])
   return <instancedMesh ref={ref} args={[geometry, material, items.length]} receiveShadow frustumCulled={false} />
 }

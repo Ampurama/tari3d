@@ -51,6 +51,28 @@ export const glowTexture = () =>
     ctx.fillRect(0, 0, size, size)
   })
 
+/**
+ * A soft round contact shadow, as an alpha map (alpha maps read brightness, so it's drawn as an
+ * opaque white-to-black gradient): dark right in the middle, fading smoothly to nothing.
+ */
+export const shadowTexture = () =>
+  canvasTexture(
+    'contact-shadow',
+    64,
+    (ctx, size) => {
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, size, size)
+      const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+      g.addColorStop(0, 'rgb(255,255,255)')
+      g.addColorStop(0.35, 'rgb(204,204,204)')
+      g.addColorStop(0.7, 'rgb(72,72,72)')
+      g.addColorStop(1, 'rgb(0,0,0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, size, size)
+    },
+    { srgb: false },
+  )
+
 export const petalTexture = () =>
   canvasTexture('petal', 64, (ctx, size) => {
     ctx.translate(size / 2, size / 2)
