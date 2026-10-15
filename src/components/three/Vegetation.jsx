@@ -92,6 +92,7 @@ function useInstances(ref, items, apply) {
 function bladeGeometry() {
   const pos = []
   const col = []
+  const nor = []
   const idx = []
   const base = new THREE.Color('#5f9e45')
   const tip = new THREE.Color('#c4e27c')
@@ -111,6 +112,9 @@ function bladeGeometry() {
       pos.push(cx - px, t, cz - pz, cx + px, t, cz + pz)
       const c = base.clone().lerp(tip, t)
       col.push(c.r, c.g, c.b, c.r, c.g, c.b)
+      // normals point up (leaning out a little toward the tip): blades take the light like the lawn
+      const n = new THREE.Vector3(Math.cos(a) * 0.3 * t, 1, Math.sin(a) * 0.3 * t).normalize()
+      nor.push(n.x, n.y, n.z, n.x, n.y, n.z)
       if (row < 2) {
         const i = start + row * 2
         idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2)
@@ -120,15 +124,15 @@ function bladeGeometry() {
   const g = new THREE.BufferGeometry()
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3))
   g.setIndex(idx)
-  g.computeVertexNormals()
   return g
 }
 
 function Grass() {
   const ref = useRef()
   const geometry = useMemo(bladeGeometry, [])
-  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.6, vertexColors: true, side: THREE.DoubleSide, roughness: 0.95 }), [])
+  const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.6, vertexColors: true, side: THREE.DoubleSide, roughness: 0.95, litBothSides: true }), [])
   const items = useMemo(() => {
     const rand = seeded(1201)
     const stepSize = HIGH ? 0.38 : 0.52

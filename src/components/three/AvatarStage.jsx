@@ -49,7 +49,8 @@ export default function AvatarStage() {
       {/* platform */}
       <mesh position={[0, -0.15, 0]} receiveShadow>
         <cylinderGeometry args={[1.4, 1.2, 0.3, 48]} />
-        <meshStandardMaterial color="#efe3ff" roughness={0.35} metalness={0.2} />
+        {/* pearly, warm and softly lit from within (metal made it look like grey plastic) */}
+        <meshStandardMaterial color="#f6e4f4" roughness={0.42} metalness={0} emissive="#ffc6e0" emissiveIntensity={0.12} />
       </mesh>
       <mesh position={[0, -0.6, 0]}>
         <cylinderGeometry args={[1.15, 0.2, 0.7, 24]} />

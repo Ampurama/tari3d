@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
-import { Bloom, EffectComposer, ToneMapping, Vignette } from '@react-three/postprocessing'
+import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, N8AO, TiltShift2, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import { atmosphere } from '../../lib/atmosphere'
 import { SUN_DIR } from './Sky'
 import { tier } from '../../lib/device'
+import { useStore } from '../../store'
 
 /** Shadows are redrawn every other frame: half the cost, no visible difference at this pace. */
 function ShadowThrottle() {
@@ -89,14 +90,39 @@ export function Lights() {
   )
 }
 
+/** Views seen from the high island camera, where the miniature (tilt-shift) look belongs. */
+const DIORAMA_VIEWS = new Set(['explore', 'distance', 'cinematic', 'epilogue'])
+
+/**
+ * The miniature look: the top and bottom of the frame go softly out of focus, like a photo of a
+ * tiny model. Only from the high island camera, and eased in and out so close-ups stay sharp.
+ */
+function useDiorama(effect) {
+  useFrame((_, delta) => {
+    const e = effect.current
+    if (!e) return
+    const goal = DIORAMA_VIEWS.has(useStore.getState().view) ? 0.11 : 0
+    e.blur = THREE.MathUtils.damp(e.blur, goal, 2, delta)
+  })
+}
+
 export function Effects() {
   const high = tier === 'high'
+  const tilt = useRef()
+  useDiorama(tilt)
   return (
     <EffectComposer multisampling={high ? 4 : 2} enableNormalPass={false}>
+      {/* soft contact shadows where things meet: under trees, props, the avatar, in the folds of the
+          ground (warm violet, never black: it should read as painted shade). Laptops/desktops only. */}
+      {high ? <N8AO halfRes quality="low" aoRadius={1.1} distanceFalloff={0.6} intensity={2.2} color="#3b2a52" /> : <></>}
       {/* bloom only for things that really glow (lanterns, lights, sparkles) — not to brighten the world */}
       <Bloom mipmapBlur intensity={high ? 0.5 : 0.4} luminanceThreshold={0.94} luminanceSmoothing={0.2} radius={0.6} />
+      {high ? <TiltShift2 ref={tilt} blur={0} taper={0.38} start={[0, 0.46]} end={[1, 0.46]} samples={8} /> : <></>}
       {/* film-like curve: rich mid-tones and soft highlights, like a painted background */}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      {/* ACES leaves pastels a little grey: give the colour back, with a touch more depth */}
+      <HueSaturation saturation={0.12} />
+      <BrightnessContrast contrast={0.06} />
       <Vignette eskil={false} offset={0.4} darkness={0.2} />
     </EffectComposer>
   )

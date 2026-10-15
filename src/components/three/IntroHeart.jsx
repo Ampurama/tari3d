@@ -30,7 +30,8 @@ export default function IntroHeart() {
     if (!root.current.visible) return
     const p = useStore.getState().pointer
     const beat = reducedMotion ? 0 : Math.max(0, Math.sin(now * 2.6)) ** 6 * 0.06
-    heart.current.rotation.y = reducedMotion ? p.x * 0.3 : now * 0.45 + p.x * 0.35
+    // a gentle sway, never a full spin: seen edge-on the heart would turn into a pink pill
+    heart.current.rotation.y = reducedMotion ? p.x * 0.3 : Math.sin(now * 0.5) * 0.5 + p.x * 0.35
     heart.current.rotation.x = THREE.MathUtils.damp(heart.current.rotation.x, -p.y * 0.25, 3, delta)
     heart.current.scale.setScalar(1 + beat)
     halo.current.material.opacity = 0.45 + beat * 4

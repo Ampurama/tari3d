@@ -68,6 +68,14 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  /* a soft frosted card, so the name stays readable over the bright platform */
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(36, 24, 72, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(20, 10, 50, 0.25);
 }
 
 .avatar-name {
@@ -89,7 +97,7 @@
   font-size: 0.74rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: rgba(255, 236, 246, 0.82);
 }
 
 .avatar-dots {
@@ -112,7 +120,8 @@
 .avatar-hint {
   font-size: 0.72rem;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 8px rgba(20, 10, 50, 0.8);
 }
 
 /* the 2D stand-in for the 3D avatar */

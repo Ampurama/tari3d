@@ -11,9 +11,13 @@ export const wind = { uTime: { value: 0 }, uStrength: { value: 1 } }
  * A MeshStandardMaterial that sways with the wind.
  * `bendFrom`: local height where bending starts; `amount`: sway at 1 unit above that.
  */
-export function windMaterial({ bendFrom = 0, amount = 0.12, ...params } = {}) {
+export function windMaterial({ bendFrom = 0, amount = 0.12, litBothSides = false, ...params } = {}) {
   const m = new THREE.MeshStandardMaterial(params)
   m.onBeforeCompile = (shader) => {
+    // thin double-sided things (grass blades) with upward normals: light both faces the same way,
+    // like the ground they grow from, instead of turning the back of every blade dark grey
+    if (litBothSides)
+      shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize( vNormal );')
     shader.uniforms.uWindTime = wind.uTime
     shader.uniforms.uWindStrength = wind.uStrength
     shader.vertexShader = shader.vertexShader
@@ -41,6 +45,6 @@ export function windMaterial({ bendFrom = 0, amount = 0.12, ...params } = {}) {
       )
   }
   // keep a distinct program per bend setting
-  m.customProgramCacheKey = () => `wind-${bendFrom}-${amount}`
+  m.customProgramCacheKey = () => `wind-${bendFrom}-${amount}-${litBothSides}`
   return m
 }

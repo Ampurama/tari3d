@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { attach, balloonPose, board, callBalloon, detach, leaveBalloon, mySeat, PADS, ROUTE_POINTS, trackDock, useBalloon } from '../../lib/balloon'
-import { seeded } from '../../lib/terrain'
+import { edgeRadius, seeded } from '../../lib/terrain'
 import { count } from '../../lib/device'
 import { coupleAvailable, useCouple } from '../../lib/couple'
 import { player } from '../../lib/player'
@@ -127,7 +127,9 @@ function RouteClouds() {
       const p = ROUTE_CURVE.getPointAt(0.15 + t * 0.7)
       list.push([p.x + (rand() - 0.5) * 16, 1.5 + rand() * 3, p.z + (rand() - 0.5) * 16, 2.2 + rand() * 2])
     }
-    return list
+    // never over the main island: from the high three-quarter camera a cloud there would sit on
+    // top of the lake and the paths (the higher it floats, the more of the island it can cover)
+    return list.filter(([x, y, z, s]) => Math.hypot(x, z) - s * 1.1 > edgeRadius(x, z) + 2 + Math.max(0, y) * 0.55)
   }, [])
   // every puff of every cloud in one instanced draw (light on phones)
   const puffsRef = useRef()
