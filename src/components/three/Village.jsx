@@ -369,12 +369,13 @@ function Building({ b, children }) {
 function Counter({ c, top = '#f1e4d3', body = '#c8915f' }) {
   const len = c.x1 - c.x0
   const cx = (c.x0 + c.x1) / 2
+  const slats = Math.max(2, Math.round(len / 0.6))
   return (
     <group>
       <B p={[cx, 0.48, c.z]} s={[len, 0.96, c.d]} c={body} />
       <B p={[cx, 0.99, c.z]} s={[len + 0.06, 0.05, c.d + 0.06]} c={top} />
-      {Array.from({ length: Math.max(2, Math.round(len / 0.6)) }, (_, i, a) => (
-        <B key={i} p={[c.x0 + 0.25 + (i * (len - 0.5)) / (a.length - 1), 0.48, c.z + c.d / 2 + 0.006]} s={[0.035, 0.84, 0.01]} c="#9a6b4a" />
+      {Array.from({ length: slats }, (_, i) => (
+        <B key={i} p={[c.x0 + 0.25 + (i * (len - 0.5)) / (slats - 1), 0.48, c.z + c.d / 2 + 0.006]} s={[0.035, 0.84, 0.01]} c="#9a6b4a" />
       ))}
     </group>
   )
