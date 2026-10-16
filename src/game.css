@@ -368,7 +368,7 @@
   text-align: center;
 }
 
-/* time of day: a row of little chips */
+/* time of day: the world clock */
 .time-now {
   display: flex;
   align-items: center;
@@ -378,36 +378,10 @@
   color: rgba(255, 255, 255, 0.78);
 }
 
-.time-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.time-help {
+  margin: 0 0 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.time-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  font: inherit;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.time-chip:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.time-chip.is-on {
-  background: linear-gradient(135deg, rgba(255, 143, 196, 0.45), rgba(184, 146, 255, 0.45));
-  border-color: rgba(255, 214, 234, 0.6);
 }
 
 .setting-row {

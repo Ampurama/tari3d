@@ -17,6 +17,9 @@ export const couple = {
   you: { name: 'Tari', nickname: 'Tari', place: 'Makassar', icon: '🌸' },
   // Opsional: hari pertama cerita kalian (YYYY-MM-DD). Isi null untuk menyembunyikan.
   since: '2026-08-01',
+  // Jam dunia: langit di game ikut jam asli di zona waktu ini, sama persis untuk kalian berdua.
+  // 8 = WITA (Makassar, waktunya Tari). Ganti ke 7 untuk WIB (Jakarta).
+  worldClock: { utcOffset: 8, label: 'WITA' },
 }
 
 export const intro = {

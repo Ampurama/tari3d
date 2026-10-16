@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html, useCursor } from '@react-three/drei'
 import * as THREE from 'three'
@@ -6,6 +6,38 @@ import { heartGeometry } from '../../lib/heart'
 import { glowTexture } from '../../lib/textures'
 import { useStore } from '../../store'
 import { player } from '../../lib/player'
+import { atmosphere } from '../../lib/atmosphere'
+
+const POOL_GEOMETRY = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2)
+
+/**
+ * Warm pools of light on the ground around lamps and lanterns, appearing as evening comes and
+ * strongest at night: a soft glow lying on the grass (no real lights, so as many as we like).
+ * `points`: [{ x, y, z }] on the ground.
+ */
+export function LightPools({ points, size = 3.2, color = '#ffc68a', strength = 0.5 }) {
+  const ref = useRef()
+  const material = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: glowTexture(), color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+    [color],
+  )
+  useLayoutEffect(() => {
+    const m = new THREE.Matrix4()
+    const q = new THREE.Quaternion()
+    points.forEach((p, i) => {
+      m.compose(new THREE.Vector3(p.x, p.y + 0.08, p.z), q, new THREE.Vector3(size, 1, size))
+      ref.current.setMatrixAt(i, m)
+    })
+    ref.current.instanceMatrix.needsUpdate = true
+    ref.current.computeBoundingSphere()
+  }, [points, size])
+  useFrame(() => {
+    const k = strength * Math.max(1 - atmosphere.day, atmosphere.sunset * 0.3)
+    material.opacity = k
+    ref.current.visible = k > 0.01
+  })
+  return <instancedMesh ref={ref} args={[POOL_GEOMETRY, material, points.length]} renderOrder={2} />
+}
 
 /** Glossy, softly glowing heart. */
 export function HeartMesh({ color = '#ff8fbf', emissive = '#ff5fa2', glow = 0.6, ...props }) {

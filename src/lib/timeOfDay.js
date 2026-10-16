@@ -1,60 +1,33 @@
 import * as THREE from 'three'
-import { create } from 'zustand'
+import { couple } from '../content/config'
+import { serverNow } from './clock'
 
 /*
- * TIME OF DAY — morning, midday, afternoon and night over the meadow.
+ * TIME OF DAY — morning, midday, afternoon and night over the meadow, following the real clock.
  *
- *   'cycle'  the day goes by on its own: one whole day in 24 minutes (a minute an hour), from morning
- *   'real'   the sky follows the clock on her phone (so it's night in the game when it's night outside)
- *   'pagi' | 'siang' | 'sore' | 'malam'   held at that time
- *
- * The chosen mode is remembered on this device. Places with a mood of their own (the night pier,
- * the sunset garden, a date, a cutscene) still bring their own sky while she's there.
+ * The hour is the real time in one shared time zone (couple.worldClock in content/config.js, WITA by
+ * default), read from the shared clock (lib/clock.js) — so both of you always see the same sky at
+ * the same moment: when it's evening in Makassar, it's evening in your little universe for both.
+ * Places with a mood of their own (the night pier, the sunset garden, a date, a cutscene) still
+ * bring their own sky while you're there.
  */
 
-const KEY = 'our-little-universe:time'
-export const TIME_MODES = ['cycle', 'real', 'pagi', 'siang', 'sore', 'malam']
-export const TIME_LABELS = { cycle: 'Otomatis', real: 'Ikut jam', pagi: 'Pagi', siang: 'Siang', sore: 'Sore', malam: 'Malam' }
-const PRESET_HOURS = { pagi: 7.2, siang: 12.5, sore: 17.6, malam: 22 }
-/** How long a whole day takes in 'cycle' mode (seconds). */
-export const DAY_SECONDS = 24 * 60
-/** The day starts in the morning when the game opens. */
-const START_HOUR = 7
+const UTC_OFFSET = couple.worldClock?.utcOffset ?? 8
+export const CLOCK_LABEL = couple.worldClock?.label ?? 'WITA'
+export const PART_LABELS = { pagi: 'Pagi', siang: 'Siang', sore: 'Sore', malam: 'Malam' }
 
-const load = () => {
-  try {
-    const m = localStorage.getItem(KEY)
-    return TIME_MODES.includes(m) ? m : 'cycle'
-  } catch {
-    return 'cycle'
-  }
+/** The hour of the day (0–24) right now, on the world clock. */
+export function currentHour() {
+  const hours = serverNow() / 3600000 + UTC_OFFSET
+  return ((hours % 24) + 24) % 24
 }
 
-export const useTimeOfDay = create((set) => ({
-  mode: load(),
-  setMode: (mode) => {
-    if (!TIME_MODES.includes(mode)) return
-    try {
-      localStorage.setItem(KEY, mode)
-    } catch {
-      // private window: it just won't be remembered
-    }
-    set({ mode })
-  },
-}))
-
-const started = typeof performance !== 'undefined' ? performance.now() : 0
-
-/** The hour of the day (0–24) right now, for the current mode. */
-export function currentHour() {
-  const { mode } = useTimeOfDay.getState()
-  if (PRESET_HOURS[mode] !== undefined) return PRESET_HOURS[mode]
-  if (mode === 'real') {
-    const d = new Date()
-    return d.getHours() + d.getMinutes() / 60
-  }
-  const seconds = (performance.now() - started) / 1000
-  return (START_HOUR + (seconds / DAY_SECONDS) * 24) % 24
+/** The world clock as text, e.g. "17:42 WITA". */
+export function clockText() {
+  const h = currentHour()
+  const hh = Math.floor(h)
+  const mm = Math.floor((h - hh) * 60)
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${CLOCK_LABEL}`
 }
 
 /** Which part of the day an hour belongs to. */

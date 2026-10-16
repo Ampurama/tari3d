@@ -14,7 +14,7 @@ import LoveCapsule from './LoveCapsule'
 import HiddenHearts from './HiddenHearts'
 import TimeMachine from './TimeMachine'
 import FuturePortal from './FuturePortal'
-import { IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, ShoreGlow, Waterfall } from './Terrain'
+import { IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, Waterfall } from './Terrain'
 import Vegetation from './Vegetation'
 import Meadow from './Meadow'
 import LoveTree from './LoveTree'
@@ -73,7 +73,6 @@ export default function World() {
       <LuminousPaths />
       <PlaceNames />
       <PathLanterns />
-      <ShoreGlow />
       <Vegetation />
       <Meadow />
       <LoveTree />

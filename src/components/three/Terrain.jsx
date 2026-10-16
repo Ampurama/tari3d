@@ -17,13 +17,15 @@ import {
 } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
 import { riverAt, WATERFALL_FOOT } from '../../lib/meadow'
+import { createWater } from '../../lib/water'
+import { withGroundDetail } from '../../lib/paint'
 import { tier } from '../../lib/device'
 import { CINE, cineTime, windowAt } from '../../lib/cinematic'
 import { atmosphere } from '../../lib/atmosphere'
 import { journeyProgress } from '../../lib/story'
 import { placeNames } from '../../content/config'
 import { useChapterUnlocked, useStore } from '../../store'
-import { Glow } from './Bits'
+import { Glow, LightPools } from './Bits'
 
 /*
  * Ground detail: soft painted patches and fine grain on top of the zone colours, so the ground
@@ -72,6 +74,8 @@ groundMaterial.onBeforeCompile = (shader) => {
     )
 }
 groundMaterial.customProgramCacheKey = () => 'island-ground'
+// clumps of grass that catch the light (lib/paint.js)
+withGroundDetail(groundMaterial)
 
 
 /** Names of the places, written softly on the map (only while exploring). */
@@ -121,69 +125,12 @@ export function IslandGround() {
   )
 }
 
-const waterVertex = /* glsl */ `
-  varying vec2 vUv;
-  varying vec3 vWorld;
-  void main() {
-    vUv = uv;
-    vec4 w = modelMatrix * vec4(position, 1.0);
-    vWorld = w.xyz;
-    gl_Position = projectionMatrix * viewMatrix * w;
-  }
-`
-const waterFragment = /* glsl */ `
-  uniform float uTime;
-  uniform vec3 uDeep;
-  uniform vec3 uShallow;
-  uniform vec3 uSky;
-  uniform vec2 uCenter;
-  uniform float uRadius;
-  varying vec2 vUv;
-  varying vec3 vWorld;
-  void main() {
-    float d = length(vWorld.xz - uCenter) / uRadius;
-    // gentle moving ripples
-    float r1 = sin(vWorld.x * 3.1 + uTime * 1.2) * sin(vWorld.z * 2.7 - uTime * 0.9);
-    float r2 = sin((vWorld.x + vWorld.z) * 5.3 - uTime * 1.7);
-    float ripple = r1 * 0.5 + r2 * 0.25;
-    vec3 col = mix(uDeep, uShallow, smoothstep(0.35, 1.0, d));
-    // soft sky reflection + glints
-    vec3 viewDir = normalize(cameraPosition - vWorld);
-    float fres = pow(1.0 - max(viewDir.y, 0.0), 3.0);
-    col = mix(col, uSky, fres * 0.55 + ripple * 0.05);
-    float glint = smoothstep(0.82, 1.0, ripple) * 0.6;
-    col += vec3(1.0, 0.97, 0.92) * glint;
-    // soft foam where the water meets the shore
-    float foam = smoothstep(0.86, 0.97, d) * (0.6 + 0.4 * sin(atan(vWorld.z - uCenter.y, vWorld.x - uCenter.x) * 9.0 + uTime * 0.8));
-    col = mix(col, vec3(0.96, 1.0, 1.0), foam * 0.55);
-    float alpha = 0.82 + fres * 0.12;
-    gl_FragColor = vec4(col, alpha);
-  }
-`
-
 /** Reflection Lake: a calm, shimmering surface. */
 export function Lake() {
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uDeep: { value: new THREE.Color('#1aa3b5') },
-          uShallow: { value: new THREE.Color('#72e2d6') },
-          uSky: { value: new THREE.Color('#efe4ff') },
-          uCenter: { value: new THREE.Vector2(ZONES.lake.x, ZONES.lake.z) },
-          uRadius: { value: 3.6 },
-        },
-        vertexShader: waterVertex,
-        fragmentShader: waterFragment,
-        transparent: true,
-      }),
-    [],
-  )
+  const material = useMemo(() => createWater({ shape: 'round', center: [ZONES.lake.x, ZONES.lake.z], radius: 3.6, deep: '#1597a8', shallow: '#6ddcd2' }), [])
   const reducedMotion = useStore((s) => s.reducedMotion)
-  useFrame((_, delta) => {
-    material.uniforms.uTime.value += delta * (reducedMotion ? 0.2 : 1)
-  })
+  useFrame((_, delta) => material.tick(delta, reducedMotion))
+  useEffect(() => () => material.dispose(), [material])
   return (
     <mesh position={[ZONES.lake.x, WATER_LEVEL, ZONES.lake.z]} rotation={[-Math.PI / 2, 0, 0]} material={material} renderOrder={1}>
       <circleGeometry args={[3.95, 64]} />
@@ -404,6 +351,7 @@ export function PathLanterns() {
         <sphereGeometry args={[0.1, 12, 10]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
+      <LightPools points={items} />
     </group>
   )
 }

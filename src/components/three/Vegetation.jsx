@@ -129,15 +129,27 @@ export function bladeGeometry() {
   return g
 }
 
+/**
+ * Grass colour that varies in patches, the way a real lawn does: mostly lush, here a sunny
+ * yellow-green, there a cool blue-green or a darker, denser patch. Multiplies the blade colours.
+ */
+export function grassTint(x, z) {
+  const a = Math.sin(x * 0.31 + 1.7) * Math.cos(z * 0.27 - 0.6) + 0.5 * Math.sin((x - z) * 0.13 + 2.1)
+  const b = Math.sin(x * 0.83 - z * 0.71 + 0.3)
+  if (a > 0.75) return '#f6f0c4' // sunny, a little dry
+  if (a < -0.8) return '#cfe2c6' // darker, denser
+  if (b > 0.7) return '#e2f3f0' // cool blue-green
+  return b < -0.6 ? '#f2fbe6' : '#ffffff'
+}
+
 function Grass() {
   const ref = useRef()
   const geometry = useMemo(bladeGeometry, [])
   const material = useMemo(() => windMaterial({ bendFrom: 0, amount: 0.6, vertexColors: true, side: THREE.DoubleSide, roughness: 0.95, litBothSides: true }), [])
   const items = useMemo(() => {
     const rand = seeded(1201)
-    const stepSize = HIGH ? 0.38 : 0.52
-    const max = HIGH ? 4200 : 1900
-    const tints = ['#ffffff', '#f0fff0', '#e9f7ff', '#fff0f6', '#f4ffe6']
+    const stepSize = HIGH ? 0.33 : 0.5
+    const max = HIGH ? 5800 : 2100
     const list = []
     const R = MAIN_RADIUS + 0.5
     for (let x = -R; x < R; x += stepSize) {
@@ -150,7 +162,7 @@ function Grass() {
         const density =
           zoneDistance(px, pz, 'meadow') < 4.4 ? 0.7 : zoneDistance(px, pz, 'forest') < 4.2 ? 0.25 : zoneDistance(px, pz, 'cove') < 2.6 ? 0.2 : zoneDistance(px, pz, 'tree') < 3.2 ? 0.1 : 0.4
         if (rand() > density) continue
-        list.push({ x: px, z: pz, y: worldHeight(px, pz), h: 0.2 + rand() * 0.16, r: rand() * Math.PI, color: tints[Math.floor(rand() * tints.length)] })
+        list.push({ x: px, z: pz, y: worldHeight(px, pz), h: 0.2 + rand() * 0.16, r: rand() * Math.PI, color: grassTint(px, pz) })
         if (list.length >= max) break
       }
       if (list.length >= max) break

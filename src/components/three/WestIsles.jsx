@@ -9,6 +9,7 @@ import { partner, useCouple } from '../../lib/couple'
 import { SEAT_DROP, seats, useSeat } from '../../lib/actions'
 import { useInteractable } from '../../lib/interactions'
 import { atmosphere } from '../../lib/atmosphere'
+import { createWater } from '../../lib/water'
 import { openWish } from '../../lib/wish'
 import { withPaint } from '../../lib/paint'
 import { count } from '../../lib/device'
@@ -43,49 +44,14 @@ function tapWalk(e) {
 
 /* ───────── the sea ───────── */
 
-const seaMaterial = new THREE.ShaderMaterial({
-  transparent: true,
-  depthWrite: false,
-  uniforms: {
-    uTime: { value: 0 },
-    uNight: { value: 0 },
-    uSunset: { value: 0 },
-    uMoon: { value: new THREE.Vector2(-0.21, -0.98) },
-    uPier: { value: new THREE.Vector2(PIER.bx, PIER.bz) },
-    uCenter: { value: new THREE.Vector2(SEA.x, SEA.z) },
-    uRadius: { value: SEA.r },
-  },
-  vertexShader: /* glsl */ `
-    varying vec2 vWorld;
-    void main() {
-      vec4 w = modelMatrix * vec4(position, 1.0);
-      vWorld = w.xz;
-      gl_Position = projectionMatrix * viewMatrix * w;
-    }`,
-  fragmentShader: /* glsl */ `
-    uniform float uTime, uNight, uSunset, uRadius;
-    uniform vec2 uMoon, uPier, uCenter;
-    varying vec2 vWorld;
-    void main() {
-      // slow, overlapping swells
-      float w = sin(vWorld.x * 0.9 + uTime * 0.7) * 0.5 + sin(vWorld.y * 1.3 - uTime * 0.5) * 0.35 + sin((vWorld.x + vWorld.y) * 2.3 + uTime * 1.1) * 0.15;
-      vec3 day = vec3(0.2, 0.72, 0.78);
-      vec3 night = vec3(0.04, 0.10, 0.24);
-      vec3 col = mix(day, night, uNight);
-      col = mix(col, vec3(0.95, 0.62, 0.52), uSunset * 0.35 * (1.0 - uNight));
-      col += w * mix(0.025, 0.04, uNight);
-      // the moon's path on the water, from the pier out toward the moon
-      vec2 rel = vWorld - uPier;
-      float ahead = dot(rel, uMoon);
-      float off = abs(rel.x * uMoon.y - rel.y * uMoon.x);
-      float width = 0.5 + max(ahead, 0.0) * 0.12;
-      float glint = smoothstep(width, 0.0, off) * smoothstep(-2.0, 2.0, ahead) * (0.55 + 0.45 * sin(vWorld.x * 7.0 + vWorld.y * 5.0 + uTime * 2.0));
-      col += vec3(0.95, 0.93, 0.78) * glint * uNight * 0.55;
-      // the sea fades into the clouds at its edge
-      float d = length(vWorld - uCenter) / uRadius;
-      float a = 1.0 - smoothstep(0.8, 1.0, d);
-      gl_FragColor = vec4(col, a * 0.94);
-    }`,
+// the lake around the two isles, with a path of moonlight from the pier's tip toward the moon
+const seaMaterial = createWater({
+  shape: 'round',
+  center: [SEA.x, SEA.z],
+  radius: SEA.r,
+  deep: '#11798f',
+  shallow: '#4fc9c4',
+  path: { from: [PIER.bx, PIER.bz], dir: [-0.21, -0.98] },
 })
 
 function Sea() {
@@ -93,14 +59,10 @@ function Sea() {
     const dx = moonPosition.x - PIER.bx
     const dz = moonPosition.z - PIER.bz
     const l = Math.hypot(dx, dz)
-    seaMaterial.uniforms.uMoon.value.set(dx / l, dz / l)
+    seaMaterial.uniforms.uPathDir.value.set(dx / l, dz / l)
   }, [])
-  useFrame((_, delta) => {
-    const u = seaMaterial.uniforms
-    u.uTime.value += delta
-    u.uNight.value = 1 - atmosphere.day
-    u.uSunset.value = atmosphere.sunset
-  })
+  const reducedMotion = useStore((s) => s.reducedMotion)
+  useFrame((_, delta) => seaMaterial.tick(delta, reducedMotion))
   return (
     <mesh position={[SEA.x, SEA.level, SEA.z]} rotation={[-Math.PI / 2, 0, 0]} material={seaMaterial} renderOrder={1}>
       <circleGeometry args={[SEA.r, 72]} />

@@ -34,6 +34,23 @@ const skyFragment = /* glsl */ `
   uniform vec3 uDayMid;
   uniform vec3 uDayTop;
   uniform vec3 uDayBelow;
+  float sHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float sNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(sHash(i), sHash(i + vec2(1.0, 0.0)), u.x), mix(sHash(i + vec2(0.0, 1.0)), sHash(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+  float sFbm(vec2 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 5; i++) {
+      v += a * sNoise(p);
+      p = p * 2.03 + vec2(1.7, 9.2);
+      a *= 0.5;
+    }
+    return v;
+  }
   void main() {
     vec3 d = normalize(vDir);
     float h = d.y;
@@ -69,10 +86,29 @@ const skyFragment = /* glsl */ `
       float starMask = step(0.982, pick) * core * twinkle * smoothstep(0.08, 0.35, h);
       col += vec3(1.0, 0.96, 1.0) * starMask * mix(0.9, 0.32, uDay);
     }
-    // the sun: a soft warm glow (and a golden halo low in the sky at sunset)
+    // the sun: its disc, a soft halo around it, and at golden hour a warm glow along the horizon
+    // on its side of the sky (wherever it is setting or rising)
     float sun = max(dot(d, uSunDir), 0.0);
     col += vec3(1.0, 0.93, 0.78) * pow(sun, 260.0) * uDay;
-    col += vec3(1.0, 0.72, 0.4) * pow(max(dot(d, normalize(vec3(0.15, 0.05, -1.0))), 0.0), 8.0) * uSunset * 0.55 * uDay;
+    col += mix(vec3(1.0, 0.95, 0.86), vec3(1.0, 0.74, 0.5), uSunset) * pow(sun, 14.0) * 0.22 * uDay;
+    vec3 sunSide = normalize(vec3(uSunDir.x, 0.05, uSunDir.z));
+    col += vec3(1.0, 0.7, 0.42) * pow(max(dot(d, sunSide), 0.0), 6.0) * smoothstep(0.45, -0.05, h) * uSunset * 0.6 * uDay;
+
+    // clouds drifting across the sky, lit from the sun's side: bright and white by day with soft grey
+    // bellies, gold and pink at sunset, dark blue at night with silver edges from the moon
+    if (h > 0.0) {
+      vec2 cp = d.xz / (h + 0.22) * 1.35 + vec2(uTime * 0.008, uTime * 0.005);
+      float c = sFbm(cp);
+      float cover = smoothstep(0.5, 0.74, c) * smoothstep(0.0, 0.14, h);
+      float thick = smoothstep(0.6, 0.85, c);
+      float lit = pow(max(dot(d, uSunDir), 0.0), 3.0);
+      vec3 cDay = mix(vec3(1.0, 0.99, 1.0), vec3(0.8, 0.8, 0.92), thick * 0.75);
+      vec3 cGold = mix(vec3(1.0, 0.76, 0.6), vec3(0.72, 0.52, 0.72), thick * 0.8);
+      vec3 cNight = mix(vec3(0.16, 0.18, 0.34), vec3(0.06, 0.07, 0.16), thick) + vec3(0.42, 0.46, 0.6) * lit * (1.0 - thick) * 0.6;
+      vec3 cloud = mix(mix(cDay, cGold, uSunset * 0.9), cNight, 1.0 - uDay);
+      cloud += vec3(1.0, 0.88, 0.7) * lit * (1.0 - thick) * 0.35 * uDay;
+      col = mix(col, cloud, cover * 0.9);
+    }
     gl_FragColor = vec4(col * uDim, 1.0);
   }
 `

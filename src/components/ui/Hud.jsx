@@ -8,7 +8,7 @@ import { useStore } from '../../store'
 import { coupleAvailable } from '../../lib/couple'
 import { useHome } from '../../lib/home'
 import { audio } from '../../audio/engine'
-import { currentHour, partOfDay, TIME_LABELS, TIME_MODES, useTimeOfDay } from '../../lib/timeOfDay'
+import { CLOCK_LABEL, clockText, currentHour, PART_LABELS, partOfDay } from '../../lib/timeOfDay'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
 import { DialogBox, ObjectivePill, PlacesSheet, StoryDirector, StoryPanel } from './Story'
@@ -53,34 +53,22 @@ export function AudioControls() {
 /** Sound settings + "change character". */
 const PART_ICONS = { pagi: Sunrise, siang: Sun, sore: Sunset, malam: Moon }
 
-/** Morning, midday, afternoon, night: let the day go by, follow the clock, or hold one. */
+/** The world's clock: real time, the same for both of you (read-only). */
 function TimeSettings() {
-  const mode = useTimeOfDay((s) => s.mode)
-  const setMode = useTimeOfDay((s) => s.setMode)
-  const [now, setNow] = useState(() => partOfDay(currentHour()))
+  const read = () => ({ part: partOfDay(currentHour()), text: clockText() })
+  const [now, setNow] = useState(read)
   useEffect(() => {
-    const id = setInterval(() => setNow(partOfDay(currentHour())), 2000)
+    const id = setInterval(() => setNow(read()), 5000)
     return () => clearInterval(id)
   }, [])
-  const Icon = PART_ICONS[now]
+  const Icon = PART_ICONS[now.part]
   return (
     <>
       <h2>Waktu</h2>
       <p className="time-now">
-        <Icon size={15} /> Sekarang {TIME_LABELS[now].toLowerCase()}
-        {mode === 'cycle' ? ' · hari berjalan sendiri' : mode === 'real' ? ' · ikut jam HP-mu' : ''}
+        <Icon size={15} /> {PART_LABELS[now.part]} · {now.text}
       </p>
-      <div className="time-chips" role="radiogroup" aria-label="Waktu">
-        {TIME_MODES.map((m) => {
-          const ChipIcon = PART_ICONS[m]
-          return (
-            <button key={m} type="button" role="radio" aria-checked={mode === m} className={`time-chip${mode === m ? ' is-on' : ''}`} onClick={() => setMode(m)}>
-              {ChipIcon && <ChipIcon size={14} />}
-              {TIME_LABELS[m]}
-            </button>
-          )
-        })}
-      </div>
+      <p className="settings-help time-help">Langit di sini ikut jam asli ({CLOCK_LABEL}), sama persis untuk kalian berdua ♡</p>
     </>
   )
 }

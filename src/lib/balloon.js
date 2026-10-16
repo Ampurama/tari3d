@@ -4,6 +4,7 @@ import { onRoom, supabase, useCouple } from './couple'
 import { player } from './player'
 import { blockers, obstacles, standHeight, walkable } from './terrain'
 import { BALLOON_PAD, skyPoint } from './skyLayout'
+import { serverNow, setClockOffset } from './clock'
 import { useStore } from '../store'
 
 /*
@@ -59,16 +60,13 @@ const set = (patch) => useBalloon.setState(patch)
 const get = () => useBalloon.getState()
 const toast = (text, ms = 3600) => useStore.getState().showToast(text, ms)
 
-/** server time − local time (ms), measured when we load */
-let clockOffset = 0
-const serverNow = () => Date.now() + clockOffset
 
 async function syncClock() {
   const t0 = Date.now()
   const { data, error } = await supabase.rpc('balloon_clock')
   if (error || !data) return
   const t1 = Date.now()
-  clockOffset = new Date(data).getTime() - (t0 + t1) / 2
+  setClockOffset(new Date(data).getTime() - (t0 + t1) / 2)
 }
 
 export async function loadBalloon() {

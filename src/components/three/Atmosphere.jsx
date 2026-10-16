@@ -63,10 +63,10 @@ export function Lights() {
     const { day, sunset } = atmosphere
     hemi.current.color.copy(blend(SKY, day, sunset))
     hemi.current.groundColor.copy(blend(GROUND, day, sunset))
-    hemi.current.intensity = THREE.MathUtils.lerp(0.62, 1.15 - sunset * 0.2, day)
+    hemi.current.intensity = THREE.MathUtils.lerp(0.42, 1.15 - sunset * 0.2, day)
     ambient.current.intensity = THREE.MathUtils.lerp(0.08, 0.15, day)
     sun.current.color.copy(blend(SUN, day, sunset))
-    sun.current.intensity = THREE.MathUtils.lerp(1.1, 3.4 - sunset * 1.0, day)
+    sun.current.intensity = THREE.MathUtils.lerp(1.6, 3.4 - sunset * 1.0, day)
     // the sun (and its shadows) goes wherever she is: the home island, Sky Island, the western isles
     // all get the same soft shadows as the main island
     const s = useStore.getState()
@@ -131,10 +131,28 @@ function useDiorama(effect) {
   })
 }
 
+/**
+ * The grade follows the hour: rich colour by day, a touch warmer and softer at golden hour, cooler
+ * and a little more contrasty at night (moonlight reads as blue, lanterns as warm).
+ */
+function useGrade(hue, bc) {
+  useFrame(() => {
+    const night = 1 - atmosphere.day
+    if (hue.current) hue.current.saturation = 0.12 - night * 0.14 + atmosphere.sunset * atmosphere.day * 0.04
+    if (bc.current) {
+      bc.current.contrast = 0.06 + night * 0.06
+      bc.current.brightness = -night * 0.02
+    }
+  })
+}
+
 export function Effects() {
   const high = tier === 'high'
   const tilt = useRef()
+  const hue = useRef()
+  const bc = useRef()
   useDiorama(tilt)
+  useGrade(hue, bc)
   return (
     <EffectComposer multisampling={high ? 4 : 2} enableNormalPass={false}>
       {/* soft contact shadows where things meet: under trees, props, the avatar, in the folds of the
@@ -146,8 +164,8 @@ export function Effects() {
       {/* film-like curve: rich mid-tones and soft highlights, like a painted background */}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       {/* ACES leaves pastels a little grey: give the colour back, with a touch more depth */}
-      <HueSaturation saturation={0.12} />
-      <BrightnessContrast contrast={0.06} />
+      <HueSaturation ref={hue} saturation={0.12} />
+      <BrightnessContrast ref={bc} contrast={0.06} />
       <Vignette eskil={false} offset={0.4} darkness={0.2} />
     </EffectComposer>
   )

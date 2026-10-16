@@ -7,11 +7,14 @@ import { addCollider, edgeRadius, HOME_ISLAND, homeDistance, SEA, seeded, SKY, S
 import { player, walkTo } from '../../lib/player'
 import { tier } from '../../lib/device'
 import { windMaterial } from '../../lib/wind'
-import { withPaint } from '../../lib/paint'
+import { withGroundDetail, withPaint } from '../../lib/paint'
 import { atmosphere } from '../../lib/atmosphere'
 import { useStore } from '../../store'
-import { bladeGeometry, FLOWER_SETS, Rocks, TreeKind } from './Vegetation'
-import { Glow } from './Bits'
+import { bladeGeometry, FLOWER_SETS, grassTint, Rocks, TreeKind } from './Vegetation'
+
+const tintColor = new THREE.Color()
+import { Glow, LightPools } from './Bits'
+import { createWater } from '../../lib/water'
 import { Bench } from './Props'
 import { Butterflies } from './Wildlife'
 import { Fireflies } from './Particles'
@@ -88,7 +91,8 @@ const meadowMaterial = (() => {
       )
   }
   m.customProgramCacheKey = () => 'meadow-ground'
-  return m
+  // clumps of grass that catch the light (lib/paint.js)
+  return withGroundDetail(m)
 })()
 
 function MeadowGround() {
@@ -120,86 +124,25 @@ function SkyCliff() {
 
 /* ───────── water ───────── */
 
-const waterVertex = /* glsl */ `
-  varying vec2 vUv;
-  varying vec3 vWorld;
-  void main() {
-    vUv = uv;
-    vec4 w = modelMatrix * vec4(position, 1.0);
-    vWorld = w.xyz;
-    gl_Position = projectionMatrix * viewMatrix * w;
-  }
-`
-const waterFragment = /* glsl */ `
-  uniform float uTime;
-  uniform float uNight;
-  uniform float uSunset;
-  uniform float uRound;
-  uniform vec2 uCenter;
-  uniform float uRadius;
-  varying vec2 vUv;
-  varying vec3 vWorld;
-  void main() {
-    // across the water: 0 in the middle, 1 at the banks (a ribbon uses uv.x, the pond its radius)
-    float edge = uRound > 0.5 ? length(vWorld.xz - uCenter) / uRadius : abs(vUv.x - 0.5) * 2.0;
-    // the river flows along its length; the pond only shivers
-    float along = uRound > 0.5 ? 0.0 : vUv.y;
-    float r1 = sin(vWorld.x * 2.3 + uTime * 0.9) * sin(vWorld.z * 2.1 - uTime * 0.7);
-    float r2 = sin(along * 3.0 - uTime * 2.2 + vWorld.x * 0.8);
-    float ripple = r1 * 0.5 + r2 * 0.35;
-    vec3 deep = mix(vec3(0.1, 0.62, 0.68), vec3(0.03, 0.08, 0.2), uNight);
-    vec3 shallow = mix(vec3(0.45, 0.88, 0.84), vec3(0.1, 0.2, 0.36), uNight);
-    vec3 col = mix(deep, shallow, smoothstep(0.2, 1.0, edge));
-    // the dreamy sky in it (lavender by day, peach at sunset, moonlit at night)
-    vec3 sky = mix(mix(vec3(0.93, 0.89, 1.0), vec3(1.0, 0.8, 0.72), uSunset), vec3(0.45, 0.5, 0.8), uNight);
-    vec3 viewDir = normalize(cameraPosition - vWorld);
-    float fres = pow(1.0 - max(viewDir.y, 0.0), 2.5);
-    col = mix(col, sky, fres * 0.45 + ripple * 0.04);
-    col += vec3(1.0, 0.97, 0.92) * smoothstep(0.78, 1.0, ripple) * 0.45;
-    // soft foam where it meets the banks
-    col = mix(col, vec3(0.97, 1.0, 1.0), smoothstep(0.8, 0.98, edge) * (0.5 + 0.3 * r1));
-    gl_FragColor = vec4(col, 0.86 + fres * 0.1);
-  }
-`
-
-function useWaterMaterial(round) {
-  const material = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uNight: { value: 0 },
-          uSunset: { value: 0 },
-          uRound: { value: round ? 1 : 0 },
-          uCenter: { value: new THREE.Vector2(POND.x, POND.z) },
-          uRadius: { value: POND.r },
-        },
-        vertexShader: waterVertex,
-        fragmentShader: waterFragment,
-        transparent: true,
-      }),
-    [round],
-  )
+/** A water material that follows the time of day (lib/water.js). */
+function useWater(options) {
+  const material = useMemo(() => createWater(options), []) // eslint-disable-line react-hooks/exhaustive-deps
   const reducedMotion = useStore((s) => s.reducedMotion)
-  useFrame((_, delta) => {
-    const u = material.uniforms
-    u.uTime.value += delta * (reducedMotion ? 0.2 : 1)
-    u.uNight.value = 1 - atmosphere.day
-    u.uSunset.value = atmosphere.sunset
-  })
+  useFrame((_, delta) => material.tick(delta, reducedMotion))
   useEffect(() => () => material.dispose(), [material])
   return material
 }
 
 function River() {
   const geometry = useMemo(buildRiverGeometry, [])
-  const material = useWaterMaterial(false)
+  // it flows from the western lake down to the pond
+  const material = useWater({ shape: 'ribbon', flow: [0, 0.55], deep: '#128a96', shallow: '#5fd2c6' })
   useEffect(() => () => geometry.dispose(), [geometry])
   return <mesh geometry={geometry} material={material} renderOrder={1} />
 }
 
 function Pond() {
-  const material = useWaterMaterial(true)
+  const material = useWater({ shape: 'round', center: [POND.x, POND.z], radius: POND.r, deep: '#127f95', shallow: '#62d6cc' })
   return (
     <mesh position={[POND.x, POND.level, POND.z]} rotation={[-Math.PI / 2, 0, 0]} material={material} renderOrder={1}>
       <circleGeometry args={[POND.r * 1.02, 48]} />
@@ -300,14 +243,16 @@ function MeadowGrass() {
   const items = useMemo(() => {
     const rand = seeded(9090)
     const list = []
-    const max = HIGH ? 6500 : 2400
+    const max = HIGH ? 8500 : 2800
     for (let i = 0; i < max * 3 && list.length < max; i++) {
       const a = rand() * Math.PI * 2
       const r = 15 + Math.sqrt(rand()) * 50
       const x = Math.cos(a) * r + 4
       const z = Math.sin(a) * r - 8
       if (!openMeadow(x, z, { water: 0.2 })) continue
-      list.push({ x, z, y: meadowHeight(x, z), h: 0.24 + rand() * 0.2, r: rand() * Math.PI })
+      // patches of taller, wilder grass out in the meadow
+      const wild = Math.sin(x * 0.19 + 0.8) * Math.cos(z * 0.23 - 1.1) > 0.55
+      list.push({ x, z, y: meadowHeight(x, z), h: wild ? 0.42 + rand() * 0.28 : 0.24 + rand() * 0.2, r: rand() * Math.PI, color: grassTint(x, z) })
     }
     return list
   }, [])
@@ -317,8 +262,10 @@ function MeadowGrass() {
       const spread = 0.45 + it.h
       m.compose(new THREE.Vector3(it.x, it.y, it.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, it.r, 0)), new THREE.Vector3(spread, it.h, spread))
       ref.current.setMatrixAt(i, m)
+      ref.current.setColorAt(i, tintColor.set(it.color))
     })
     ref.current.instanceMatrix.needsUpdate = true
+    ref.current.instanceColor.needsUpdate = true
     ref.current.computeBoundingSphere()
   }, [items])
   useEffect(() => () => geometry.dispose(), [geometry])
@@ -617,6 +564,7 @@ function MeadowLanterns() {
         <sphereGeometry args={[0.09, 10, 8]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
+      <LightPools points={items} />
     </group>
   )
 }
