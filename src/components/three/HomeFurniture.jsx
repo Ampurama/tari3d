@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { Glow, HeartMesh } from './Bits'
+import { CATALOG } from '../../lib/homeLayout'
 
 /*
  * OUR LITTLE HOME — the furniture and garden things, as tiny low-poly models.
@@ -41,6 +42,30 @@ export const S = ({ p, s, c, glow, seg }) => <mesh geometry={ball(seg)} material
 /** A lumpy round bush. */
 const Blob = ({ p, s, c }) => <mesh geometry={blob()} material={mat(c, 0, 0.9)} position={p} scale={s} />
 
+/* ───────── plants that show how they're doing (lib/home.js plantNeeds) ───────── */
+
+const FRESH = { mood: 'segar', growth: 'sedang' }
+const tint = new THREE.Color()
+const DRY = { haus: ['#c3c46a', 0.45], layu: ['#b39a5e', 0.72], kering: ['#9c7a55', 0.92] }
+/** A leaf colour for how thirsty the plant is (a little yellow, then brown). */
+const leafFor = (base, mood) => (DRY[mood] ? '#' + tint.set(base).lerp(tint.clone().set(DRY[mood][0]), DRY[mood][1]).getHexString() : base)
+/** A flower colour: paler when thirsty, faded and brownish when wilting. */
+const petalFor = (base, mood) =>
+  mood === 'segar' ? base : '#' + tint.set(base).lerp(tint.clone().set(mood === 'haus' ? '#ffffff' : '#b9958a'), mood === 'haus' ? 0.25 : 0.65).getHexString()
+/** How many of a plant's flowers are still open. */
+const openFor = (n, mood) => Math.round(n * { segar: 1, haus: 0.7, layu: 0.35, kering: 0 }[mood])
+
+/** A lighter (k > 0) or darker (k < 0) shade of a colour, as hex. */
+const shadeCache = new Map()
+export function shade(hex, k) {
+  const key = hex + k
+  if (!shadeCache.has(key)) {
+    const c = new THREE.Color(hex)
+    shadeCache.set(key, '#' + (k > 0 ? c.lerp(new THREE.Color('#ffffff'), k) : c.multiplyScalar(1 + k)).getHexString())
+  }
+  return shadeCache.get(key)
+}
+
 const WOOD = '#c8915f'
 const WOOD_DARK = '#a5714a'
 const CREAM = '#fff4e4'
@@ -53,13 +78,13 @@ const legs = (w, d, h, c = WOOD_DARK, t = 0.06) =>
     [1, 1],
   ].map(([sx, sz], i) => <B key={i} p={[(sx * (w - t)) / 2, h / 2, (sz * (d - t)) / 2]} s={[t, h, t]} c={c} />)
 
-function Bed() {
+function Bed({ color = '#f7a8c4' }) {
   return (
     <group>
       <B p={[0, 0.15, 0]} s={[1.2, 0.3, 1.9]} c={WOOD} />
       <B p={[0, 0.39, 0.03]} s={[1.1, 0.18, 1.78]} c={CREAM} />
-      <B p={[0, 0.5, 0.33]} s={[1.14, 0.07, 1.12]} c="#f7a8c4" />
-      <B p={[0, 0.54, 0.33]} s={[1.15, 0.02, 0.18]} c="#ffd6e6" />
+      <B p={[0, 0.5, 0.33]} s={[1.14, 0.07, 1.12]} c={color} />
+      <B p={[0, 0.54, 0.33]} s={[1.15, 0.02, 0.18]} c={shade(color, 0.45)} />
       <B p={[0, 0.54, -0.62]} s={[0.78, 0.12, 0.34]} c="#ffffff" />
       <B p={[0, 0.55, -0.9]} s={[1.2, 0.9, 0.1]} c={WOOD_DARK} />
       <S p={[0, 1.0, -0.9]} s={[0.12, 0.11, 0.05]} c="#ff8fbf" />
@@ -67,81 +92,96 @@ function Bed() {
   )
 }
 
-function Sofa() {
+function Sofa({ color = '#b9a5e8' }) {
+  const dark = shade(color, -0.1)
+  const light = shade(color, 0.35)
   return (
     <group>
-      <B p={[0, 0.18, 0]} s={[1.6, 0.32, 0.75]} c="#b9a5e8" />
-      <B p={[0, 0.52, -0.29]} s={[1.6, 0.5, 0.18]} c="#a88fe0" />
-      <B p={[-0.72, 0.34, 0]} s={[0.16, 0.36, 0.75]} c="#a88fe0" />
-      <B p={[0.72, 0.34, 0]} s={[0.16, 0.36, 0.75]} c="#a88fe0" />
-      <B p={[-0.32, 0.39, 0.05]} s={[0.6, 0.1, 0.52]} c="#cfc0f2" />
-      <B p={[0.32, 0.39, 0.05]} s={[0.6, 0.1, 0.52]} c="#cfc0f2" />
+      <B p={[0, 0.18, 0]} s={[1.6, 0.32, 0.75]} c={color} />
+      <B p={[0, 0.52, -0.29]} s={[1.6, 0.5, 0.18]} c={dark} />
+      <B p={[-0.72, 0.34, 0]} s={[0.16, 0.36, 0.75]} c={dark} />
+      <B p={[0.72, 0.34, 0]} s={[0.16, 0.36, 0.75]} c={dark} />
+      <B p={[-0.32, 0.39, 0.05]} s={[0.6, 0.1, 0.52]} c={light} />
+      <B p={[0.32, 0.39, 0.05]} s={[0.6, 0.1, 0.52]} c={light} />
       <B p={[0.42, 0.56, -0.12]} s={[0.3, 0.28, 0.1]} c="#ffc2d9" r={[0, 0, 0.15]} />
     </group>
   )
 }
 
-function Table() {
+function Table({ color = WOOD }) {
   return (
     <group>
-      <B p={[0, 0.62, 0]} s={[1.0, 0.06, 0.7]} c={WOOD} />
-      {legs(0.9, 0.6, 0.6)}
+      <B p={[0, 0.62, 0]} s={[1.0, 0.06, 0.7]} c={color} />
+      {legs(0.9, 0.6, 0.6, shade(color, -0.2))}
       <C p={[0.2, 0.7, 0.05]} rt={0.06} rb={0.05} h={0.1} c="#ffffff" />
     </group>
   )
 }
 
-function Chair() {
+function Chair({ color = '#ffc2d9' }) {
   return (
     <group>
       <B p={[0, 0.42, 0]} s={[0.45, 0.06, 0.45]} c={WOOD} />
       {legs(0.42, 0.42, 0.4)}
       <B p={[0, 0.7, -0.2]} s={[0.45, 0.5, 0.05]} c={WOOD} />
-      <B p={[0, 0.47, 0.02]} s={[0.36, 0.04, 0.36]} c="#ffc2d9" />
+      <B p={[0, 0.47, 0.02]} s={[0.36, 0.04, 0.36]} c={color} />
     </group>
   )
 }
 
-function Rug() {
+function Rug({ color = '#f5a9c6' }) {
   return (
     <group>
-      <B p={[0, 0.008, 0]} s={[1.6, 0.016, 1.1]} c="#f5a9c6" rough={1} />
-      <B p={[0, 0.012, 0]} s={[1.3, 0.016, 0.8]} c="#fff0f5" rough={1} />
-      <B p={[0, 0.016, 0]} s={[0.9, 0.016, 0.4]} c="#f9c9db" rough={1} />
+      <B p={[0, 0.008, 0]} s={[1.6, 0.016, 1.1]} c={color} rough={1} />
+      <B p={[0, 0.012, 0]} s={[1.3, 0.016, 0.8]} c={shade(color, 0.82)} rough={1} />
+      <B p={[0, 0.016, 0]} s={[0.9, 0.016, 0.4]} c={shade(color, 0.4)} rough={1} />
     </group>
   )
 }
 
-function FloorLamp() {
+function FloorLamp({ color = '#ffe7b8' }) {
   return (
     <group>
       <C p={[0, 0.02, 0]} rt={0.15} h={0.04} c={WOOD_DARK} />
       <C p={[0, 0.67, 0]} rt={0.022} h={1.3} c={WOOD_DARK} seg={6} />
-      <C p={[0, 1.38, 0]} rt={0.12} rb={0.2} h={0.26} c="#ffe7b8" glow={0.9} />
+      <C p={[0, 1.38, 0]} rt={0.12} rb={0.2} h={0.26} c={color} glow={0.9} />
       <Glow position={[0, 1.36, 0]} color="#ffd9a0" size={1.3} opacity={0.5} />
     </group>
   )
 }
 
-function Plant() {
+function Plant({ needs = FRESH }) {
+  const { mood, growth } = needs
+  const blooms = growth === 'mekar' ? openFor(4, mood) : 0
   return (
     <group>
       <C p={[0, 0.15, 0]} rt={0.17} rb={0.13} h={0.3} c="#e08f6a" />
-      <Blob p={[0, 0.5, 0]} s={[0.24, 0.26, 0.24]} c="#6fb85a" />
-      <Blob p={[0.1, 0.68, 0.04]} s={[0.15, 0.16, 0.15]} c="#86c96b" />
+      <Blob p={[0, 0.5, 0]} s={[0.24, 0.26, 0.24]} c={leafFor('#6fb85a', mood)} />
+      <Blob p={[0.1, 0.68, 0.04]} s={[0.15, 0.16, 0.15]} c={leafFor('#86c96b', mood)} />
+      {growth !== 'kecil' && <Blob p={[-0.12, 0.62, -0.06]} s={[0.13, 0.14, 0.13]} c={leafFor('#7cc262', mood)} />}
+      {[
+        [0.05, 0.84, 0.05, '#ff9cc6'],
+        [-0.14, 0.74, 0.08, '#ffffff'],
+        [0.17, 0.72, -0.06, '#ffd27f'],
+        [-0.04, 0.78, -0.15, '#ff9cc6'],
+      ]
+        .slice(0, blooms)
+        .map(([x, y, z, c], i) => (
+          <S key={i} p={[x, y, z]} s={0.045} c={petalFor(c, mood)} />
+        ))}
     </group>
   )
 }
 
 const BOOK = ['#f7a8c4', '#9ec8f0', '#ffd27f', '#b9a5e8', '#8fd1a5', '#ffffff']
-function Bookshelf() {
+function Bookshelf({ color = WOOD }) {
   return (
     <group>
-      <B p={[0, 0.65, -0.17]} s={[1.0, 1.3, 0.05]} c={WOOD_DARK} />
-      <B p={[-0.475, 0.65, 0]} s={[0.05, 1.3, 0.4]} c={WOOD} />
-      <B p={[0.475, 0.65, 0]} s={[0.05, 1.3, 0.4]} c={WOOD} />
+      <B p={[0, 0.65, -0.17]} s={[1.0, 1.3, 0.05]} c={shade(color, -0.2)} />
+      <B p={[-0.475, 0.65, 0]} s={[0.05, 1.3, 0.4]} c={color} />
+      <B p={[0.475, 0.65, 0]} s={[0.05, 1.3, 0.4]} c={color} />
       {[0.02, 0.44, 0.86, 1.28].map((y) => (
-        <B key={y} p={[0, y, 0]} s={[1.0, 0.04, 0.4]} c={WOOD} />
+        <B key={y} p={[0, y, 0]} s={[1.0, 0.04, 0.4]} c={color} />
       ))}
       {[0.04, 0.46, 0.88].map((y, row) =>
         [0, 1, 2, 3, 4].map((i) => {
@@ -196,7 +236,8 @@ function Teddy() {
   )
 }
 
-function Vase() {
+function Vase({ needs = FRESH }) {
+  const { mood } = needs
   return (
     <group>
       <C p={[0, 0.22, 0]} rt={0.19} rb={0.15} h={0.04} c={WOOD} />
@@ -209,8 +250,8 @@ function Vase() {
         [0.07, 0.54, -0.02, '#f7f2ff'],
       ].map(([x, y, z, c], i) => (
         <group key={i}>
-          <C p={[x / 2, (y + 0.45) / 2, z / 2]} rt={0.008} h={y - 0.45} c="#6fb85a" seg={4} />
-          <S p={[x, y, z]} s={0.045} c={c} />
+          <C p={[x / 2, (y + 0.45) / 2, z / 2]} rt={0.008} h={y - 0.45} c={leafFor('#6fb85a', mood)} seg={4} />
+          <S p={[x, y - (mood === 'layu' || mood === 'kering' ? 0.04 : 0), z]} s={mood === 'kering' ? 0.03 : 0.045} c={petalFor(c, mood)} />
         </group>
       ))}
     </group>
@@ -218,18 +259,22 @@ function Vase() {
 }
 
 const PETALS = ['#ff8fbf', '#ffd27f', '#f7f2ff', '#b9a5e8', '#ff9f8f']
-function Flowers() {
+function Flowers({ needs = FRESH }) {
+  const { mood, growth } = needs
+  const total = growth === 'mekar' ? 12 : growth === 'kecil' ? 6 : 8
+  const open = openFor(total, mood)
   return (
     <group>
       <B p={[0, 0.05, 0]} s={[1.0, 0.1, 0.6]} c={WOOD_DARK} />
-      <B p={[0, 0.07, 0]} s={[0.9, 0.08, 0.5]} c="#8a6248" />
-      {Array.from({ length: 8 }, (_, i) => {
-        const x = -0.36 + (i % 4) * 0.24
-        const z = i < 4 ? -0.12 : 0.12
+      <B p={[0, 0.07, 0]} s={[0.9, 0.08, 0.5]} c={mood === 'kering' ? '#a07a5a' : '#8a6248'} />
+      {Array.from({ length: total }, (_, i) => {
+        const row = Math.floor(i / 4)
+        const x = -0.36 + (i % 4) * 0.24 + (row === 2 ? 0.12 : 0)
+        const z = row === 0 ? -0.12 : row === 1 ? 0.12 : 0
         return (
           <group key={i}>
-            <S p={[x, 0.17, z]} s={[0.07, 0.05, 0.07]} c="#6fb85a" />
-            <S p={[x, 0.24, z]} s={0.05} c={PETALS[i % PETALS.length]} />
+            <S p={[x, 0.17, z]} s={[0.07, 0.05, 0.07]} c={leafFor('#6fb85a', mood)} />
+            {i < open && <S p={[x, growth === 'kecil' ? 0.22 : 0.25, z]} s={growth === 'mekar' ? 0.058 : 0.05} c={petalFor(PETALS[i % PETALS.length], mood)} />}
           </group>
         )
       })}
@@ -237,17 +282,24 @@ function Flowers() {
   )
 }
 
-function Bush() {
+function Bush({ needs = FRESH }) {
+  const { mood, growth } = needs
+  const spots = [
+    [0.2, 0.45, 0.28],
+    [-0.25, 0.4, 0.22],
+    [0.05, 0.62, 0.15],
+    [-0.1, 0.55, -0.25],
+    [0.28, 0.35, -0.12],
+    [-0.3, 0.3, -0.05],
+    [0.12, 0.66, -0.1],
+  ]
+  const blossoms = openFor(growth === 'mekar' ? 7 : growth === 'kecil' ? 1 : 3, mood)
   return (
     <group>
-      <Blob p={[0, 0.34, 0]} s={[0.4, 0.34, 0.4]} c="#6fb85a" />
-      <Blob p={[0.15, 0.48, 0.1]} s={[0.2, 0.18, 0.2]} c="#86c96b" />
-      {[
-        [0.2, 0.45, 0.28],
-        [-0.25, 0.4, 0.22],
-        [0.05, 0.62, 0.15],
-      ].map((p, i) => (
-        <S key={i} p={p} s={0.04} c="#ffb3cf" />
+      <Blob p={[0, 0.34, 0]} s={[0.4, 0.34, 0.4]} c={leafFor('#6fb85a', mood)} />
+      <Blob p={[0.15, 0.48, 0.1]} s={[0.2, 0.18, 0.2]} c={leafFor('#86c96b', mood)} />
+      {spots.slice(0, blossoms).map((p, i) => (
+        <S key={i} p={p} s={0.04} c={petalFor('#ffb3cf', mood)} />
       ))}
     </group>
   )
@@ -264,23 +316,107 @@ function Lantern() {
   )
 }
 
-function GardenBench() {
+function GardenBench({ color = WOOD }) {
   return (
     <group>
-      <B p={[0, 0.42, 0]} s={[1.3, 0.06, 0.45]} c={WOOD} />
-      <B p={[0, 0.7, -0.2]} s={[1.3, 0.3, 0.05]} c={WOOD} />
+      <B p={[0, 0.42, 0]} s={[1.3, 0.06, 0.45]} c={color} />
+      <B p={[0, 0.7, -0.2]} s={[1.3, 0.3, 0.05]} c={color} />
       {legs(1.2, 0.4, 0.4, '#6d5a6e', 0.05)}
     </group>
   )
 }
 
-function SmallTree() {
+function SmallTree({ needs = FRESH }) {
+  const { mood, growth } = needs
+  // the blossom canopy thins out as it gets thirsty
+  const k = { segar: 1, haus: 0.92, layu: 0.78, kering: 0.62 }[mood]
   return (
     <group>
       <C p={[0, 0.45, 0]} rt={0.06} rb={0.09} h={0.9} c="#9a6b4a" seg={7} />
-      <Blob p={[0, 1.15, 0]} s={[0.45, 0.38, 0.45]} c="#ffc2d9" />
-      <Blob p={[0.22, 1.32, 0.08]} s={[0.26, 0.22, 0.26]} c="#ffd6e6" />
-      <Blob p={[-0.2, 1.05, 0.12]} s={[0.24, 0.2, 0.24]} c="#f7a8c4" />
+      <Blob p={[0, 1.15, 0]} s={[0.45 * k, 0.38 * k, 0.45 * k]} c={petalFor('#ffc2d9', mood)} />
+      <Blob p={[0.22, 1.32, 0.08]} s={[0.26 * k, 0.22 * k, 0.26 * k]} c={petalFor('#ffd6e6', mood)} />
+      <Blob p={[-0.2, 1.05, 0.12]} s={[0.24 * k, 0.2 * k, 0.24 * k]} c={petalFor('#f7a8c4', mood)} />
+      {growth === 'mekar' && mood !== 'kering' && (
+        <>
+          <Blob p={[-0.1, 1.42, -0.15]} s={[0.22, 0.18, 0.22]} c={petalFor('#ffe0ec', mood)} />
+          <Blob p={[0.28, 1.08, -0.18]} s={[0.18, 0.16, 0.18]} c={petalFor('#ffb3cf', mood)} />
+        </>
+      )}
+    </group>
+  )
+}
+
+/* ───────── kitchen, bathroom, entertainment ───────── */
+
+/** A little stove with an oven door, two rings and a pot. `cooking`: steam rises, the rings glow. */
+function Stove({ color = '#f6e3c6' }) {
+  return (
+    <group>
+      <B p={[0, 0.42, 0]} s={[0.7, 0.84, 0.6]} c={color} />
+      <B p={[0, 0.86, 0]} s={[0.72, 0.04, 0.62]} c="#5d5363" />
+      <B p={[0, 0.36, 0.305]} s={[0.5, 0.36, 0.02]} c={shade(color, -0.25)} />
+      <B p={[0, 0.36, 0.317]} s={[0.36, 0.22, 0.01]} c="#3b3346" rough={0.3} />
+      <B p={[0, 0.6, 0.313]} s={[0.4, 0.03, 0.02]} c="#d9d2dd" />
+      {[-0.17, 0.17].map((x) => (
+        <C key={x} p={[x, 0.885, -0.05]} rt={0.11} h={0.012} c="#2e2836" />
+      ))}
+      <C p={[-0.17, 0.95, -0.05]} rt={0.1} rb={0.09} h={0.13} c="#f29bb3" />
+      <B p={[0.09, 0.95, -0.05]} s={[0.16, 0.02, 0.03]} c="#5d5363" />
+      {[-0.2, 0, 0.2].map((x) => (
+        <S key={x} p={[x, 0.78, 0.31]} s={0.025} c="#d9d2dd" />
+      ))}
+    </group>
+  )
+}
+
+/** A rounded retro fridge. */
+function Fridge({ color = '#bfe3d6' }) {
+  return (
+    <group>
+      <B p={[0, 0.82, 0]} s={[0.66, 1.64, 0.62]} c={color} rough={0.45} />
+      <B p={[0, 1.18, 0.312]} s={[0.6, 0.02, 0.01]} c={shade(color, -0.25)} />
+      <B p={[-0.24, 1.42, 0.33]} s={[0.04, 0.22, 0.04]} c="#e8e2ea" rough={0.3} />
+      <B p={[-0.24, 0.85, 0.33]} s={[0.04, 0.34, 0.04]} c="#e8e2ea" rough={0.3} />
+      {/* a few magnets and a little heart note */}
+      <S p={[0.12, 1.45, 0.32]} s={0.03} c="#ff8fbf" />
+      <S p={[0.2, 1.35, 0.32]} s={0.025} c="#ffd27f" />
+      <B p={[0.12, 0.95, 0.315]} s={[0.16, 0.18, 0.01]} c="#fffaf0" />
+      <S p={[0.12, 0.98, 0.322]} s={[0.03, 0.03, 0.01]} c="#ff8fbf" />
+    </group>
+  )
+}
+
+/** A clawfoot bathtub. `bathing`: it's full of bubbles. */
+function Bathtub({ color = '#ffffff' }) {
+  return (
+    <group>
+      <B p={[0, 0.36, 0]} s={[0.8, 0.5, 1.5]} c={color} rough={0.3} />
+      <B p={[0, 0.58, 0]} s={[0.66, 0.06, 1.34]} c="#cdeaf3" rough={0.2} />
+      {[
+        [-0.32, -0.62],
+        [0.32, -0.62],
+        [-0.32, 0.62],
+        [0.32, 0.62],
+      ].map(([x, z], i) => (
+        <S key={i} p={[x, 0.07, z]} s={[0.06, 0.07, 0.06]} c="#e0b85c" />
+      ))}
+      <C p={[0, 0.78, -0.72]} rt={0.025} h={0.32} c="#d9d2dd" />
+      <B p={[0, 0.92, -0.64]} s={[0.04, 0.03, 0.18]} c="#d9d2dd" />
+      {/* a little stack of towels and a rubber duck */}
+      <S p={[0.28, 0.66, 0.55]} s={[0.07, 0.05, 0.06]} c="#ffe36e" />
+    </group>
+  )
+}
+
+/** A small TV on a low cabinet. `on`: the screen glows. */
+function Tv({ color = '#a88fe0', on = false }) {
+  return (
+    <group>
+      <B p={[0, 0.22, 0]} s={[1.0, 0.44, 0.4]} c={color} />
+      <B p={[0, 0.22, 0.201]} s={[0.9, 0.02, 0.01]} c={shade(color, -0.2)} />
+      <B p={[0, 0.82, -0.02]} s={[0.86, 0.54, 0.06]} c="#3b3346" rough={0.4} />
+      <B p={[0, 0.82, 0.012]} s={[0.78, 0.46, 0.01]} c={on ? '#bde6ff' : '#2a2433'} glow={on ? 1.1 : 0} rough={0.2} />
+      <B p={[0, 0.48, -0.02]} s={[0.12, 0.1, 0.06]} c="#3b3346" />
     </group>
   )
 }
@@ -408,10 +544,18 @@ const MODELS = {
   lantern: Lantern,
   garden_bench: GardenBench,
   small_tree: SmallTree,
+  stove: Stove,
+  fridge: Fridge,
+  bathtub: Bathtub,
+  tv: Tv,
 }
 
-/** One piece of furniture by kind. */
-export default function Furniture({ kind }) {
+/**
+ * One piece of furniture by kind, in its colour (`variant`, from the catalog's colours). Plants also
+ * show how they're doing (`needs`); `on` lights up what's in use (the TV).
+ */
+export default function Furniture({ kind, needs, variant = 0, on }) {
   const Model = MODELS[kind]
-  return Model ? <Model /> : null
+  const color = CATALOG[kind]?.colors?.[variant]
+  return Model ? <Model needs={needs} on={on} {...(color ? { color } : {})} /> : null
 }

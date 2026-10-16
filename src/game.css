@@ -2685,3 +2685,236 @@
     bottom: calc(8vh + 10px);
   }
 }
+
+/* ───────── a plant's little status card (Our Little Home) ───────── */
+.plant-anchor {
+  pointer-events: none;
+}
+
+.plant-card {
+  display: grid;
+  gap: 3px;
+  min-width: 128px;
+  padding: 8px 11px 9px;
+  border-radius: 12px;
+  background: rgba(36, 24, 72, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(20, 10, 50, 0.3);
+  transform: translateY(-18px);
+}
+
+.plant-card strong {
+  font-size: 0.8rem;
+}
+
+.plant-card span {
+  color: rgba(255, 236, 246, 0.85);
+}
+
+.plant-card small {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.66rem;
+}
+
+/* the water bar */
+.plant-water {
+  position: relative;
+  display: block;
+  height: 6px;
+  margin: 2px 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.plant-water::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: calc(var(--w) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7fd0ff, #b8e6ff);
+}
+
+.plant-card.is-haus .plant-water::after {
+  background: linear-gradient(90deg, #f6d36b, #ffe7a3);
+}
+
+.plant-card.is-layu .plant-water::after,
+.plant-card.is-kering .plant-water::after {
+  background: linear-gradient(90deg, #ff9a6b, #ffc19e);
+}
+
+/* ───────── living in the house (Sims-like): activity progress, moodlets ───────── */
+.act-bar {
+  position: relative;
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.act-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: calc(var(--k) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff9fd0, #b892ff);
+  transition: width 0.2s linear;
+}
+
+.together-title {
+  margin: 14px 0 6px;
+  font-size: 0.9rem;
+}
+
+.partner-mood {
+  margin-left: 2px;
+}
+
+.mood-strip {
+  position: fixed;
+  left: calc(22px + var(--safe-left, 0px));
+  bottom: calc(110px + var(--safe-bottom));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.mood-overall,
+.moodlet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(36, 24, 72, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.mood-overall {
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.mood-overall em,
+.moodlet em {
+  font-style: normal;
+}
+
+.moodlet small {
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.68rem;
+}
+
+@media (max-width: 600px) {
+  .mood-strip {
+    left: 12px;
+    bottom: calc(200px + var(--safe-bottom));
+  }
+}
+
+/* ───────── build / buy mode (Our Little Home) ───────── */
+.home-coins {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 10px;
+  font-weight: 600;
+}
+
+.home-coins small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.home-coins.is-off {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.home-coins.is-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 143, 196, 0.18);
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.home-price {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.7rem;
+  color: #ffd1e6;
+}
+
+.home-catalog button.is-poor {
+  opacity: 0.55;
+}
+
+.home-styles h4 {
+  margin: 8px 0 6px;
+  font-size: 0.82rem;
+}
+
+.home-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.home-swatches button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.home-swatches button i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.home-swatches button.is-on {
+  border-color: rgba(255, 214, 234, 0.85);
+  background: rgba(255, 143, 196, 0.2);
+}
+
+.home-swatches.is-colors {
+  margin-top: 8px;
+}
+
+.home-swatches.is-colors button {
+  padding: 5px;
+}

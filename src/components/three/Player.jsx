@@ -11,6 +11,7 @@ import { holdSeat, sitStyle, standUp } from '../../lib/actions'
 import { followBlocked, handFollow, holding, myHand, releaseHand } from '../../lib/hand'
 import { respawnPoint } from '../../lib/sky'
 import { warmPaths } from '../../lib/path'
+import { tickLife } from '../../lib/life'
 import { holdBalloon } from '../../lib/balloon'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
@@ -170,6 +171,8 @@ export function PlayerController() {
 
     // ── movement intent: keyboard / joystick, or tap-to-walk
     const move = readMove()
+    // living in the house: an activity holds her still; moving (or a tap somewhere) stops it
+    tickLife(Boolean(player.act) && (move.mag > 0.05 || Boolean(player.walkTarget)))
     // sitting: any move (keys, joystick, a tap somewhere) gets her up again
     if (player.seat && (move.mag > 0.05 || player.walkTarget)) standUp()
     // holding hands and following: walk beside the leader (her own keys wait; "Lepas Gandengan" lets go)
@@ -180,6 +183,10 @@ export function PlayerController() {
     let targetSpeed = 0
     if (player.balloon) {
       // in the basket: her own keys rest until she's back on the ground
+      player.walkTarget = null
+      player.onArrive = null
+    } else if (player.act) {
+      // busy (sleeping, cooking…): she stays right where the activity put her
       player.walkTarget = null
       player.onArrive = null
     } else if (lead) {
@@ -424,7 +431,7 @@ export function PlayerAvatar() {
   return (
     <>
       <group ref={group}>
-        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sitStyle(player.seat), emote: player.emote, hand: myHand() })} />
+        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sitStyle(player.seat), emote: player.emote, hand: myHand(), act: player.act?.kind })} />
         <EmoteFx get={() => player.emote} />
         {(carrying || hasWater) && (
           <group ref={carry} position={[0, 1.55, 0]}>

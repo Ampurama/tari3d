@@ -63,7 +63,7 @@ function FieldFlowers() {
   const items = useMemo(() => {
     const rand = seeded(8080)
     const list = []
-    const max = HIGH ? 8000 : 3000
+    const max = HIGH ? 3500 : 1500
     for (let i = 0; i < max * 6 && list.length < max; i++) {
       const a = rand() * Math.PI * 2
       const r = Math.sqrt(rand()) * 84
@@ -107,13 +107,13 @@ function useWoods() {
     const far = { round: [], tall: [], blossom: [] }
     const pick = () => (rand() < 0.25 ? 'blossom' : rand() < 0.55 ? 'tall' : 'round')
     // small woods out in the meadow (well away from the main meadow, so they frame it)
-    const woods = HIGH ? 14 : 8
+    const woods = HIGH ? 8 : 5
     for (let w = 0; w < woods; w++) {
       const a = (w / woods) * Math.PI * 2 + rand() * 0.4
       const r = 36 + rand() * 42
       const cx = LIMIT_CENTRE.x + Math.cos(a) * r
       const cz = LIMIT_CENTRE.z + Math.sin(a) * r
-      const n = HIGH ? 14 + Math.floor(rand() * 12) : 8 + Math.floor(rand() * 6)
+      const n = HIGH ? 8 + Math.floor(rand() * 7) : 5 + Math.floor(rand() * 4)
       for (let k = 0; k < n; k++) {
         const x = cx + (rand() - 0.5) * 14
         const z = cz + (rand() - 0.5) * 14
@@ -124,7 +124,7 @@ function useWoods() {
       }
     }
     // a forest along the hills at the horizon (no shadows: it's far)
-    const ring = HIGH ? 520 : 220
+    const ring = HIGH ? 300 : 140
     for (let i = 0; i < ring; i++) {
       const a = rand() * Math.PI * 2
       const r = 96 + Math.pow(rand(), 0.7) * 110
@@ -181,7 +181,7 @@ function GiantFlowers() {
   const groups = useMemo(() => {
     const rand = seeded(4444)
     const out = [[], [], [], []]
-    const n = HIGH ? 46 : 24
+    const n = HIGH ? 18 : 10
     for (let i = 0; i < n * 5 && out.flat().length < n; i++) {
       const a = rand() * Math.PI * 2
       const r = 22 + rand() * 58

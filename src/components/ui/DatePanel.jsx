@@ -28,6 +28,7 @@ import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { dates } from '../../content/config'
 import { acceptHand, declineHand, releaseHand, useHand } from '../../lib/hand'
+import { ActFloat, TogetherButtons, TogetherFloat } from './LifeUI'
 import { SkyCards } from './SkyPanel'
 import { BalloonCard } from './BalloonPanel'
 
@@ -99,6 +100,7 @@ function ActionsSheet({ onClose }) {
           </button>
         )}
       </div>
+      {mateOnline && <TogetherButtons onDone={onClose} />}
       {!mateOnline && <p className="couple-status">{mateName()} sedang nggak online, tapi gesturnya tetap bisa kamu lakukan.</p>}
       <p className="date-hint">Mau duduk? Dekati sofa, kursi, kasur, bangku, atau tepi teras, lalu tekan E / tombol ✦.</p>
     </Sheet>
@@ -510,6 +512,8 @@ export default function DatePanel() {
       <div className="top-stack">
         <DateFloat />
         <HandFloat />
+        <ActFloat />
+        <TogetherFloat />
         <BalloonCard />
         <SkyCards />
       </div>

@@ -6,17 +6,20 @@ import {
   cancelDraft,
   loadHome,
   mateName,
+  paintDraft,
   pickKind,
   placeDraft,
   removeDraft,
   rotateDraft,
   saveMemory,
+  setHouseStyle,
+  simsInstalled,
   startEditing,
   stopEditing,
   upgradeHome,
   useHome,
 } from '../../lib/home'
-import { CATALOG, KINDS, STAGES } from '../../lib/homeLayout'
+import { CATALOG, CATEGORIES, FLOOR_STYLES, KINDS, priceOf, STAGES, STYLE_PRICE, WALL_STYLES } from '../../lib/homeLayout'
 import { useStore } from '../../store'
 import { useDate } from '../../lib/date'
 import { dates } from '../../content/config'
@@ -133,6 +136,7 @@ function HomeSheet({ onClose }) {
       <>
         <h2>{STAGES[stage - 1].title}</h2>
         <p className="couple-status">{STAGES[stage - 1].text}</p>
+        <Coins />
         <ol className="home-stages">
           {STAGES.map((s) => (
             <li key={s.n} className={s.n < stage ? 'is-done' : s.n === stage ? 'is-now' : ''}>
@@ -205,76 +209,169 @@ function HomeButtons() {
   )
 }
 
-/** The decorating bar: the catalog, then Putar / Tempatkan / Batalkan for what she's holding. */
+/** The shared heart coins, and how to earn them. */
+function Coins({ compact = false }) {
+  const coins = useHome((s) => s.coins)
+  if (!simsInstalled() || coins === null) {
+    return compact ? null : <p className="home-coins is-off">Koin hati, warna perabot, dinding &amp; lantai butuh <code>009_sims_home.sql</code> dijalankan di Supabase dulu.</p>
+  }
+  return (
+    <p className={'home-coins' + (compact ? ' is-compact' : '')} title="Koin hati bersama — dapat dari masak, tidur, baca, berendam, makan, nonton, siram tanaman, dan aktivitas berdua">
+      <span aria-hidden="true">💗</span> {coins} koin hati
+      {!compact && <small>Dapat dari masak, tidur, baca, berendam, siram tanaman, dan aktivitas berdua ♡</small>}
+    </p>
+  )
+}
+
+/** Walls and floors: pick, then pay once for what changed. */
+function StylePicker() {
+  const style = useHome((s) => s.style)
+  const coins = useHome((s) => s.coins)
+  const saving = useHome((s) => s.saving)
+  const [wall, setWall] = useState(style.wall)
+  const [floor, setFloor] = useState(style.floor)
+  const [msg, setMsg] = useState(null)
+  useEffect(() => {
+    setWall(style.wall)
+    setFloor(style.floor)
+  }, [style.wall, style.floor])
+  const cost = (wall !== style.wall ? STYLE_PRICE : 0) + (floor !== style.floor ? STYLE_PRICE : 0)
+  const apply = async () => {
+    setMsg(null)
+    const res = await setHouseStyle(wall, floor)
+    if (res.ok) audio.sparkle()
+    setMsg(res.ok ? 'Rumahnya jadi baru ✓' : res.error)
+  }
+  if (!simsInstalled()) return <Coins />
+  return (
+    <div className="home-styles">
+      <h4>Dinding</h4>
+      <div className="home-swatches">
+        {Object.entries(WALL_STYLES).map(([id, w]) => (
+          <button key={id} type="button" className={wall === id ? 'is-on' : ''} style={{ '--sw': w.color }} onClick={() => setWall(id)} title={w.label}>
+            <i />
+            {w.label}
+          </button>
+        ))}
+      </div>
+      <h4>Lantai</h4>
+      <div className="home-swatches">
+        {Object.entries(FLOOR_STYLES).map(([id, f]) => (
+          <button key={id} type="button" className={floor === id ? 'is-on' : ''} style={{ '--sw': f.color }} onClick={() => setFloor(id)} title={f.label}>
+            <i />
+            {f.label}
+          </button>
+        ))}
+      </div>
+      <div className="couple-actions">
+        <button type="button" className="btn-glow" disabled={!cost || saving || (coins ?? 0) < cost} onClick={apply}>
+          <Paintbrush size={15} /> {cost ? `Terapkan (💗 ${cost})` : 'Pilih yang baru dulu'}
+        </button>
+        {msg && <small>{msg}</small>}
+      </div>
+    </div>
+  )
+}
+
+/** The build / buy bar, like The Sims: shelves of furniture with prices, colours, walls and floors. */
 function EditBar() {
-  const { editing, draft, saving, notice, stage } = useHome()
+  const { editing, draft, saving, notice, stage, coins } = useHome()
   const keepsakes = useDate((s) => s.keepsakes)
-  const [tab, setTab] = useState('inside')
+  const [tab, setTab] = useState('santai')
   if (!editing) return null
-  const kinds = KINDS.filter((k) => CATALOG[k].area === tab)
-  const status = draft ? (draft.ok ? (saving ? 'Menyimpan…' : 'Pas! Tekan "Tempatkan".') : draft.reason) : notice?.text || 'Pilih barang, lalu ketuk lantai atau taman. Ketuk barang yang sudah ada untuk memindahkannya.'
+  const sims = simsInstalled()
+  const kinds = KINDS.filter((k) => CATALOG[k].cat === tab)
+  const status = draft ? (draft.ok ? (saving ? 'Menyimpan…' : 'Pas! Tekan "Tempatkan".') : draft.reason) : notice?.text || 'Pilih barang, lalu ketuk lantai atau taman. Ketuk barang yang sudah ada untuk memindahkan atau mengganti warnanya.'
   const bad = draft ? !draft.ok : notice?.bad
+  const colors = draft && sims ? CATALOG[draft.kind].colors : null
+  const price = draft?.isNew && sims ? priceOf(draft.kind) : 0
   return (
     <motion.div className="home-edit" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} onPointerDown={(e) => e.stopPropagation()}>
       <div className="home-edit-top">
         <p className={bad ? 'is-bad' : ''} aria-live="polite">
           {status}
         </p>
+        <Coins compact />
         <button type="button" className="btn-ghost" onClick={stopEditing}>
           Selesai
         </button>
       </div>
       {draft ? (
-        <div className="home-edit-actions">
-          <span className="home-edit-holding">
-            {CATALOG[draft.kind].icon} {CATALOG[draft.kind].label}
-          </span>
-          {CATALOG[draft.kind].layer !== 'wall' && (
-            <button type="button" onClick={rotateDraft} disabled={saving}>
-              <RotateCw size={16} /> Putar
+        <>
+          <div className="home-edit-actions">
+            <span className="home-edit-holding">
+              {CATALOG[draft.kind].icon} {CATALOG[draft.kind].label}
+              {price > 0 && <small> · 💗 {price}</small>}
+            </span>
+            {CATALOG[draft.kind].layer !== 'wall' && (
+              <button type="button" onClick={rotateDraft} disabled={saving}>
+                <RotateCw size={16} /> Putar
+              </button>
+            )}
+            <button type="button" className="is-main" onClick={placeDraft} disabled={!draft.ok || saving || (price > 0 && (coins ?? 0) < price)}>
+              <Check size={16} /> {price ? `Beli & tempatkan` : 'Tempatkan'}
             </button>
-          )}
-          <button type="button" className="is-main" onClick={placeDraft} disabled={!draft.ok || saving}>
-            <Check size={16} /> Tempatkan
-          </button>
-          {!draft.isNew && (
-            <button type="button" onClick={removeDraft} disabled={saving}>
-              <Trash2 size={16} /> Hapus
+            {!draft.isNew && (
+              <button type="button" onClick={removeDraft} disabled={saving}>
+                <Trash2 size={16} /> {sims && priceOf(draft.kind) ? `Jual (+${priceOf(draft.kind)})` : 'Hapus'}
+              </button>
+            )}
+            <button type="button" onClick={cancelDraft} disabled={saving}>
+              <X size={16} /> Batalkan
             </button>
+          </div>
+          {colors && (
+            <div className="home-swatches is-colors" role="radiogroup" aria-label="Warna">
+              {colors.map((c, i) => (
+                <button key={c} type="button" role="radio" aria-checked={(draft.variant | 0) === i} className={(draft.variant | 0) === i ? 'is-on' : ''} style={{ '--sw': c }} onClick={() => paintDraft(i)} aria-label={`Warna ${i + 1}`}>
+                  <i />
+                </button>
+              ))}
+            </div>
           )}
-          <button type="button" onClick={cancelDraft} disabled={saving}>
-            <X size={16} /> Batalkan
-          </button>
-        </div>
+        </>
       ) : (
         <>
           <div className="home-edit-tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={tab === 'inside'} className={tab === 'inside' ? 'is-on' : ''} onClick={() => setTab('inside')}>
-              Dalam rumah
-            </button>
-            <button type="button" role="tab" aria-selected={tab === 'garden'} className={tab === 'garden' ? 'is-on' : ''} onClick={() => setTab('garden')}>
-              Taman {stage < 3 && '🔒'}
-            </button>
-          </div>
-          <div className="home-catalog">
-            {kinds.map((k) => (
-              <button
-                key={k}
-                type="button"
-                title={CATALOG[k].keepsake && !keepsakes[k] ? CATALOG[k].hint || `Didapat dari kencan ${dates[CATALOG[k].keepsake]?.title}` : undefined}
-                disabled={(tab === 'garden' && stage < 3) || (CATALOG[k].keepsake && !keepsakes[k])}
-                onClick={() => {
-                  audio.sparkle()
-                  pickKind(k)
-                }}
-              >
-                <span aria-hidden="true">{CATALOG[k].icon}</span>
-                {CATALOG[k].label}
-                {CATALOG[k].keepsake && !keepsakes[k] && ' 🔒'}
+            {CATEGORIES.map((c) => (
+              <button key={c.id} type="button" role="tab" aria-selected={tab === c.id} className={tab === c.id ? 'is-on' : ''} onClick={() => setTab(c.id)}>
+                <span aria-hidden="true">{c.icon}</span> {c.label} {c.area === 'garden' && stage < 3 && '🔒'}
               </button>
             ))}
+            <button type="button" role="tab" aria-selected={tab === 'style'} className={tab === 'style' ? 'is-on' : ''} onClick={() => setTab('style')}>
+              <span aria-hidden="true">🎨</span> Dinding &amp; Lantai
+            </button>
           </div>
-          {tab === 'garden' && stage < 3 && <p className="home-edit-note">Dekorasi taman terbuka di tahap 3.</p>}
+          {tab === 'style' ? (
+            <StylePicker />
+          ) : (
+            <div className="home-catalog">
+              {kinds.map((k) => {
+                const c = CATALOG[k]
+                const locked = c.keepsake && !keepsakes[k]
+                const cost = sims ? priceOf(k) : 0
+                const poor = cost > 0 && (coins ?? 0) < cost
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    className={poor ? 'is-poor' : ''}
+                    title={locked ? c.hint || `Didapat dari kencan ${dates[c.keepsake]?.title}` : poor ? 'Koin hatinya belum cukup' : undefined}
+                    disabled={(c.area === 'garden' && stage < 3) || locked}
+                    onClick={() => {
+                      audio.sparkle()
+                      pickKind(k)
+                    }}
+                  >
+                    <span aria-hidden="true">{c.icon}</span>
+                    {c.label}
+                    {locked ? ' 🔒' : cost ? <small className="home-price">💗 {cost}</small> : c.keepsake ? <small className="home-price">hadiah</small> : null}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {tab === 'taman' && stage < 3 && <p className="home-edit-note">Dekorasi taman terbuka di tahap 3.</p>}
         </>
       )}
     </motion.div>

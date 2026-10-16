@@ -289,7 +289,7 @@ const fieldOut = { k: 0, color: 0 }
  */
 export function flowerField(x, z) {
   const v = vNoise(x * 0.045 + 3.1, z * 0.045 - 1.7) * 0.65 + vNoise(x * 0.11, z * 0.11) * 0.35
-  let k = smooth(0.55, 0.68, v)
+  let k = smooth(0.61, 0.72, v)
   if (k > 0) {
     k *= smooth(0.8, 1.8, meadowPathDistance(x, z)) * smooth(RIVER_HALF_WIDTH + 1, RIVER_HALF_WIDTH + 3, riverAt(x, z).d)
     k *= smooth(1.15, 1.35, Math.hypot(x - POND.x, z - POND.z) / POND.r)
@@ -329,7 +329,7 @@ export function meadowColor(out, x, z, h, steep) {
   out.lerp(COL.sand, (1 - smooth(1.0, 1.22, dp)) * 0.8)
   // flower fields: from afar the meadow is carpeted in colour
   const field = flowerField(x, z)
-  if (field.k > 0) out.lerp(FIELD_TINTS[field.color], field.k * 0.5)
+  if (field.k > 0) out.lerp(FIELD_TINTS[field.color], field.k * 0.35)
   // the footpaths, worn soft into the grass
   out.lerp(COL.soil, (1 - smooth(0.4, 0.95, meadowPathDistance(x, z))) * 0.8)
   // bare lavender stone on the steepest faces (Sky Island's bluff)

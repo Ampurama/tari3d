@@ -15,6 +15,7 @@ import { Glow } from './Bits'
 import EmoteFx from './EmoteFx'
 import { partnerEmote, SEAT_DROP, seats, sitStyle } from '../../lib/actions'
 import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from '../../lib/hand'
+import { MOODS } from '../../lib/mood'
 import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
 
 /*
@@ -73,6 +74,7 @@ function Partner() {
     motion.current.sit = partner.seat ? sitStyle(partner.seat.seat) : false
     motion.current.emote = partnerEmote()
     motion.current.hand = mateHand()
+    motion.current.act = partner.act?.kind || null
     // where they're drawn, for holding hands and for the pet
     partner.shown.x = g.position.x
     partner.shown.y = g.position.y
@@ -90,11 +92,30 @@ function Partner() {
       <EmoteFx get={partnerEmote} />
       {online && (
         <Html position={[0, 1.75, 0]} center zIndexRange={[13, 0]} className="mochi-anchor">
-          <span className="partner-tag">♡ {nameFor(mate.role)}</span>
+          <span className="partner-tag">
+            ♡ {nameFor(mate.role)}
+            <PartnerMood />
+          </span>
         </Html>
       )}
     </group>
   )
+}
+
+/** How they're feeling (their happiest moodlet, lib/mood.js), next to their name. */
+function PartnerMood() {
+  const [kind, setKind] = useState(null)
+  useEffect(() => {
+    const id = setInterval(() => setKind(partner.online ? partner.mood?.kind || null : null), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const m = kind && MOODS[kind]
+  return m ? (
+    <span className="partner-mood" title={m.label}>
+      {' '}
+      {m.icon}
+    </span>
+  ) : null
 }
 
 /** The little dock on the riverbank: write a letter, put it in a bottle, let the river carry it. */

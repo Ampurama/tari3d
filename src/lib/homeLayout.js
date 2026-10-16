@@ -59,35 +59,79 @@ export const STAGES = [
  * 'rug's lie under them, 'wall' things hang on a wall. `area`: inside the house or in the garden.
  */
 export const CATALOG = {
-  bed: { label: 'Kasur', icon: '🛏️', area: 'inside', w: 1.2, d: 1.9 },
-  sofa: { label: 'Sofa', icon: '🛋️', area: 'inside', w: 1.6, d: 0.75 },
-  table: { label: 'Meja', icon: '🪵', area: 'inside', w: 1.0, d: 0.7 },
-  chair: { label: 'Kursi', icon: '🪑', area: 'inside', w: 0.5, d: 0.5 },
-  rug: { label: 'Karpet', icon: '🟪', area: 'inside', w: 1.6, d: 1.1, layer: 'rug' },
-  floor_lamp: { label: 'Lampu berdiri', icon: '💡', area: 'inside', w: 0.4, d: 0.4 },
-  plant: { label: 'Tanaman pot', icon: '🪴', area: 'inside', w: 0.45, d: 0.45 },
-  bookshelf: { label: 'Rak buku', icon: '📚', area: 'inside', w: 1.0, d: 0.4 },
-  picture: { label: 'Bingkai di dinding', icon: '🖼️', area: 'inside', w: 0.7, d: 0.06, layer: 'wall' },
-  heart_lamp: { label: 'Lampu hati', icon: '💗', area: 'inside', w: 0.4, d: 0.4 },
-  teddy: { label: 'Boneka beruang', icon: '🧸', area: 'inside', w: 0.45, d: 0.4 },
-  vase: { label: 'Vas bunga', icon: '💐', area: 'inside', w: 0.4, d: 0.4 },
-  // keepsakes: unlocked once by finishing a date (see supabase/migrations/003_dates.sql)
-  picnic_basket: { label: 'Keranjang piknik', icon: '🧺', area: 'inside', w: 0.5, d: 0.4, keepsake: 'sunset_picnic' },
-  candles: { label: 'Lilin makan malam', icon: '🕯️', area: 'inside', w: 0.4, d: 0.4, keepsake: 'dinner_home' },
-  camp_lantern: { label: 'Lentera kemah', icon: '🏮', area: 'inside', w: 0.4, d: 0.4, keepsake: 'camping' },
-  postcard: { label: 'Kartu pos danau', icon: '💌', area: 'inside', w: 0.5, d: 0.05, layer: 'wall', keepsake: 'lakeside' },
+  // ── Ruang santai
+  sofa: { label: 'Sofa', icon: '🛋️', area: 'inside', w: 1.6, d: 0.75, cat: 'santai', price: 50, colors: ['#b9a5e8', '#f4a9c4', '#a8d5ba', '#f2d6a8'] },
+  chair: { label: 'Kursi', icon: '🪑', area: 'inside', w: 0.5, d: 0.5, cat: 'santai', price: 15, colors: ['#ffc2d9', '#c9b6f4', '#bfe3d6', '#ffe08a'] },
+  rug: { label: 'Karpet', icon: '🟪', area: 'inside', w: 1.6, d: 1.1, layer: 'rug', cat: 'santai', price: 20, colors: ['#f5a9c6', '#b9a5e8', '#9fd3c7', '#f6c89f'] },
+  floor_lamp: { label: 'Lampu berdiri', icon: '💡', area: 'inside', w: 0.4, d: 0.4, cat: 'santai', price: 18, colors: ['#ffe7b8', '#ffd1e3', '#d9ccff', '#c9f0e0'] },
+  tv: { label: 'TV', icon: '📺', area: 'inside', w: 1.0, d: 0.45, cat: 'santai', price: 45, colors: ['#a88fe0', '#f29bb3', '#8fc9b3', '#c8915f'] },
+  // ── Kamar
+  bed: { label: 'Kasur', icon: '🛏️', area: 'inside', w: 1.2, d: 1.9, cat: 'kamar', price: 60, colors: ['#f7a8c4', '#b9a5e8', '#9fd3c7', '#ffd27f'] },
+  teddy: { label: 'Boneka beruang', icon: '🧸', area: 'inside', w: 0.45, d: 0.4, cat: 'kamar', price: 15 },
+  heart_lamp: { label: 'Lampu hati', icon: '💗', area: 'inside', w: 0.4, d: 0.4, cat: 'kamar', price: 22 },
   // the pet's own bed: wherever it's placed becomes the pet's home (supabase/migrations/004_pet.sql)
-  pet_bed: { label: 'Kasur peliharaan', icon: '🐾', area: 'inside', w: 0.7, d: 0.55, layer: 'rug' },
-  // rewards from Sky Island (supabase/migrations/005_sky_island.sql)
-  star_lamp: { label: 'Lampu bintang', icon: '🌟', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Temukan 4 bintang tersembunyi di Sky Island' },
-  sky_lantern: { label: 'Lentera langit', icon: '🎐', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Selesaikan Cloud Hop berdua' },
-  flowers: { label: 'Petak bunga', icon: '🌷', area: 'garden', w: 1.0, d: 0.6 },
-  bush: { label: 'Semak bulat', icon: '🌳', area: 'garden', w: 0.8, d: 0.8 },
-  lantern: { label: 'Lentera taman', icon: '🏮', area: 'garden', w: 0.4, d: 0.4 },
-  garden_bench: { label: 'Bangku taman', icon: '🪵', area: 'garden', w: 1.3, d: 0.6 },
-  small_tree: { label: 'Pohon bunga', icon: '🌸', area: 'garden', w: 1.0, d: 1.0 },
+  pet_bed: { label: 'Kasur peliharaan', icon: '🐾', area: 'inside', w: 0.7, d: 0.55, layer: 'rug', cat: 'kamar', price: 20 },
+  // ── Dapur & makan
+  table: { label: 'Meja makan', icon: '🪵', area: 'inside', w: 1.0, d: 0.7, cat: 'dapur', price: 35, colors: ['#c8915f', '#a97955', '#f1e4d3', '#e9b7c6'] },
+  stove: { label: 'Kompor', icon: '🍳', area: 'inside', w: 0.7, d: 0.6, cat: 'dapur', price: 55, colors: ['#f6e3c6', '#f4b6cc', '#bfe3d6', '#cbbcf2'] },
+  fridge: { label: 'Kulkas', icon: '🧊', area: 'inside', w: 0.66, d: 0.62, cat: 'dapur', price: 50, colors: ['#bfe3d6', '#f7c3d6', '#fff4e4', '#cfe0ff'] },
+  // ── Kamar mandi
+  bathtub: { label: 'Bak mandi', icon: '🛁', area: 'inside', w: 0.8, d: 1.5, cat: 'mandi', price: 70, colors: ['#ffffff', '#ffd6e6', '#cfeae4', '#e3d9ff'] },
+  // ── Dekorasi
+  plant: { label: 'Tanaman pot', icon: '🪴', area: 'inside', w: 0.45, d: 0.45, cat: 'dekor', price: 12 },
+  vase: { label: 'Vas bunga', icon: '💐', area: 'inside', w: 0.4, d: 0.4, cat: 'dekor', price: 10 },
+  bookshelf: { label: 'Rak buku', icon: '📚', area: 'inside', w: 1.0, d: 0.4, cat: 'dekor', price: 40, colors: ['#c8915f', '#a97955', '#f1e4d3', '#b9a5e8'] },
+  picture: { label: 'Bingkai di dinding', icon: '🖼️', area: 'inside', w: 0.7, d: 0.06, layer: 'wall', cat: 'dekor', price: 15 },
+  // ── Kenangan: unlocked once by finishing a date (003_dates.sql) or on Sky Island (005_sky_island.sql); gifts, no coins
+  picnic_basket: { label: 'Keranjang piknik', icon: '🧺', area: 'inside', w: 0.5, d: 0.4, keepsake: 'sunset_picnic', cat: 'kenangan' },
+  candles: { label: 'Lilin makan malam', icon: '🕯️', area: 'inside', w: 0.4, d: 0.4, keepsake: 'dinner_home', cat: 'kenangan' },
+  camp_lantern: { label: 'Lentera kemah', icon: '🏮', area: 'inside', w: 0.4, d: 0.4, keepsake: 'camping', cat: 'kenangan' },
+  postcard: { label: 'Kartu pos danau', icon: '💌', area: 'inside', w: 0.5, d: 0.05, layer: 'wall', keepsake: 'lakeside', cat: 'kenangan' },
+  star_lamp: { label: 'Lampu bintang', icon: '🌟', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Temukan 4 bintang tersembunyi di Sky Island', cat: 'kenangan' },
+  sky_lantern: { label: 'Lentera langit', icon: '🎐', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Selesaikan Cloud Hop berdua', cat: 'kenangan' },
+  // ── Taman
+  flowers: { label: 'Petak bunga', icon: '🌷', area: 'garden', w: 1.0, d: 0.6, cat: 'taman', price: 12 },
+  bush: { label: 'Semak bulat', icon: '🌳', area: 'garden', w: 0.8, d: 0.8, cat: 'taman', price: 10 },
+  lantern: { label: 'Lentera taman', icon: '🏮', area: 'garden', w: 0.4, d: 0.4, cat: 'taman', price: 12 },
+  garden_bench: { label: 'Bangku taman', icon: '🪵', area: 'garden', w: 1.3, d: 0.6, cat: 'taman', price: 25, colors: ['#c8915f', '#f1e4d3', '#b9a5e8', '#8fc9b3'] },
+  small_tree: { label: 'Pohon bunga', icon: '🌸', area: 'garden', w: 1.0, d: 1.0, cat: 'taman', price: 30 },
 }
 export const KINDS = Object.keys(CATALOG)
+
+/**
+ * Prices are in heart coins (koin hati) and must match public.item_price() in
+ * supabase/migrations/009_sims_home.sql (the server is the one that charges).
+ */
+export const priceOf = (kind) => CATALOG[kind]?.price || 0
+
+/** The catalog's shelves, like the buy mode in The Sims. */
+export const CATEGORIES = [
+  { id: 'santai', label: 'Santai', icon: '🛋️', area: 'inside' },
+  { id: 'kamar', label: 'Kamar', icon: '🛏️', area: 'inside' },
+  { id: 'dapur', label: 'Dapur', icon: '🍳', area: 'inside' },
+  { id: 'mandi', label: 'Mandi', icon: '🛁', area: 'inside' },
+  { id: 'dekor', label: 'Dekor', icon: '🪴', area: 'inside' },
+  { id: 'kenangan', label: 'Kenangan', icon: '💌', area: 'inside' },
+  { id: 'taman', label: 'Taman', icon: '🌷', area: 'garden' },
+]
+
+/** Walls and floors (15 coins for each part that changes; checked by public.house_style()). */
+export const WALL_STYLES = {
+  krem: { label: 'Krem', color: '#fff1dc' },
+  blush: { label: 'Blush', color: '#ffe0ea' },
+  sage: { label: 'Sage', color: '#e2efdc' },
+  lavender: { label: 'Lavender', color: '#ece3ff' },
+  langit: { label: 'Langit', color: '#e0eeff' },
+  bintik: { label: 'Peach', color: '#ffe6d6' },
+}
+export const FLOOR_STYLES = {
+  kayu: { label: 'Kayu', color: '#e2b98a' },
+  walnut: { label: 'Walnut', color: '#a97955' },
+  putih: { label: 'Kayu putih', color: '#f1e9df' },
+  pink: { label: 'Pink', color: '#f3c9d6' },
+  kotak: { label: 'Ubin krem', color: '#efe0cc' },
+}
+export const STYLE_PRICE = 15
 export const layerOf = (kind) => CATALOG[kind]?.layer || 'floor'
 
 /** Footprint rectangle of an item: { x0, x1, z0, z1 } (house-local). */

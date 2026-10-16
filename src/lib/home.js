@@ -4,7 +4,9 @@ import { blockers, obstacles } from './terrain'
 import { player } from './player'
 import { couple } from '../content/config'
 import { uid } from './uid'
-import { CATALOG, checkPlacement, HOUSE, hitsItem, hitsWall, inHouse, layerOf, snapPlacement, startSpot, toLocal } from './homeLayout'
+import { serverNow } from './clock'
+import { useStore } from '../store'
+import { CATALOG, checkPlacement, HOUSE, hitsItem, hitsWall, inHouse, layerOf, priceOf, snapPlacement, startSpot, toLocal } from './homeLayout'
 
 /*
  * OUR LITTLE HOME — the shared house, kept in Supabase (tables `house` and `house_items`,
@@ -26,6 +28,9 @@ export const useHome = create(() => ({
   memory: { title: '', date: null, note: '' },
   /** the house lights and the fairy lights on the roof (shared) */
   lights: { on: true, fairy: true },
+  /** shared heart coins, and the walls' and floor's style (009_sims_home.sql); null until installed */
+  coins: null,
+  style: { wall: 'krem', floor: 'kayu' },
   items: {},
   error: null,
   /** decorating mode is on */
@@ -43,8 +48,40 @@ const get = () => useHome.getState()
 /** ids removed in this session: a late event for them must not bring them back */
 const removed = new Set()
 
-const ITEM_COLUMNS = 'id, kind, area, x, z, rot, version, updated_by'
-const clean = (row) => ({ id: row.id, kind: row.kind, area: row.area, x: +row.x, z: +row.z, rot: row.rot | 0, version: row.version | 0, updatedBy: row.updated_by })
+const BASE_COLUMNS = 'id, kind, area, x, z, rot, version, updated_by'
+/**
+ * What the database has: plant care (008_plant_care.sql) and colours (009_sims_home.sql). The house
+ * opens either way; features that need a migration say so when used.
+ */
+const COLUMN_SETS = [
+  { cols: `${BASE_COLUMNS}, watered_at, care, variant`, care: true, sims: true },
+  { cols: `${BASE_COLUMNS}, watered_at, care`, care: true, sims: false },
+  { cols: BASE_COLUMNS, care: false, sims: false },
+]
+let columnSet = 0
+let ITEM_COLUMNS = COLUMN_SETS[0].cols
+let careReady = true
+let simsReady = true
+const useColumns = (i) => {
+  columnSet = i
+  ITEM_COLUMNS = COLUMN_SETS[i].cols
+  careReady = COLUMN_SETS[i].care
+  simsReady = COLUMN_SETS[i].sims
+}
+export const simsInstalled = () => simsReady
+const clean = (row) => ({
+  id: row.id,
+  kind: row.kind,
+  area: row.area,
+  x: +row.x,
+  z: +row.z,
+  rot: row.rot | 0,
+  version: row.version | 0,
+  updatedBy: row.updated_by,
+  wateredAt: row.watered_at ? Date.parse(row.watered_at) : null,
+  care: row.care | 0,
+  variant: row.variant | 0,
+})
 
 function applyHouse(row) {
   if (!row) return
@@ -53,6 +90,8 @@ function applyHouse(row) {
     memory: { title: row.memory_title || '', date: row.memory_date || null, note: row.memory_note || '' },
     // (older databases without 003_dates.sql have no light switches: they stay on)
     lights: { on: row.lights_on ?? true, fairy: row.fairy_on ?? true },
+    coins: typeof row.coins === 'number' ? row.coins : null,
+    style: { wall: row.wall_style || 'krem', floor: row.floor_style || 'kayu' },
   })
   obstacles.version++
 }
@@ -61,7 +100,14 @@ function applyItem(row) {
   if (!row?.id || removed.has(row.id) || !CATALOG[row.kind]) return
   const cur = get().items[row.id]
   if (cur && cur.version > row.version) return // an older event arriving late
-  set({ items: { ...get().items, [row.id]: clean(row) } })
+  const next = clean(row)
+  // the other person just watered a plant: say so (the plant perks up by itself)
+  const { mate } = useCouple.getState()
+  if (cur && PLANTS.has(next.kind) && next.wateredAt && next.wateredAt !== cur.wateredAt && mate && row.updated_by === mate.id) {
+    const who = mate.role === 'owner' ? couple.me.nickname || couple.me.name : couple.you.nickname || couple.you.name
+    useStore.getState().showToast(`💧 ${who} menyiram ${CATALOG[next.kind].label.toLowerCase()}`, 3200)
+  }
+  set({ items: { ...get().items, [row.id]: next } })
   obstacles.version++
 }
 
@@ -78,10 +124,15 @@ function dropItem(id) {
 export async function loadHome() {
   if (!supabase || useCouple.getState().status !== 'connected') return
   if (get().status !== 'ready') set({ status: 'loading', error: null })
-  const [house, items] = await Promise.all([
+  let [house, items] = await Promise.all([
     supabase.from('house').select('*').eq('id', 1).maybeSingle(),
     supabase.from('house_items').select(ITEM_COLUMNS).limit(200),
   ])
+  // a migration isn't installed yet: step down to what the database has (the house still opens)
+  while (items.error && columnSet < COLUMN_SETS.length - 1 && /column|watered_at|care|variant/i.test(items.error.message || '')) {
+    useColumns(columnSet + 1)
+    items = await supabase.from('house_items').select(ITEM_COLUMNS).limit(200)
+  }
   if (house.error || items.error || !house.data) {
     set({ status: 'error', error: 'Rumahnya belum bisa dibuka. Mungkin tabel rumah belum dipasang di Supabase, atau koneksinya lagi putus.' })
     return
@@ -117,6 +168,42 @@ useCouple.subscribe((s, prev) => {
     obstacles.version++
   }
 })
+
+/* ───────── plants that need watering (like The Sims) ───────── */
+
+/** What can be watered. */
+export const PLANTS = new Set(['plant', 'flowers', 'bush', 'small_tree', 'vase'])
+const HOUR = 3600000
+
+/**
+ * How a plant is doing, from when it was last watered (real time, on the shared clock) and how
+ * often it has been cared for:
+ *   water: 1 just watered … 0 bone dry (it takes four days)
+ *   mood:  'segar' (fresh, < 1 day) | 'haus' (thirsty, 1–2 days) | 'layu' (drooping, 2–4 days) | 'kering' (dry)
+ *   growth: 'kecil' (little) | 'sedang' (grown) | 'mekar' (in full bloom) — by how many times it's been
+ *           watered (once every 4 hours counts)
+ */
+export function plantNeeds(item) {
+  const hours = item.wateredAt ? Math.max(0, (serverNow() - item.wateredAt) / HOUR) : 0
+  const water = Math.max(0, 1 - hours / 96)
+  const mood = !careReady || hours < 24 ? 'segar' : hours < 48 ? 'haus' : hours < 96 ? 'layu' : 'kering'
+  const care = item.care | 0
+  const growth = care >= 7 ? 'mekar' : care >= 3 ? 'sedang' : 'kecil'
+  return { hours, water: careReady ? water : 1, mood, growth, care }
+}
+export const MOOD_LABELS = { segar: 'Segar', haus: 'Haus', layu: 'Layu', kering: 'Kering' }
+export const GROWTH_LABELS = { kecil: 'Masih kecil', sedang: 'Tumbuh', mekar: 'Mekar' }
+
+/** Water a plant (either of you). Returns { ok, error }. */
+export async function waterPlant(id) {
+  if (!supabase || get().status !== 'ready') return { ok: false, error: 'Rumahnya belum tersambung.' }
+  if (!careReady) return { ok: false, error: 'Siram tanaman butuh 008_plant_care.sql dijalankan di Supabase dulu.' }
+  const { data, error } = await supabase.rpc('water_plant', { item: id })
+  if (error || !data) return { ok: false, error: 'Belum bisa menyiram, coba lagi sebentar ya.' }
+  applyItem(data)
+  if (simsReady) refreshHouse()
+  return { ok: true }
+}
 
 /* ───────── building ───────── */
 
@@ -187,7 +274,7 @@ export function pickKind(kind) {
   if (c.area === 'garden' && get().stage < 3) return set({ notice: { text: 'Dekorasi taman terbuka di tahap 3.', bad: true } })
   presence.editing = null
   // the id is made now and kept, so pressing "Tempatkan" twice (or a retry) can never place two
-  set({ draft: withCheck({ id: uid(), isNew: true, kind, ...startSpot(kind), version: 0 }), notice: null })
+  set({ draft: withCheck({ id: uid(), isNew: true, kind, ...startSpot(kind), version: 0, variant: 0 }), notice: null })
 }
 
 /** Pick up an item that's already in the house. */
@@ -198,7 +285,7 @@ export function pickItem(id) {
     return set({ notice: { text: `Barang ini lagi dipegang ${mateName()}. Tunggu sebentar, ya.`, bad: true } })
   }
   presence.editing = id
-  set({ draft: withCheck({ id, isNew: false, kind: it.kind, x: it.x, z: it.z, rot: it.rot, version: it.version }), notice: null })
+  set({ draft: withCheck({ id, isNew: false, kind: it.kind, x: it.x, z: it.z, rot: it.rot, version: it.version, variant: it.variant | 0 }), notice: null })
 }
 
 /** Move the draft to a pointer position (house-local). */
@@ -221,6 +308,13 @@ export function rotateDraft() {
   if (!d || get().saving || layerOf(d.kind) === 'wall') return
   const rot = (d.rot + 1) % 4
   set({ draft: withCheck({ ...d, ...snapPlacement(d.kind, d.x, d.z, rot) }) })
+}
+
+/** Choose the colour of what she's holding (free; it's saved with "Tempatkan"). */
+export function paintDraft(variant) {
+  const d = get().draft
+  if (!d || get().saving) return
+  set({ draft: { ...d, variant } })
 }
 
 export function cancelDraft() {
@@ -250,7 +344,9 @@ export async function placeDraft() {
   const c = CATALOG[d.kind]
   let result
   if (d.isNew) {
-    result = await supabase.from('house_items').insert({ id: d.id, kind: d.kind, area: c.area, x: d.x, z: d.z, rot: d.rot }).select(ITEM_COLUMNS).maybeSingle()
+    const row = { id: d.id, kind: d.kind, area: c.area, x: d.x, z: d.z, rot: d.rot }
+    if (simsReady) row.variant = d.variant | 0
+    result = await supabase.from('house_items').insert(row).select(ITEM_COLUMNS).maybeSingle()
     // already saved by an earlier attempt: fine, it's the same item
     if (result.error?.code === '23505') {
       removed.delete(d.id)
@@ -258,7 +354,9 @@ export async function placeDraft() {
       result = { data: null, error: null }
     }
   } else {
-    result = await supabase.from('house_items').update({ x: d.x, z: d.z, rot: d.rot }).eq('id', d.id).eq('version', d.version).select(ITEM_COLUMNS).maybeSingle()
+    const patch = { x: d.x, z: d.z, rot: d.rot }
+    if (simsReady) patch.variant = d.variant | 0
+    result = await supabase.from('house_items').update(patch).eq('id', d.id).eq('version', d.version).select(ITEM_COLUMNS).maybeSingle()
     if (!result.error && !result.data) {
       await refetchItem(d.id)
       presence.editing = null
@@ -266,12 +364,19 @@ export async function placeDraft() {
     }
   }
   if (result.error) {
-    const full = result.error.message?.includes('house is full')
-    return set({ saving: false, notice: { text: full ? 'Rumahnya sudah penuh (80 barang).' : 'Belum tersimpan. Coba lagi, ya.', bad: true } })
+    const msg = result.error.message || ''
+    const text = msg.includes('house is full')
+      ? 'Rumahnya sudah penuh (80 barang).'
+      : msg.includes('not enough coins')
+        ? `Koin hatinya belum cukup (butuh ${priceOf(d.kind)}). Kumpulkan dengan masak, tidur, baca, mandi, siram tanaman, atau main berdua ♡`
+        : 'Belum tersimpan. Coba lagi, ya.'
+    return set({ saving: false, notice: { text, bad: true } })
   }
   if (result.data) applyItem(result.data)
   presence.editing = null
-  set({ saving: false, draft: null, notice: { text: 'Tersimpan ✓' } })
+  const bought = d.isNew && simsReady && priceOf(d.kind) > 0
+  set({ saving: false, draft: null, notice: { text: bought ? `Tersimpan ✓ (−${priceOf(d.kind)} koin)` : 'Tersimpan ✓' } })
+  if (bought) refreshHouse()
 }
 
 /** "Hapus": remove the item being moved. */
@@ -287,7 +392,40 @@ export async function removeDraft() {
     return set({ saving: false, draft: null, notice: { text: conflict(), bad: true } })
   }
   dropItem(d.id)
-  set({ saving: false, draft: null, notice: { text: 'Dihapus.' } })
+  const back = simsReady ? priceOf(d.kind) : 0
+  set({ saving: false, draft: null, notice: { text: back ? `Dihapus (+${back} koin kembali).` : 'Dihapus.' } })
+  if (back) refreshHouse()
+}
+
+/* ───────── coins, walls and floors, and living in the house ───────── */
+
+/** Re-read the house row (its coins change on the server when buying or earning). */
+async function refreshHouse() {
+  const { data } = await supabase.from('house').select('*').eq('id', 1).maybeSingle()
+  if (data) applyHouse(data)
+}
+
+/** Redo the walls and/or the floor (15 coins for each part that changes). Returns { ok, error }. */
+export async function setHouseStyle(wall, floor) {
+  if (!simsReady) return { ok: false, error: 'Ganti dinding & lantai butuh 009_sims_home.sql dijalankan di Supabase dulu.' }
+  set({ saving: true })
+  const { data, error } = await supabase.rpc('house_style', { new_wall: wall, new_floor: floor })
+  set({ saving: false })
+  if (error || !data) return { ok: false, error: error?.message?.includes('not enough coins') ? 'Koin hatinya belum cukup.' : 'Belum tersimpan. Coba lagi, ya.' }
+  applyHouse(data)
+  return { ok: true }
+}
+
+/**
+ * Living in the house earns coins (the server decides how many and when it counts again).
+ * Returns the coins added (0 when it's too soon, or before 009_sims_home.sql is installed).
+ */
+export async function earnCoins(act) {
+  if (!supabase || !simsReady || get().status !== 'ready') return 0
+  const { data, error } = await supabase.rpc('house_reward', { act })
+  if (error) return 0
+  if (data > 0) refreshHouse()
+  return data | 0
 }
 
 /* ───────── walls and furniture block the avatar ───────── */

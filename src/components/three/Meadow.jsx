@@ -203,7 +203,7 @@ function MeadowFlowers() {
         const s = 0.05 + rand() * 0.035
         list.push({ x, z, y: meadowHeight(x, z), s, color: rand() > 0.35 ? p.a : p.b, rot: rand() * Math.PI })
       }
-    return list.slice(0, HIGH ? 9000 : 3600)
+    return list.slice(0, HIGH ? 5000 : 2200)
   }, [])
   useLayoutEffect(() => {
     const m = new THREE.Matrix4()
@@ -243,7 +243,7 @@ function MeadowGrass() {
   const items = useMemo(() => {
     const rand = seeded(9090)
     const list = []
-    const max = HIGH ? 8500 : 2800
+    const max = HIGH ? 6500 : 2400
     for (let i = 0; i < max * 3 && list.length < max; i++) {
       const a = rand() * Math.PI * 2
       const r = 15 + Math.sqrt(rand()) * 50
@@ -277,7 +277,7 @@ function useMeadowTrees() {
   return useMemo(() => {
     const rand = seeded(5151)
     const kinds = { round: [], tall: [], blossom: [] }
-    const copses = HIGH ? 36 : 20
+    const copses = HIGH ? 22 : 13
     for (let c = 0; c < copses; c++) {
       const a = rand() * Math.PI * 2
       const r = 24 + rand() * 60
@@ -590,7 +590,7 @@ function Lupins() {
     ]
     const list = []
     for (const [cx, cz] of centres)
-      for (let k = 0; k < (HIGH ? 70 : 32); k++) {
+      for (let k = 0; k < (HIGH ? 40 : 20); k++) {
         const a = rand() * Math.PI * 2
         const rr = Math.sqrt(rand()) * 3.2
         const x = cx + Math.cos(a) * rr
@@ -628,7 +628,7 @@ function Bushes() {
     const rand = seeded(2323)
     const colors = ['#79c27c', '#8fd18a', '#6db382', '#a6d98c', '#f4b6cf', '#e6c6f2']
     const list = []
-    for (let i = 0; i < (HIGH ? 600 : 300) && list.length < (HIGH ? 190 : 90); i++) {
+    for (let i = 0; i < (HIGH ? 400 : 200) && list.length < (HIGH ? 100 : 50); i++) {
       const a = rand() * Math.PI * 2
       const r = 17 + rand() * 52
       const x = Math.cos(a) * r + 6
@@ -672,7 +672,7 @@ function Mushrooms() {
     const rand = seeded(3131)
     const caps = ['#ff9fbf', '#f7c6dd', '#d9c2ff', '#fff1d6', '#ff8fa8']
     const list = []
-    const rings = HIGH ? 34 : 18
+    const rings = HIGH ? 18 : 10
     for (let i = 0; i < rings * 4 && list.length < rings * 6; i++) {
       const a = rand() * Math.PI * 2
       const r = 18 + rand() * 48

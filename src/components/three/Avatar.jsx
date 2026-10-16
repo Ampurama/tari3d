@@ -87,6 +87,10 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
   const blink = useRef(2)
   const swingNow = useRef(0)
   const pose = useRef(null)
+  // little things in her hands for some activities (lib/life.js)
+  const book = useRef()
+  const plate = useRef()
+  const spoon = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
   const dress = look.outfit === 'dress'
   const longHair = look.hairStyle === 'long'
@@ -191,6 +195,92 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
         head.current.rotation.y = 0
       }
     }
+    // living in the house (lib/life.js): sleeping, cooking, a bath, reading, eating, TV, and together
+    const act = motion.act
+    if (act) {
+      const w = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t * 2.4)
+      if (act === 'sleep') {
+        // lying on her back on the bed, arms by her sides
+        legL.current.rotation.set(0, 0, 0)
+        legR.current.rotation.set(0, 0, 0)
+        kneeL.current.rotation.x = kneeR.current.rotation.x = 0
+        aL.rotation.set(0, 0, -0.12)
+        aR.rotation.set(0, 0, 0.12)
+        eL.rotation.set(0, 0, 0)
+        eR.rotation.set(0, 0, 0)
+        body.current.rotation.x = -Math.PI / 2
+        body.current.position.y = 0.56 + breathe
+        head.current.rotation.set(0, 0, 0)
+      } else if (act === 'bath') {
+        // sitting low in the water, arms resting on the rim
+        legL.current.rotation.x = legR.current.rotation.x = -1.45
+        kneeL.current.rotation.x = kneeR.current.rotation.x = 0.1
+        aL.rotation.set(-0.25, 0, -0.75)
+        aR.rotation.set(-0.25, 0, 0.75)
+        eL.rotation.set(-0.5, 0, 0)
+        eR.rotation.set(-0.5, 0, 0)
+        body.current.position.y = -0.2 + breathe
+        body.current.rotation.x = -0.15
+      } else if (act === 'eat' || act === 'snack') {
+        // a plate in one hand, the other going to her mouth
+        aL.rotation.set(-0.75, 0, -0.1)
+        eL.rotation.set(-0.7, 0, 0)
+        aR.rotation.set(-0.9 - 0.9 * w, 0, 0.25)
+        eR.rotation.set(-0.6 - 1.0 * w, 0, 0)
+      } else if (act === 'cook') {
+        // holding the pot, stirring with the other hand
+        aL.rotation.set(-0.95, 0, -0.18)
+        eL.rotation.set(-0.45, 0, 0)
+        aR.rotation.set(-1.0 + (reducedMotion ? 0 : 0.18 * Math.sin(t * 5)), 0, 0.18 + (reducedMotion ? 0 : 0.14 * Math.cos(t * 5)))
+        eR.rotation.set(-0.7, 0, 0)
+        head.current.rotation.set(0.25, 0, 0)
+      } else if (act === 'read') {
+        // a book held open in both hands, head bowed a little
+        aL.rotation.set(-0.85, 0, -0.28)
+        aR.rotation.set(-0.85, 0, 0.28)
+        eL.rotation.set(-0.85, 0, 0.55)
+        eR.rotation.set(-0.85, 0, -0.55)
+        head.current.rotation.set(0.32, 0, 0)
+      } else if (act === 'tv') {
+        // watching; now and then a laugh
+        const laugh = reducedMotion ? 0 : Math.max(0, Math.sin(t * 0.8) - 0.6) * Math.abs(Math.sin(t * 9))
+        body.current.position.y += laugh * 0.05
+        head.current.rotation.set(-0.05 - laugh * 0.2, 0, 0)
+      } else if (act === 'hug') {
+        // arms around each other
+        aL.rotation.set(-1.35, 0, 0.32)
+        aR.rotation.set(-1.35, 0, -0.32)
+        eL.rotation.set(0, 0, 1.05)
+        eR.rotation.set(0, 0, -1.05)
+        body.current.rotation.x = 0.08
+        head.current.rotation.set(0.1, 0.3, 0)
+      } else if (act === 'talk') {
+        // hands talking, a nod now and then
+        const g = reducedMotion ? 0 : Math.max(0, Math.sin(t * 3))
+        aR.rotation.set(-0.45 - 0.5 * g, 0, 0.22)
+        eR.rotation.set(-0.9, 0, 0)
+        aL.rotation.set(-0.25 - 0.3 * (reducedMotion ? 0 : Math.max(0, Math.sin(t * 2.3 + 1))), 0, -0.15)
+        eL.rotation.set(-0.6, 0, 0)
+        head.current.rotation.set(reducedMotion ? 0 : 0.08 * Math.sin(t * 4), 0, 0)
+      } else if (act === 'dance') {
+        // swaying, arms up, little steps
+        const b = reducedMotion ? 0 : Math.sin(t * 4)
+        aL.rotation.set(-2.3 + 0.3 * b, 0, -0.45)
+        aR.rotation.set(-2.3 - 0.3 * b, 0, 0.45)
+        eL.rotation.set(-0.3, 0, 0.3)
+        eR.rotation.set(-0.3, 0, -0.3)
+        legL.current.rotation.x = 0.3 * Math.max(0, b)
+        legR.current.rotation.x = 0.3 * Math.max(0, -b)
+        kneeL.current.rotation.x = 0.4 * Math.max(0, b)
+        kneeR.current.rotation.x = 0.4 * Math.max(0, -b)
+        body.current.position.y = Math.abs(b) * 0.05
+        body.current.rotation.x = 0
+      }
+    } else if (body.current.rotation.z) body.current.rotation.z = 0
+    if (book.current) book.current.visible = act === 'read'
+    if (plate.current) plate.current.visible = act === 'eat' || act === 'snack'
+    if (spoon.current) spoon.current.visible = act === 'cook'
+
     // ease every joint from where it was toward this frame's pose: starting and stopping, sitting
     // down, reaching for a hand or a wave all blend instead of snapping (quick enough to keep
     // the walk crisp and the held hands together)
@@ -206,7 +296,7 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
     prev.first = false
     // blink every few seconds
     blink.current -= delta
-    const closed = blink.current < 0.12
+    const closed = blink.current < 0.12 || motion.act === 'sleep'
     eyes.current.scale.y = closed ? 0.15 : 1
     if (blink.current < 0) blink.current = 2.5 + ((t * 7.3) % 3)
   })
@@ -285,6 +375,36 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
             </group>
           </group>
         ))}
+
+        {/* things in her hands for some activities */}
+        <group ref={book} position={[0, 0.6, 0.27]} rotation={[-0.9, 0, 0]} visible={false}>
+          <mesh position={[-0.07, 0, 0]} rotation={[0, 0.25, 0]}>
+            <boxGeometry args={[0.13, 0.18, 0.015]} />
+            <meshStandardMaterial color="#f7a8c4" roughness={0.7} />
+          </mesh>
+          <mesh position={[0.07, 0, 0]} rotation={[0, -0.25, 0]}>
+            <boxGeometry args={[0.13, 0.18, 0.015]} />
+            <meshStandardMaterial color="#f7a8c4" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0, 0.012]}>
+            <boxGeometry args={[0.24, 0.16, 0.01]} />
+            <meshStandardMaterial color="#fffaf0" roughness={0.9} />
+          </mesh>
+        </group>
+        <group ref={plate} position={[-0.16, 0.52, 0.24]} visible={false}>
+          <mesh>
+            <cylinderGeometry args={[0.09, 0.07, 0.02, 16]} />
+            <meshStandardMaterial color="#ffffff" roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.03, 0]}>
+            <sphereGeometry args={[0.04, 10, 8]} />
+            <meshStandardMaterial color="#ff8fa8" roughness={0.6} />
+          </mesh>
+        </group>
+        <mesh ref={spoon} position={[0.16, 0.66, 0.36]} rotation={[0.6, 0, 0]} visible={false}>
+          <cylinderGeometry args={[0.012, 0.012, 0.3, 6]} />
+          <meshStandardMaterial color="#c8915f" roughness={0.7} />
+        </mesh>
 
         {/* accessory */}
         {look.accessory === 'scarf' && (

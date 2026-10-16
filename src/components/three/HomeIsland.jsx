@@ -8,7 +8,7 @@ import { player, walkTo } from '../../lib/player'
 import { useInteractable } from '../../lib/interactions'
 import { withPaint } from '../../lib/paint'
 import { coupleAvailable, partner, useCouple } from '../../lib/couple'
-import { cancelDraft, moveDraft, nudgeDraft, pickItem, placeDraft, playerInHouse, removeDraft, rotateDraft, stopEditing, toggleLights, useHome } from '../../lib/home'
+import { cancelDraft, GROWTH_LABELS, MOOD_LABELS, moveDraft, nudgeDraft, pickItem, placeDraft, plantNeeds, PLANTS, playerInHouse, removeDraft, rotateDraft, stopEditing, toggleLights, useHome, waterPlant } from '../../lib/home'
 import { useSeat } from '../../lib/actions'
 import {
   CATALOG,
@@ -30,11 +30,14 @@ import {
   WALL_T,
   WINDOW_Y,
   WINDOWS,
+  WALL_STYLES,
+  FLOOR_STYLES,
 } from '../../lib/homeLayout'
 import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { couple } from '../../content/config'
-import Furniture, { B, C, mat, S } from './HomeFurniture'
+import Furniture, { B, C, mat, S, shade } from './HomeFurniture'
+import { ACTS, startAct, useLife } from '../../lib/life'
 import { Glow, HeartMesh } from './Bits'
 import Tappable from './Interact'
 
@@ -250,12 +253,13 @@ function wallPieces(side) {
 function Wall({ side, stage, innerRef, decorRef, children }) {
   const w = WALLS[side]
   const lit = useHome((s) => s.lights.on)
+  const wallColor = useHome((s) => WALL_STYLES[s.style.wall]?.color || WALL_COLOR)
   const glass = stage >= 3 && lit ? ['#ffe3b0', 0.55] : ['#cfeaff', 0]
   return (
     <group position={w.pos} rotation={[0, w.rot, 0]}>
       <group ref={innerRef}>
         {wallPieces(side).map(([u0, u1, y0, y1], i) => (
-          <B key={i} p={[(u0 + u1) / 2, (y0 + y1) / 2, 0]} s={[u1 - u0, y1 - y0, WALL_T]} c={WALL_COLOR} />
+          <B key={i} p={[(u0 + u1) / 2, (y0 + y1) / 2, 0]} s={[u1 - u0, y1 - y0, WALL_T]} c={wallColor} />
         ))}
         {/* a pink skirting board outside and in */}
         <B p={[0, 0.06, 0]} s={[w.len + 0.02, 0.12, WALL_T + 0.04]} c={TRIM} />
@@ -333,6 +337,10 @@ function Roof({ stage }) {
     return new THREE.ShapeGeometry(s)
   }, [halfD])
   const gableMat = useMemo(() => new THREE.MeshStandardMaterial({ color: WALL_COLOR, roughness: 0.8, side: THREE.DoubleSide }), [])
+  const wallStyle = useHome((s) => s.style.wall)
+  useEffect(() => {
+    gableMat.color.set(WALL_STYLES[wallStyle]?.color || WALL_COLOR)
+  }, [gableMat, wallStyle])
   const heart = useRef()
   useFrame(({ clock }) => {
     if (!heart.current) return
@@ -475,6 +483,7 @@ function Cottage({ stage }) {
   const camera = useThree((s) => s.camera)
   const editing = useHome((s) => s.editing)
   const lit = useHome((s) => s.lights.on)
+  const floorColor = useHome((s) => FLOOR_STYLES[s.style.floor]?.color || '#e2b98a')
   const wallRefs = { front: useRef(), back: useRef(), left: useRef(), right: useRef() }
   const decorRefs = { front: useRef(), back: useRef(), left: useRef(), right: useRef() }
   const partition = useRef()
@@ -501,8 +510,8 @@ function Cottage({ stage }) {
   return (
     <group>
       {/* the floor, and the porch */}
-      <B p={[0, FLOOR_Y / 2, 0]} s={[OUTER.hw * 2, FLOOR_Y, OUTER.hd * 2]} c="#e2b98a" />
-      <B p={[(IN.x0 + PARTITION.x) / 2, FLOOR_Y + 0.002, -0.1]} s={[0.02, 0.003, 3.8]} c="#d2a676" />
+      <B p={[0, FLOOR_Y / 2, 0]} s={[OUTER.hw * 2, FLOOR_Y, OUTER.hd * 2]} c={floorColor} />
+      <B p={[(IN.x0 + PARTITION.x) / 2, FLOOR_Y + 0.002, -0.1]} s={[0.02, 0.003, 3.8]} c={shade(floorColor, -0.08)} />
       <B p={[(PORCH.x0 + PORCH.x1) / 2, 0.06, (PORCH.z0 + PORCH.z1) / 2]} s={[PORCH.x1 - PORCH.x0, 0.12, PORCH.z1 - PORCH.z0]} c="#c8915f" />
       <B p={[DOOR_X, 0.03, PORCH.z1 + 0.15]} s={[1.0, 0.06, 0.3]} c="#c8915f" />
       <group onClick={tapWalk}>
@@ -657,7 +666,240 @@ function Footprint({ kind, ok }) {
   )
 }
 
+/* ───────── plants that need watering (like The Sims) ───────── */
+
+/** How tall each plant is (for its thirst icon and its little status card). */
+const PLANT_TOP = { plant: 0.95, flowers: 0.45, bush: 0.85, small_tree: 1.75, vase: 0.75 }
+const GROWTH_SCALE = { kecil: 0.84, sedang: 1, mekar: 1.1 }
+const DROOP = { segar: 0, haus: 0.05, layu: 0.13, kering: 0.2 }
+const THIRSTY = [0.55, 0.85, 1.6]
+const WILTING = [1.6, 0.85, 0.45]
+
+/** "baru saja" / "3 jam lalu" / "2 hari lalu" */
+function agoText(hours) {
+  if (hours < 1) return 'baru saja'
+  if (hours < 24) return Math.floor(hours) + ' jam lalu'
+  return Math.floor(hours / 24) + ' hari lalu'
+}
+
+/**
+ * A plant in the house: it gets thirsty with real time (even while the game is closed), droops when
+ * forgotten, perks up when watered, and grows fuller and blooms with care. Either of you can water
+ * it; the other sees it happen. A drop floats over it when it needs water; standing next to it shows
+ * how it's doing.
+ */
+function PlantCare({ item, editing }) {
+  const [needs, setNeeds] = useState(() => plantNeeds(item))
+  useEffect(() => {
+    setNeeds(plantNeeds(item))
+    // thirst changes slowly: a look every 20 seconds is plenty
+    const id = setInterval(() => setNeeds(plantNeeds(item)), 20000)
+    return () => clearInterval(id)
+  }, [item])
+  const top = PLANT_TOP[item.kind] ?? 0.8
+  const base = item.area === 'inside' ? FLOOR_Y : 0
+  const label = CATALOG[item.kind].label
+  const position = useMemo(() => {
+    const [wx, wz] = toWorld(item.x, item.z)
+    return new THREE.Vector3(wx, HOUSE.y + base, wz)
+  }, [item.x, item.z, base])
+
+  // watering: a little shower of drops (also when the other person waters it)
+  const drops = useRef()
+  const splashAt = useRef(-10)
+  const lastWatered = useRef(item.wateredAt)
+  useEffect(() => {
+    if (item.wateredAt && lastWatered.current && item.wateredAt > lastWatered.current) splashAt.current = performance.now() / 1000
+    lastWatered.current = item.wateredAt
+  }, [item.wateredAt])
+
+  useInteractable('water:' + item.id, {
+    position,
+    radius: 1.15,
+    priority: 0.3,
+    enabled: () => !useHome.getState().editing && useHome.getState().status === 'ready',
+    label: () => {
+      const n = plantNeeds(useHome.getState().items[item.id] || item)
+      return n.mood === 'segar' ? 'Siram ' + label.toLowerCase() + ' 💧' : label + ' ' + MOOD_LABELS[n.mood].toLowerCase() + ' — siram 💧'
+    },
+    onInteract: async () => {
+      splashAt.current = performance.now() / 1000
+      audio.sparkle()
+      const res = await waterPlant(item.id)
+      useStore.getState().showToast(res.ok ? '💧 ' + label + ' sudah disiram ♡' : res.error, res.ok ? 2600 : 4200)
+    },
+  })
+
+  // the thirst icon bobs; standing close shows the status card
+  const icon = useRef()
+  const [near, setNear] = useState(false)
+  useFrame(({ clock }) => {
+    if (icon.current) icon.current.position.y = top + 0.45 + Math.sin(clock.elapsedTime * 2.2) * 0.05
+    const isNear = Math.hypot(player.position.x - position.x, player.position.z - position.z) < 1.6 && !useHome.getState().editing
+    if (isNear !== near) setNear(isNear)
+    const g = drops.current
+    if (g) {
+      const k = performance.now() / 1000 - splashAt.current
+      g.visible = k >= 0 && k < 1.3
+      if (g.visible)
+        g.children.forEach((m, i) => {
+          const fall = (k * 1.6 + i * 0.13) % 1
+          m.position.set(Math.cos(i * 2.4) * 0.12, top + 0.35 - fall * (top + 0.25), Math.sin(i * 2.4) * 0.12)
+        })
+    }
+  })
+
+  const thirsty = needs.mood !== 'segar'
+  const iconColor = needs.mood === 'haus' ? THIRSTY : WILTING
+  return (
+    <>
+      <group scale={GROWTH_SCALE[needs.growth]} rotation={[DROOP[needs.mood], 0, DROOP[needs.mood] * 0.4]}>
+        <Furniture kind={item.kind} needs={needs} />
+      </group>
+      {!editing && thirsty && (
+        <group ref={icon} position={[0, top + 0.45, 0]}>
+          <mesh scale={[0.07, 0.09, 0.07]}>
+            <sphereGeometry args={[1, 12, 10]} />
+            <meshBasicMaterial color={iconColor} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0.09, 0]} scale={[0.05, 0.08, 0.05]}>
+            <coneGeometry args={[1, 1, 12]} />
+            <meshBasicMaterial color={iconColor} toneMapped={false} />
+          </mesh>
+          <Glow color={needs.mood === 'haus' ? '#8fd0ff' : '#ffb27a'} size={0.5} opacity={0.6} />
+        </group>
+      )}
+      <group ref={drops} visible={false}>
+        {Array.from({ length: 9 }, (_, i) => (
+          <mesh key={i} scale={0.025}>
+            <sphereGeometry args={[1, 6, 5]} />
+            <meshBasicMaterial color={[0.7, 1.1, 1.6]} toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
+      {near && !editing && (
+        <Html position={[0, top + 0.3, 0]} center zIndexRange={[14, 0]} className="plant-anchor">
+          <div className={'plant-card is-' + needs.mood}>
+            <strong>{label}</strong>
+            <span>
+              {MOOD_LABELS[needs.mood]} · {GROWTH_LABELS[needs.growth]}
+            </span>
+            <i className="plant-water" style={{ '--w': needs.water }} />
+            <small>{item.wateredAt ? 'Disiram ' + agoText(needs.hours) : 'Belum pernah disiram'}</small>
+          </div>
+        </Html>
+      )}
+    </>
+  )
+}
+
+/* ───────── living in the house, like The Sims (lib/life.js) ───────── */
+
+/**
+ * What a piece of furniture is for: the activity, where she goes to do it (house-local, in the
+ * item's own frame: [across, front]) and which way she faces (0: the way the item faces, π: toward it).
+ */
+const USES = {
+  bed: { act: 'sleep', at: [0, 0.5], face: 0, reach: 1.4 },
+  bathtub: { act: 'bath', at: [0, -0.3], face: 0, reach: 1.2 },
+  stove: { act: 'cook', at: [0, 0.72], face: Math.PI, reach: 1.1 },
+  fridge: { act: 'snack', at: [0, 0.75], face: Math.PI, reach: 1.1 },
+  bookshelf: { act: 'read', at: [0, 0.75], face: 0, reach: 1.1 },
+  table: { act: 'eat', at: [0, 0.78], face: Math.PI, reach: 1.1 },
+  tv: { act: 'tv', at: [0, 1.7], face: Math.PI, reach: 2.4 },
+}
+
+/** The piece's use: "Tidur 💤", "Masak 🍳"… (E / ✦ near it). Watching TV works from the sofa too. */
+function ItemUse({ item }) {
+  const use = USES[item.kind]
+  const base = item.area === 'inside' ? FLOOR_Y : 0
+  const spot = useMemo(() => {
+    const a = (item.rot * Math.PI) / 2
+    const [ax, az] = use.at
+    // the item's frame → house-local → world
+    const lx = item.x + ax * Math.cos(a) + az * Math.sin(a)
+    const lz = item.z - ax * Math.sin(a) + az * Math.cos(a)
+    const [wx, wz] = toWorld(lx, lz)
+    return { x: wx, y: HOUSE.y + base, z: wz, yaw: a + use.face }
+  }, [item.x, item.z, item.rot, base, use])
+  const position = useMemo(() => new THREE.Vector3(spot.x, spot.y, spot.z), [spot])
+  const a = ACTS[use.act]
+  useInteractable('use:' + item.id, {
+    position,
+    radius: use.reach,
+    priority: 0.25,
+    enabled: () => !useHome.getState().editing && useHome.getState().status === 'ready' && !player.act,
+    label: () => (use.act === 'tv' && player.seat ? 'Nonton TV dari sini 📺' : `${a.label} ${a.icon}`),
+    onInteract: () => {
+      audio.sparkle()
+      // the TV can be watched from wherever she's sitting
+      startAct(use.act, use.act === 'tv' && player.seat ? null : spot, item.id)
+    },
+  })
+  return null
+}
+
+/** Steam curling up from the stove while someone is cooking. */
+function Steam() {
+  const ref = useRef()
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime
+    ref.current.children.forEach((m, i) => {
+      const k = (t * 0.5 + i / 4) % 1
+      m.position.set(-0.17 + Math.sin(t * 2 + i) * 0.04, 1.05 + k * 0.6, -0.05)
+      m.scale.setScalar(0.05 + k * 0.09)
+      m.material.opacity = 0.5 * (1 - k)
+    })
+  })
+  return (
+    <group ref={ref}>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i}>
+          <sphereGeometry args={[1, 8, 6]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.4} depthWrite={false} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/** A bath full of bubbles while someone is soaking. */
+function Bubbles() {
+  const ref = useRef()
+  const list = useMemo(() => Array.from({ length: 16 }, (_, i) => [((i * 37) % 11) / 11 - 0.5, ((i * 53) % 13) / 13 - 0.5, 0.05 + ((i * 7) % 5) * 0.012]), [])
+  useFrame(({ clock }) => {
+    ref.current.children.forEach((m, i) => (m.position.y = 0.63 + Math.sin(clock.elapsedTime * 2 + i) * 0.015))
+  })
+  return (
+    <group ref={ref}>
+      {list.map(([x, z, r], i) => (
+        <mesh key={i} position={[x * 0.55, 0.63, z * 1.15]} scale={r}>
+          <sphereGeometry args={[1, 10, 8]} />
+          <meshStandardMaterial color="#ffffff" transparent opacity={0.85} roughness={0.2} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/** A plate of something good on the table while someone is eating. */
+function Meal() {
+  return (
+    <group position={[0.15, 0.66, 0.1]}>
+      <mesh>
+        <cylinderGeometry args={[0.13, 0.1, 0.02, 18]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.04, 0]} scale={[1, 0.6, 1]}>
+        <sphereGeometry args={[0.07, 12, 8]} />
+        <meshStandardMaterial color="#ffb37a" roughness={0.6} />
+      </mesh>
+    </group>
+  )
+}
+
 function PlacedItem({ item, editing, held }) {
+  const busy = useLife((s) => s.busy)
   const y = item.area === 'inside' ? FLOOR_Y : 0
   return (
     <group
@@ -674,8 +916,12 @@ function PlacedItem({ item, editing, held }) {
           : undefined
       }
     >
-      <Furniture kind={item.kind} />
+      {PLANTS.has(item.kind) ? <PlantCare item={item} editing={editing} /> : <Furniture kind={item.kind} variant={item.variant} on={item.kind === 'tv' && busy.tv} />}
       {!editing && SEATS[item.kind] && <ItemSeats item={item} />}
+      {!editing && USES[item.kind] && <ItemUse item={item} />}
+      {item.kind === 'stove' && busy.cook && <Steam />}
+      {item.kind === 'bathtub' && busy.bath && <Bubbles />}
+      {item.kind === 'table' && busy.eat && <Meal />}
       {held && <Glow position={[0, 0.9, 0]} color="#ffe2a8" size={1.4} opacity={0.6} />}
     </group>
   )
@@ -707,7 +953,7 @@ function Draft() {
     <group position={[draft.x, y, draft.z]} rotation={[0, (draft.rot * Math.PI) / 2, 0]}>
       <Footprint kind={draft.kind} ok={draft.ok} />
       <group ref={ref}>
-        <Furniture kind={draft.kind} />
+        <Furniture kind={draft.kind} variant={draft.variant} />
       </group>
     </group>
   )

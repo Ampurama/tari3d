@@ -20,6 +20,7 @@ import PicnicUI from './components/ui/PicnicUI'
 import CouplePanel from './components/ui/CouplePanel'
 import HomePanel from './components/ui/HomePanel'
 import DatePanel from './components/ui/DatePanel'
+import { MoodStrip } from './components/ui/LifeUI'
 import PetPanel from './components/ui/PetPanel'
 import SkyPanel from './components/ui/SkyPanel'
 import WishLetter from './components/ui/WishLetter'
@@ -54,6 +55,7 @@ export default function App() {
         <CouplePanel />
         <HomePanel />
         <DatePanel />
+        <MoodStrip />
         <PetPanel />
         <SkyPanel />
         <WishLetter />

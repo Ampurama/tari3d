@@ -38,12 +38,17 @@ export const partner = {
   hand: null,
   /** something they just did with the pet: { id, kind: 'pet' | 'sit', at } */
   pet: null,
+  /** in the house (lib/life.js): what they're doing { id, kind (a pose), at }, how they feel
+   *  (lib/mood.js) { id, kind, at }, and doing something together { id, kind, state, at } */
+  act: null,
+  mood: null,
+  together: null,
   /** where their character is drawn right now (smoothed), written by the 3D scene */
   shown: { x: 0, y: 0, z: 0, yaw: 0, speed: 0, ok: false },
 }
 
 /** What I'm doing that the other person should know about (sent with my character). */
-export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null }
+export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null }
 
 const ID = /^[\w:-]{1,80}$/
 /** Only well-formed little objects get through: { id, seat?, kind?, at } (strings and a number). */
@@ -163,6 +168,9 @@ async function joinRoom(myId, mateId) {
       partner.emote = emote
       partner.hand = cleanAct(payload.hand)
       partner.pet = cleanAct(payload.pet)
+      partner.act = cleanAct(payload.act)
+      partner.mood = cleanAct(payload.mood)
+      partner.together = cleanAct(payload.together)
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
@@ -197,6 +205,9 @@ async function joinRoom(myId, mateId) {
       emote: presence.emote,
       hand: presence.hand,
       pet: presence.pet,
+      act: presence.act,
+      mood: presence.mood,
+      together: presence.together,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -229,6 +240,9 @@ async function leaveRoom() {
   partner.emote = null
   partner.hand = null
   partner.pet = null
+  partner.act = null
+  partner.mood = null
+  partner.together = null
   set({ mateOnline: false })
   roomHooks.forEach((h) => h.left?.())
   const old = channels
