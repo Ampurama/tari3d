@@ -4,6 +4,7 @@ import { Check, Hammer, Home, Paintbrush, PawPrint, RotateCw, Trash2, X } from '
 import { coupleAvailable, useCouple } from '../../lib/couple'
 import {
   cancelDraft,
+  growHome,
   loadHome,
   mateName,
   paintDraft,
@@ -19,7 +20,7 @@ import {
   upgradeHome,
   useHome,
 } from '../../lib/home'
-import { CATALOG, CATEGORIES, FLOOR_STYLES, KINDS, priceOf, STAGES, STYLE_PRICE, WALL_STYLES } from '../../lib/homeLayout'
+import { CATALOG, CATEGORIES, FLOOR_STYLES, HOUSE_SIZES, KINDS, priceOf, STAGES, STYLE_PRICE, WALL_STYLES } from '../../lib/homeLayout'
 import { useStore } from '../../store'
 import { useDate } from '../../lib/date'
 import { dates } from '../../content/config'
@@ -165,6 +166,7 @@ function HomeSheet({ onClose }) {
             </button>
           </div>
         )}
+        {stage >= 2 && <GrowHome />}
         {stage >= 4 && <MemoryForm />}
       </>
     )
@@ -206,6 +208,51 @@ function HomeButtons() {
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+/** Make the house bigger: Kecil → Sedang → Besar (it grows toward the back; the front stays). */
+function GrowHome() {
+  const size = useHome((s) => s.size)
+  const coins = useHome((s) => s.coins)
+  const saving = useHome((s) => s.saving)
+  const [msg, setMsg] = useState(null)
+  const now = HOUSE_SIZES[size]
+  const next = HOUSE_SIZES[size + 1]
+  const dims = (d) => `${(d.hw * 2).toFixed(1)} × ${(d.hd * 2).toFixed(1)} m`
+  const grow = async () => {
+    setMsg(null)
+    const res = await growHome()
+    if (res.ok) audio.sparkle()
+    setMsg(res.ok ? 'Rumahnya jadi lebih luas ✓ Atur ruangannya pakai Dinding sekat di rak Struktur ♡' : res.error)
+  }
+  return (
+    <div className="home-grow">
+      <h3>Ukuran rumah</h3>
+      <p className="couple-status">
+        Sekarang: <strong>{now.label}</strong> ({dims(now)})
+        {next ? (
+          <>
+            {' '}
+            · berikutnya <strong>{next.label}</strong> ({dims(next)})
+          </>
+        ) : (
+          ' · sudah paling luas ♡'
+        )}
+      </p>
+      {next && (
+        <>
+          <button type="button" className="btn-glow" disabled={saving || !simsInstalled() || (coins ?? 0) < next.price} onClick={grow}>
+            <Hammer size={15} /> Perbesar Rumah (💗 {next.price})
+          </button>
+          <p className="date-hint">
+            Rumah melebar ke samping dan memanjang ke belakang. Pintu, teras, dan taman tetap di tempatnya.
+            {size === 1 && ' Sekat bawaan diganti ruang terbuka, jadi kalian bisa menata kamar sendiri dengan Dinding sekat & Sekat berpintu.'}
+          </p>
+        </>
+      )}
+      {msg && <p className={msg.includes('✓') ? 'couple-status' : 'couple-error'}>{msg}</p>}
+    </div>
   )
 }
 

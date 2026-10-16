@@ -6,7 +6,7 @@ import { couple } from '../content/config'
 import { uid } from './uid'
 import { serverNow } from './clock'
 import { useStore } from '../store'
-import { CATALOG, checkPlacement, HOUSE, hitsItem, hitsWall, inHouse, layerOf, priceOf, snapPlacement, startSpot, toLocal } from './homeLayout'
+import { applyHouseSize, CATALOG, checkPlacement, HOUSE, HOUSE_SIZES, hitsItem, hitsWall, inHouse, layerOf, OUTER, priceOf, snapPlacement, startSpot, toLocal } from './homeLayout'
 
 /*
  * OUR LITTLE HOME — the shared house, kept in Supabase (tables `house` and `house_items`,
@@ -31,6 +31,8 @@ export const useHome = create(() => ({
   /** shared heart coins, and the walls' and floor's style (009_sims_home.sql); null until installed */
   coins: null,
   style: { wall: 'krem', floor: 'kayu' },
+  /** how big the house is: 1 Kecil, 2 Sedang, 3 Besar (010_bigger_home.sql) */
+  size: 1,
   items: {},
   error: null,
   /** decorating mode is on */
@@ -85,6 +87,8 @@ const clean = (row) => ({
 
 function applyHouse(row) {
   if (!row) return
+  // a bigger house: its walls, windows and the walking rules are rebuilt (before anything re-draws)
+  applyHouseSize(row.size || 1)
   set({
     stage: row.stage | 0,
     memory: { title: row.memory_title || '', date: row.memory_date || null, note: row.memory_note || '' },
@@ -92,6 +96,7 @@ function applyHouse(row) {
     lights: { on: row.lights_on ?? true, fairy: row.fairy_on ?? true },
     coins: typeof row.coins === 'number' ? row.coins : null,
     style: { wall: row.wall_style || 'krem', floor: row.floor_style || 'kayu' },
+    size: row.size || 1,
   })
   obstacles.version++
 }
@@ -428,6 +433,35 @@ export async function earnCoins(act) {
   return data | 0
 }
 
+/**
+ * Make the house bigger (120 coins to "Sedang", 250 to "Besar"). Returns { ok, error }.
+ * It can't grow over garden things: the error names them, so she knows what to move.
+ */
+export async function growHome() {
+  const { size, items } = get()
+  const next = HOUSE_SIZES[size + 1]
+  if (!next) return { ok: false, error: 'Rumahnya sudah paling besar ♡' }
+  // say which garden things are in the way before even asking
+  const back = 2.3 - 2 * next.hd - 0.6
+  const blocking = Object.values(items).filter((it) => it.area === 'garden' && Math.abs(it.x) <= next.hw + 0.6 && it.z >= back && it.z <= 2.3)
+  if (blocking.length) {
+    const names = [...new Set(blocking.map((it) => CATALOG[it.kind].label.toLowerCase()))].join(', ')
+    return { ok: false, error: `Pindahkan dulu ${names} di taman: tempatnya akan jadi bagian rumah.` }
+  }
+  set({ saving: true })
+  const { data, error } = await supabase.rpc('house_grow', { expected: size })
+  set({ saving: false })
+  if (error) {
+    const m = error.message || ''
+    if (m.includes('not enough coins')) return { ok: false, error: `Koin hatinya belum cukup (butuh ${next.price}).` }
+    if (m.includes('clear the garden')) return { ok: false, error: 'Ada barang taman di tempat rumah yang baru. Pindahkan dulu, ya.' }
+    if (m.includes('function') || m.includes('house_grow')) return { ok: false, error: 'Memperbesar rumah butuh 010_bigger_home.sql dijalankan di Supabase dulu.' }
+    return { ok: false, error: 'Belum bisa memperbesar sekarang. Coba lagi, ya.' }
+  }
+  applyHouse(data)
+  return { ok: true }
+}
+
 /* ───────── walls and furniture block the avatar ───────── */
 
 blockers.push((wx, wz) => {
@@ -436,7 +470,7 @@ blockers.push((wx, wz) => {
   const [x, z] = toLocal(wx, wz)
   if (Math.abs(x) > 9 || z < -7 || z > 11) return false
   const [px, pz] = toLocal(player.position.x, player.position.z)
-  if (Math.abs(x) < 3.6 && Math.abs(z) < 2.7 && hitsWall(x, z) && !hitsWall(px, pz)) return true
+  if (Math.abs(x) < OUTER.hw + 0.4 && z > OUTER.cz - OUTER.hd - 0.4 && z < OUTER.cz + OUTER.hd + 0.4 && hitsWall(x, z) && !hitsWall(px, pz)) return true
   for (const id in s.items) {
     const it = s.items[id]
     // never trap her: furniture placed right where she stands lets her walk out

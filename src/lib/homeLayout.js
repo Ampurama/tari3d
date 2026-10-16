@@ -11,29 +11,41 @@ export const HOUSE = { x: 0, z: -35.5, y: HOME_ISLAND.level }
 export const toWorld = (x, z) => [HOUSE.x + x, HOUSE.z + z]
 export const toLocal = (x, z) => [x - HOUSE.x, z - HOUSE.z]
 
-/** Outer walls (centre lines) and the room inside them. */
-export const OUTER = { hw: 3.2, hd: 2.3 }
+/**
+ * How big the house is (house.size, supabase/migrations/010_bigger_home.sql): it grows wider and
+ * deeper toward the back, while the front wall, the door, the porch and the garden stay put —
+ * so nothing already placed moves. From "Sedang" on there's no built-in partition: you build your
+ * own rooms with wall pieces ("Dinding sekat", "Sekat berpintu").
+ */
+export const HOUSE_SIZES = {
+  1: { label: 'Kecil', hw: 3.2, hd: 2.3, price: 0 },
+  2: { label: 'Sedang', hw: 3.9, hd: 2.9, price: 120 },
+  3: { label: 'Besar', hw: 4.5, hd: 3.4, price: 250 },
+}
+/** The front wall's line (house-local z): it never moves. */
+export const FRONT = 2.3
+
+/*
+ * The live shape of the house for its current size (applyHouseSize() updates these in place, so
+ * everything that imports them sees the new shape). OUTER is centred on the cottage: its centre is
+ * at house-local z = OUTER.cz (0 for the small house, further back as it grows).
+ */
+export const OUTER = { hw: 3.2, hd: 2.3, cz: 0 }
 export const IN = { x0: -3.05, x1: 3.05, z0: -2.15, z1: 2.15 }
 export const WALL_H = 1.9
 export const WALL_T = 0.15
 /** The front door: a gap in the front wall. */
 export const DOOR = { x0: -1.6, x1: -0.4, h: 1.5 }
 export const DOOR_X = (DOOR.x0 + DOOR.x1) / 2
-/** A wall between the living room (left) and the bedroom (right), open toward the front. */
-export const PARTITION = { x: 0.9, z0: -OUTER.hd, z1: 0.75 }
-export const PORCH = { x0: -2.3, x1: 0.5, z0: OUTER.hd, z1: 3.3 }
-/** Windows: [wall, centre along the wall, width]. */
-export const WINDOWS = [
-  ['front', -2.4, 0.8],
-  ['front', 2.0, 0.9],
-  ['back', -0.4, 0.9],
-  ['back', 2.0, 0.7],
-  ['left', 0.2, 0.9],
-  ['right', -0.6, 0.8],
-]
+/** The small house's wall between the living room (left) and the bedroom (right), open toward the front. */
+export const PARTITION = { x: 0.9, z0: -2.3, z1: 0.75, on: true }
+export const PORCH = { x0: -2.3, x1: 0.5, z0: FRONT, z1: 3.3 }
+/** Windows: [wall, centre along the wall (cottage-local: x for front/back, z for the sides), width]. */
+export const WINDOWS = []
 export const WINDOW_Y = [0.85, 1.45]
 /** The memory corner: a shelf against the back wall of the living room, and a frame above it. */
 export const MEMORY_CORNER = { x0: -3.05, x1: -1.75, z0: -2.15, z1: -1.65 }
+export let houseSize = 1
 /** The stepping-stone path from the porch down to the bridge. */
 export const GARDEN_PATH = [
   [DOOR_X, PORCH.z1 + 0.2],
@@ -82,6 +94,9 @@ export const CATALOG = {
   vase: { label: 'Vas bunga', icon: '💐', area: 'inside', w: 0.4, d: 0.4, cat: 'dekor', price: 10 },
   bookshelf: { label: 'Rak buku', icon: '📚', area: 'inside', w: 1.0, d: 0.4, cat: 'dekor', price: 40, colors: ['#c8915f', '#a97955', '#f1e4d3', '#b9a5e8'] },
   picture: { label: 'Bingkai di dinding', icon: '🖼️', area: 'inside', w: 0.7, d: 0.06, layer: 'wall', cat: 'dekor', price: 15 },
+  // ── Struktur: build your own rooms (in the colour of the walls)
+  wall_panel: { label: 'Dinding sekat', icon: '🧱', area: 'inside', w: 1.5, d: 0.14, cat: 'struktur', price: 10 },
+  wall_arch: { label: 'Sekat berpintu', icon: '🚪', area: 'inside', w: 1.5, d: 0.14, cat: 'struktur', price: 15 },
   // ── Kenangan: unlocked once by finishing a date (003_dates.sql) or on Sky Island (005_sky_island.sql); gifts, no coins
   picnic_basket: { label: 'Keranjang piknik', icon: '🧺', area: 'inside', w: 0.5, d: 0.4, keepsake: 'sunset_picnic', cat: 'kenangan' },
   candles: { label: 'Lilin makan malam', icon: '🕯️', area: 'inside', w: 0.4, d: 0.4, keepsake: 'dinner_home', cat: 'kenangan' },
@@ -111,6 +126,7 @@ export const CATEGORIES = [
   { id: 'dapur', label: 'Dapur', icon: '🍳', area: 'inside' },
   { id: 'mandi', label: 'Mandi', icon: '🛁', area: 'inside' },
   { id: 'dekor', label: 'Dekor', icon: '🪴', area: 'inside' },
+  { id: 'struktur', label: 'Struktur', icon: '🧱', area: 'inside' },
   { id: 'kenangan', label: 'Kenangan', icon: '💌', area: 'inside' },
   { id: 'taman', label: 'Taman', icon: '🌷', area: 'garden' },
 ]
@@ -153,32 +169,20 @@ const segDist = (px, pz, [ax, az], [bx, bz]) => {
 }
 
 /** Places inside that always stay free: in front of the door, the way into the bedroom, the memory corner. */
-const KEEP_FREE = [
-  { x0: DOOR.x0 - 0.05, x1: DOOR.x1 + 0.05, z0: 1.25, z1: IN.z1 },
-  { x0: PARTITION.x - 0.45, x1: PARTITION.x + 0.45, z0: PARTITION.z1, z1: IN.z1 },
-  MEMORY_CORNER,
-]
-const PARTITION_RECT = { x0: PARTITION.x - 0.09, x1: PARTITION.x + 0.09, z0: IN.z0, z1: PARTITION.z1 }
+const KEEP_FREE = []
+const PARTITION_RECT = { x0: 0, x1: 0, z0: 0, z1: 0 }
 /** The campsite for "Kemah di Bawah Bintang", west of the house (kept free of garden things). */
 export const CAMP = { fire: [-5.0, 1.7], tent: [-5.3, 0.15], zone: { x0: -6.6, x1: -3.75, z0: -0.75, z1: 2.85 } }
 /** The pet's cushion in the garden (its home until a pet bed is placed in the house). */
 export const PET_SPOT = { at: [4.6, 4.4], radius: 2.2, zone: { x0: 4.0, x1: 5.2, z0: 3.8, z1: 5.0 } }
 /** The house, its porch and a little margin: no garden things here. */
-const HOUSE_ZONE = { x0: -OUTER.hw - 0.45, x1: OUTER.hw + 0.45, z0: -OUTER.hd - 0.45, z1: PORCH.z1 + 0.3 }
+const HOUSE_ZONE = { x0: 0, x1: 0, z0: 0, z1: 0 }
 
 /* ───────── wall things (picture frames) ───────── */
 
-const WALL_SPANS = {
-  back: { axis: 'x', fixed: IN.z0 + 0.04, rot: 0, min: IN.x0, max: IN.x1 },
-  left: { axis: 'z', fixed: IN.x0 + 0.04, rot: 1, min: IN.z0, max: IN.z1 },
-  right: { axis: 'z', fixed: IN.x1 - 0.04, rot: 3, min: IN.z0, max: IN.z1 },
-}
+const WALL_SPANS = { back: {}, left: {}, right: {} }
 /** Stretches of each wall that are taken: windows, where the partition meets it, the memory frame. */
-const WALL_TAKEN = {
-  back: [...WINDOWS.filter((w) => w[0] === 'back').map(([, c, w]) => [c - w / 2, c + w / 2]), [PARTITION.x - 0.1, PARTITION.x + 0.1], [MEMORY_CORNER.x0, MEMORY_CORNER.x1 + 0.1]],
-  left: WINDOWS.filter((w) => w[0] === 'left').map(([, c, w]) => [c - w / 2, c + w / 2]),
-  right: WINDOWS.filter((w) => w[0] === 'right').map(([, c, w]) => [c - w / 2, c + w / 2]),
-}
+const WALL_TAKEN = { back: [], left: [], right: [] }
 const wallOf = (x, z, rot) => (rot === 1 ? 'left' : rot === 3 ? 'right' : 'back')
 
 /** Snap a pointer position onto the nearest wall a frame can hang on. */
@@ -230,7 +234,7 @@ export function checkPlacement(kind, x, z, rot, others, ignoreId = null) {
   const r = rectOf(kind, x, z, rot)
   if (c.area === 'inside') {
     if (!inside(r, IN)) return { ok: false, reason: 'Harus di dalam rumah.' }
-    if (overlaps(r, PARTITION_RECT)) return { ok: false, reason: 'Kena dinding kamar.' }
+    if (PARTITION.on && overlaps(r, PARTITION_RECT)) return { ok: false, reason: 'Kena dinding kamar.' }
     if (layer === 'floor' && KEEP_FREE.some((k) => overlaps(r, k))) return { ok: false, reason: 'Jangan halangi pintu, jalan ke kamar, atau pojok kenangan.' }
     if (layer === 'rug' && overlaps(r, MEMORY_CORNER)) return { ok: false, reason: 'Pojok kenangan biarkan kosong, ya.' }
   } else {
@@ -249,21 +253,14 @@ export function checkPlacement(kind, x, z, rot, others, ignoreId = null) {
 /** A good first spot for a new item (in the living room, or the front garden). */
 export function startSpot(kind) {
   const c = CATALOG[kind]
-  if (layerOf(kind) === 'wall') return snapToWall(IN.x0, -1.0)
-  return c.area === 'inside' ? snapPlacement(kind, -1.0, -0.4, 0) : snapPlacement(kind, 2.75, 6.0, 0)
+  if (layerOf(kind) === 'wall') return snapToWall(IN.x0, IN.z0 + 1.2)
+  return c.area === 'inside' ? snapPlacement(kind, -1.0, (IN.z0 + IN.z1) / 2 - 0.4, 0) : snapPlacement(kind, 2.75, 6.0, 0)
 }
 
 /* ───────── walking: walls and furniture block the avatar ───────── */
 
 /** Wall centre lines (house-local) once the cottage stands; the door is a gap. */
-export const WALL_SEGMENTS = [
-  [[-OUTER.hw, -OUTER.hd], [OUTER.hw, -OUTER.hd]],
-  [[-OUTER.hw, -OUTER.hd], [-OUTER.hw, OUTER.hd]],
-  [[OUTER.hw, -OUTER.hd], [OUTER.hw, OUTER.hd]],
-  [[-OUTER.hw, OUTER.hd], [DOOR.x0, OUTER.hd]],
-  [[DOOR.x1, OUTER.hd], [OUTER.hw, OUTER.hd]],
-  [[PARTITION.x, PARTITION.z0], [PARTITION.x, PARTITION.z1]],
-]
+export const WALL_SEGMENTS = []
 const BODY = 0.22
 
 /** Is (x, z) (house-local) inside a wall for someone walking? */
@@ -273,7 +270,76 @@ export function hitsItem(item, x, z, pad = BODY * 0.7) {
   const layer = layerOf(item.kind)
   if (layer !== 'floor') return false
   const r = rectOf(item.kind, item.x, item.z, item.rot)
-  return x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad
+  if (!(x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad)) return false
+  // a wall piece with a doorway: only its two ends are solid, the middle is the way through
+  if (item.kind === 'wall_arch') {
+    const along = item.rot % 2 === 1 ? z - item.z : x - item.x
+    return Math.abs(along) > 0.42
+  }
+  return true
 }
 /** Is (x, z) (house-local) within the house's walls? */
-export const inHouse = (x, z) => Math.abs(x) < OUTER.hw && Math.abs(z) < OUTER.hd
+export const inHouse = (x, z) => Math.abs(x) < OUTER.hw && z > OUTER.cz - OUTER.hd && z < FRONT
+
+/* ───────── the house's shape for its size ───────── */
+
+const setRect = (target, x0, x1, z0, z1) => Object.assign(target, { x0, x1, z0, z1 })
+
+/**
+ * Re-shape the house for a size (1 small, 2 medium, 3 large). Everything above is updated in place;
+ * returns true if anything changed (so the walls and the walking rules can be rebuilt).
+ */
+export function applyHouseSize(size) {
+  const def = HOUSE_SIZES[size] || HOUSE_SIZES[1]
+  const n = HOUSE_SIZES[size] ? size : 1
+  if (n === houseSize && WINDOWS.length) return false
+  houseSize = n
+  const { hw, hd } = def
+  const cz = FRONT - hd // the cottage's centre: the front stays, the back grows
+  Object.assign(OUTER, { hw, hd, cz })
+  setRect(IN, -hw + 0.15, hw - 0.15, cz - hd + 0.15, FRONT - 0.15)
+  // the small house keeps its built-in partition; bigger ones are open (build your own rooms)
+  Object.assign(PARTITION, { x: 0.9, z0: cz - hd, z1: 0.75, on: n === 1 })
+  setRect(MEMORY_CORNER, IN.x0, IN.x0 + 1.3, IN.z0, IN.z0 + 0.5)
+  // windows spread along the walls (front ones keep clear of the door)
+  WINDOWS.length = 0
+  WINDOWS.push(['front', -(hw - 0.8), 0.8], ['front', hw - 1.2, 0.9])
+  if (n === 3) WINDOWS.push(['front', 1.0, 0.8])
+  WINDOWS.push(['back', -0.4, 0.9], ['back', hw - 1.2, 0.7])
+  if (n === 3) WINDOWS.push(['back', 1.4, 0.8])
+  if (n === 1) WINDOWS.push(['left', 0.2, 0.9], ['right', -0.6, 0.8])
+  else WINDOWS.push(['left', -hd * 0.42, 0.9], ['left', hd * 0.42, 0.9], ['right', -hd * 0.42, 0.8], ['right', hd * 0.42, 0.8])
+  // what has to stay free, and where wall frames can hang
+  KEEP_FREE.length = 0
+  KEEP_FREE.push({ x0: DOOR.x0 - 0.05, x1: DOOR.x1 + 0.05, z0: FRONT - 1.05, z1: IN.z1 })
+  if (PARTITION.on) KEEP_FREE.push({ x0: PARTITION.x - 0.45, x1: PARTITION.x + 0.45, z0: PARTITION.z1, z1: IN.z1 })
+  KEEP_FREE.push(MEMORY_CORNER)
+  if (PARTITION.on) setRect(PARTITION_RECT, PARTITION.x - 0.09, PARTITION.x + 0.09, IN.z0, PARTITION.z1)
+  else setRect(PARTITION_RECT, 99, 99, 99, 99)
+  setRect(HOUSE_ZONE, -hw - 0.45, hw + 0.45, cz - hd - 0.45, PORCH.z1 + 0.3)
+  // the campsite moves west as the house widens
+  const dx = hw - 3.2
+  CAMP.fire = [-5.0 - dx, 1.7]
+  CAMP.tent = [-5.3 - dx, 0.15]
+  setRect(CAMP.zone, -6.6 - dx, -3.75 - dx, -0.75, 2.85)
+  Object.assign(WALL_SPANS.back, { axis: 'x', fixed: IN.z0 + 0.04, rot: 0, min: IN.x0, max: IN.x1 })
+  Object.assign(WALL_SPANS.left, { axis: 'z', fixed: IN.x0 + 0.04, rot: 1, min: IN.z0, max: IN.z1 })
+  Object.assign(WALL_SPANS.right, { axis: 'z', fixed: IN.x1 - 0.04, rot: 3, min: IN.z0, max: IN.z1 })
+  const span = (side, shift = 0) => WINDOWS.filter((w) => w[0] === side).map(([, c, w]) => [c + shift - w / 2, c + shift + w / 2])
+  WALL_TAKEN.back = [...span('back'), ...(PARTITION.on ? [[PARTITION.x - 0.1, PARTITION.x + 0.1]] : []), [MEMORY_CORNER.x0, MEMORY_CORNER.x1 + 0.1]]
+  WALL_TAKEN.left = span('left', cz)
+  WALL_TAKEN.right = span('right', cz)
+  // walls for walking: back, sides, the front with its door gap, and the partition
+  const back = cz - hd
+  WALL_SEGMENTS.length = 0
+  WALL_SEGMENTS.push(
+    [[-hw, back], [hw, back]],
+    [[-hw, back], [-hw, FRONT]],
+    [[hw, back], [hw, FRONT]],
+    [[-hw, FRONT], [DOOR.x0, FRONT]],
+    [[DOOR.x1, FRONT], [hw, FRONT]],
+  )
+  if (PARTITION.on) WALL_SEGMENTS.push([[PARTITION.x, PARTITION.z0], [PARTITION.x, PARTITION.z1]])
+  return true
+}
+applyHouseSize(1)

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { Glow, HeartMesh } from './Bits'
-import { CATALOG } from '../../lib/homeLayout'
+import { CATALOG, WALL_STYLES } from '../../lib/homeLayout'
+import { useHome } from '../../lib/home'
 
 /*
  * OUR LITTLE HOME — the furniture and garden things, as tiny low-poly models.
@@ -421,6 +422,44 @@ function Tv({ color = '#a88fe0', on = false }) {
   )
 }
 
+/* ───────── structure: build your own rooms ───────── */
+
+/** The walls' colour (wallpaper), so wall pieces match the house. */
+const useWallColor = () => useHome((s) => WALL_STYLES[s.style.wall]?.color || '#fff1dc')
+const PIECE_H = 1.45
+
+/** A straight piece of wall (1.5 m), in the colour of the walls, with a pink skirting board. */
+function WallPanel() {
+  const c = useWallColor()
+  return (
+    <group>
+      <B p={[0, PIECE_H / 2, 0]} s={[1.5, PIECE_H, 0.12]} c={c} />
+      <B p={[0, 0.06, 0]} s={[1.52, 0.12, 0.15]} c="#f7c6d0" />
+      <B p={[0, PIECE_H + 0.02, 0]} s={[1.54, 0.04, 0.16]} c={shade(c, -0.06)} />
+    </group>
+  )
+}
+
+/** A piece of wall with an arched doorway in the middle (you walk through it). */
+function WallArch() {
+  const c = useWallColor()
+  return (
+    <group>
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * 0.6, 0, 0]}>
+          <B p={[0, PIECE_H / 2, 0]} s={[0.3, PIECE_H, 0.12]} c={c} />
+          <B p={[0, 0.06, 0]} s={[0.32, 0.12, 0.15]} c="#f7c6d0" />
+        </group>
+      ))}
+      <B p={[0, PIECE_H - 0.12, 0]} s={[1.5, 0.24, 0.12]} c={c} />
+      <B p={[0, PIECE_H + 0.02, 0]} s={[1.54, 0.04, 0.16]} c={shade(c, -0.06)} />
+      <mesh position={[0, 1.08, 0]} material={mat('#ffffff')}>
+        <torusGeometry args={[0.43, 0.035, 6, 18, Math.PI]} />
+      </mesh>
+    </group>
+  )
+}
+
 /* ───────── keepsakes from dates ───────── */
 
 export { PetBed }
@@ -548,6 +587,8 @@ const MODELS = {
   fridge: Fridge,
   bathtub: Bathtub,
   tv: Tv,
+  wall_panel: WallPanel,
+  wall_arch: WallArch,
 }
 
 /**

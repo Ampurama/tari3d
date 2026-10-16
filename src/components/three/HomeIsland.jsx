@@ -30,6 +30,7 @@ import {
   WALL_T,
   WINDOW_Y,
   WINDOWS,
+  FRONT,
   WALL_STYLES,
   FLOOR_STYLES,
 } from '../../lib/homeLayout'
@@ -230,18 +231,20 @@ function Plot() {
 
 /* ───────── the cottage ───────── */
 
-const WALLS = {
+/** The four walls for the house's current size (cottage-centred: the cottage group sits at OUTER.cz). */
+const wallsDef = () => ({
   front: { pos: [0, 0, OUTER.hd], rot: 0, len: OUTER.hw * 2 + WALL_T, sign: 1, normal: [0, 1] },
   back: { pos: [0, 0, -OUTER.hd], rot: Math.PI, len: OUTER.hw * 2 + WALL_T, sign: -1, normal: [0, -1] },
   left: { pos: [-OUTER.hw, 0, 0], rot: -Math.PI / 2, len: OUTER.hd * 2 - WALL_T, sign: 1, normal: [-1, 0] },
   right: { pos: [OUTER.hw, 0, 0], rot: Math.PI / 2, len: OUTER.hd * 2 - WALL_T, sign: -1, normal: [1, 0] },
-}
+})
+const WALL_NORMALS = { front: [0, 1], back: [0, -1], left: [-1, 0], right: [1, 0] }
 const WALL_COLOR = '#fff1dc'
 const TRIM = '#f7c6d0'
 
 /** Solid pieces of a wall, along its length (u), leaving the door open in the front wall. */
 function wallPieces(side) {
-  const { len } = WALLS[side]
+  const { len } = wallsDef()[side]
   if (side !== 'front') return [[-len / 2, len / 2, 0, WALL_H]]
   return [
     [-len / 2, DOOR.x0, 0, WALL_H],
@@ -251,7 +254,7 @@ function wallPieces(side) {
 }
 
 function Wall({ side, stage, innerRef, decorRef, children }) {
-  const w = WALLS[side]
+  const w = wallsDef()[side]
   const lit = useHome((s) => s.lights.on)
   const wallColor = useHome((s) => WALL_STYLES[s.style.wall]?.color || WALL_COLOR)
   const glass = stage >= 3 && lit ? ['#ffe3b0', 0.55] : ['#cfeaff', 0]
@@ -496,47 +499,55 @@ function Cottage({ stage }) {
     cut.current = THREE.MathUtils.damp(cut.current, open ? 1 : 0, 6, delta)
     roof.current.visible = cut.current < 0.5
     tmp.set(camera.position.x - HOUSE.x, 0, camera.position.z - HOUSE.z).normalize()
-    for (const side of Object.keys(WALLS)) {
-      const [nx, nz] = WALLS[side].normal
+    for (const side of ['front', 'back', 'left', 'right']) {
+      const [nx, nz] = WALL_NORMALS[side]
       const facing = nx * tmp.x + nz * tmp.z > 0.2
       const target = facing ? 1 - cut.current * 0.9 : 1
       const g = wallRefs[side].current
       g.scale.y = THREE.MathUtils.damp(g.scale.y, target, 10, delta)
       decorRefs[side].current.visible = g.scale.y > 0.7
     }
-    partition.current.scale.y = 1 - cut.current * 0.65
+    if (partition.current) partition.current.scale.y = 1 - cut.current * 0.65
   })
 
   return (
     <group>
-      {/* the floor, and the porch */}
-      <B p={[0, FLOOR_Y / 2, 0]} s={[OUTER.hw * 2, FLOOR_Y, OUTER.hd * 2]} c={floorColor} />
-      <B p={[(IN.x0 + PARTITION.x) / 2, FLOOR_Y + 0.002, -0.1]} s={[0.02, 0.003, 3.8]} c={shade(floorColor, -0.08)} />
+      {/* the shell (floor, walls, roof) is centred on the cottage, which sits further back as it grows */}
+      <group position={[0, 0, OUTER.cz]}>
+        <B p={[0, FLOOR_Y / 2, 0]} s={[OUTER.hw * 2, FLOOR_Y, OUTER.hd * 2]} c={floorColor} />
+        <group onClick={tapWalk}>
+          <Wall side="front" stage={stage} innerRef={wallRefs.front} decorRef={decorRefs.front}>
+            <Door stage={stage} />
+          </Wall>
+          <Wall side="back" stage={stage} innerRef={wallRefs.back} decorRef={decorRefs.back}>
+            {stage >= 4 && <MemoryFrame />}
+          </Wall>
+          <Wall side="left" stage={stage} innerRef={wallRefs.left} decorRef={decorRefs.left} />
+          <Wall side="right" stage={stage} innerRef={wallRefs.right} decorRef={decorRefs.right} />
+        </group>
+        {stage >= 3 && lit && (
+          <>
+            <Glow position={[-1.2, 1.6, -0.3]} color="#ffd9a0" size={2.6} opacity={0.32} />
+            <Glow position={[2.0, 1.6, -0.6]} color="#ffc2dd" size={2.0} opacity={0.3} />
+          </>
+        )}
+        <group ref={roof}>
+          <Roof stage={stage} />
+        </group>
+      </group>
+      {/* the porch (it never moves) */}
       <B p={[(PORCH.x0 + PORCH.x1) / 2, 0.06, (PORCH.z0 + PORCH.z1) / 2]} s={[PORCH.x1 - PORCH.x0, 0.12, PORCH.z1 - PORCH.z0]} c="#c8915f" />
       <B p={[DOOR_X, 0.03, PORCH.z1 + 0.15]} s={[1.0, 0.06, 0.3]} c="#c8915f" />
-      <group onClick={tapWalk}>
-        <Wall side="front" stage={stage} innerRef={wallRefs.front} decorRef={decorRefs.front}>
-          <Door stage={stage} />
-        </Wall>
-        <Wall side="back" stage={stage} innerRef={wallRefs.back} decorRef={decorRefs.back}>
-          {stage >= 4 && <MemoryFrame />}
-        </Wall>
-        <Wall side="left" stage={stage} innerRef={wallRefs.left} decorRef={decorRefs.left} />
-        <Wall side="right" stage={stage} innerRef={wallRefs.right} decorRef={decorRefs.right} />
-      </group>
-      <group ref={partition} position={[PARTITION.x, 0, (PARTITION.z0 + PARTITION.z1) / 2]}>
-        <B p={[0, WALL_H / 2, 0]} s={[0.12, WALL_H, PARTITION.z1 - PARTITION.z0]} c="#fde6ef" />
-      </group>
-      {stage >= 4 && <MemoryShelf stage={stage} />}
-      {stage >= 3 && lit && (
+      {/* the small house's built-in partition (bigger houses have rooms built from wall pieces) */}
+      {PARTITION.on && (
         <>
-          <Glow position={[-1.2, 1.6, -0.3]} color="#ffd9a0" size={2.6} opacity={0.32} />
-          <Glow position={[2.0, 1.6, -0.6]} color="#ffc2dd" size={2.0} opacity={0.3} />
+          <B p={[(IN.x0 + PARTITION.x) / 2, FLOOR_Y + 0.002, -0.1]} s={[0.02, 0.003, 3.8]} c={shade(floorColor, -0.08)} />
+          <group ref={partition} position={[PARTITION.x, 0, (PARTITION.z0 + PARTITION.z1) / 2]}>
+            <B p={[0, WALL_H / 2, 0]} s={[0.12, WALL_H, PARTITION.z1 - PARTITION.z0]} c="#fde6ef" />
+          </group>
         </>
       )}
-      <group ref={roof}>
-        <Roof stage={stage} />
-      </group>
+      {stage >= 4 && <MemoryShelf stage={stage} />}
       <PorchSeats />
       <LightSwitches stage={stage} />
     </group>
@@ -545,18 +556,19 @@ function Cottage({ stage }) {
 
 /** Stage 4: flowers all around the house, and a flowery arch where the bridge arrives. */
 function GardenDressing() {
+  const size = useHome((s) => s.size)
   const flowers = useMemo(() => {
     const list = []
     const add = (x, z, i) => list.push({ x, z, c: ['#ff8fbf', '#ffd27f', '#f7f2ff', '#b9a5e8', '#ff9f8f'][i % 5] })
     let i = 0
-    for (let x = PORCH.x1 + 0.4; x < OUTER.hw + 0.2; x += 0.32) add(x, OUTER.hd + 0.32, i++)
-    for (let x = -OUTER.hw - 0.2; x < PORCH.x0 - 0.3; x += 0.32) add(x, OUTER.hd + 0.32, i++)
-    for (let z = -OUTER.hd; z < OUTER.hd; z += 0.36) {
+    for (let x = PORCH.x1 + 0.4; x < OUTER.hw + 0.2; x += 0.32) add(x, FRONT + 0.32, i++)
+    for (let x = -OUTER.hw - 0.2; x < PORCH.x0 - 0.3; x += 0.32) add(x, FRONT + 0.32, i++)
+    for (let z = OUTER.cz - OUTER.hd; z < FRONT; z += 0.36) {
       add(-OUTER.hw - 0.32, z, i++)
       add(OUTER.hw + 0.32, z, i++)
     }
     return list
-  }, [])
+  }, [size])
   return (
     <group>
       {flowers.map((f, i) => (
@@ -628,7 +640,7 @@ function PorchSeats() {
 
 /** The light switch by the door (from stage 3) and the fairy lights' switch on the porch (stage 5). */
 function LightSwitches({ stage }) {
-  const switchAt = useMemo(() => at(DOOR.x0 - 0.55, OUTER.hd - 0.55), [])
+  const switchAt = useMemo(() => at(DOOR.x0 - 0.55, FRONT - 0.55), [])
   const fairyAt = useMemo(() => at(PORCH.x1 - 0.2, PORCH.z0 + 0.45), [])
   useInteractable('home-lights', {
     position: switchAt,
@@ -646,7 +658,7 @@ function LightSwitches({ stage }) {
     onInteract: () => toggleLights('fairy'),
   })
   return stage >= 3 ? (
-    <group position={[DOOR.x0 - 0.55, 1.05, OUTER.hd - WALL_T / 2 - 0.02]}>
+    <group position={[DOOR.x0 - 0.55, 1.05, FRONT - WALL_T / 2 - 0.02]}>
       <B p={[0, 0, 0]} s={[0.12, 0.18, 0.02]} c="#ffffff" />
       <B p={[0, 0, -0.012]} s={[0.04, 0.07, 0.02]} c="#f29bb3" />
     </group>
@@ -1018,7 +1030,7 @@ const at = (x, z) => {
   return new THREE.Vector3(wx, HOUSE.y, wz)
 }
 const signSpot = at(LANDING.x + 1.1, LANDING.z - 0.9)
-const doorSpot = at(DOOR_X, OUTER.hd)
+const doorSpot = at(DOOR_X, FRONT)
 
 function HomeSign() {
   const status = useCouple((s) => s.status)
@@ -1090,6 +1102,7 @@ export default function HomeIsland() {
   const status = useHome((s) => s.status)
   const stage = useHome((s) => s.stage)
   const editing = useHome((s) => s.editing)
+  const size = useHome((s) => s.size)
   const built = status === 'ready' ? stage : 1
   return (
     <group>
@@ -1097,7 +1110,7 @@ export default function HomeIsland() {
       <SkyBridge />
       <group position={[HOUSE.x, HOUSE.y, HOUSE.z]}>
         <SteppingStones />
-        {built < 2 ? <Plot /> : <Cottage stage={built} />}
+        {built < 2 ? <Plot /> : <Cottage key={size} stage={built} />}
         {built >= 4 && <GardenDressing />}
         {status === 'ready' && <Items />}
         {editing && (
