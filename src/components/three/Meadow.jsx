@@ -36,7 +36,7 @@ const segDist = (px, pz, ax, az, bx, bz) => {
   return Math.hypot(px - (ax + vx * t), pz - (az + vz * t))
 }
 /** Open meadow: not on a place, not in water, not under a bridge. `tall`: also keep the island's camera side clear. */
-function openMeadow(x, z, { tall = false, water = 0.5 } = {}) {
+export function openMeadow(x, z, { tall = false, water = 0.5 } = {}) {
   // grass and flowers grow right up to the main meadow and the home garden (it's all one land)
   if (Math.hypot(x, z) - edgeRadius(x, z) < (tall ? 2 : 0)) return false
   if ((homeDistance(x, z) - 1) * HOME_ISLAND.r < (tall ? 1.5 : 0)) return false

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
-import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, N8AO, TiltShift2, ToneMapping, Vignette } from '@react-three/postprocessing'
+import { Bloom, BrightnessContrast, EffectComposer, HueSaturation, N8AO, ToneMapping, Vignette } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import { atmosphere } from '../../lib/atmosphere'
@@ -115,22 +115,6 @@ export function Lights() {
   )
 }
 
-/** Views seen from the high island camera, where the miniature (tilt-shift) look belongs. */
-const DIORAMA_VIEWS = new Set(['explore', 'distance', 'cinematic', 'epilogue'])
-
-/**
- * The miniature look: the top and bottom of the frame go softly out of focus, like a photo of a
- * tiny model. Only from the high island camera, and eased in and out so close-ups stay sharp.
- */
-function useDiorama(effect) {
-  useFrame((_, delta) => {
-    const e = effect.current
-    if (!e) return
-    const goal = DIORAMA_VIEWS.has(useStore.getState().view) ? 0.11 : 0
-    e.blur = THREE.MathUtils.damp(e.blur, goal, 2, delta)
-  })
-}
-
 /**
  * The grade follows the hour: rich colour by day, a touch warmer and softer at golden hour, cooler
  * and a little more contrasty at night (moonlight reads as blue, lanterns as warm).
@@ -148,10 +132,8 @@ function useGrade(hue, bc) {
 
 export function Effects() {
   const high = tier === 'high'
-  const tilt = useRef()
   const hue = useRef()
   const bc = useRef()
-  useDiorama(tilt)
   useGrade(hue, bc)
   return (
     <EffectComposer multisampling={high ? 4 : 2} enableNormalPass={false}>
@@ -160,7 +142,6 @@ export function Effects() {
       {high ? <N8AO halfRes quality="low" aoRadius={1.1} distanceFalloff={0.6} intensity={2.2} color="#3b2a52" /> : <></>}
       {/* bloom only for things that really glow (lanterns, lights, sparkles) — not to brighten the world */}
       <Bloom mipmapBlur intensity={high ? 0.5 : 0.4} luminanceThreshold={0.94} luminanceSmoothing={0.2} radius={0.6} />
-      {high ? <TiltShift2 ref={tilt} blur={0} taper={0.38} start={[0, 0.46]} end={[1, 0.46]} samples={8} /> : <></>}
       {/* film-like curve: rich mid-tones and soft highlights, like a painted background */}
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       {/* ACES leaves pastels a little grey: give the colour back, with a touch more depth */}

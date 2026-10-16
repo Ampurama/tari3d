@@ -260,6 +260,45 @@ export function meadowHeight(x, z) {
   return h
 }
 
+/* ───────── flower fields ───────── */
+
+const vHash = (x, z) => {
+  const s = Math.sin(x * 127.1 + z * 311.7) * 43758.5453
+  return s - Math.floor(s)
+}
+function vNoise(x, z) {
+  const ix = Math.floor(x)
+  const iz = Math.floor(z)
+  const fx = x - ix
+  const fz = z - iz
+  const ux = fx * fx * (3 - 2 * fx)
+  const uz = fz * fz * (3 - 2 * fz)
+  const a = vHash(ix, iz)
+  const b = vHash(ix + 1, iz)
+  const c = vHash(ix, iz + 1)
+  const d = vHash(ix + 1, iz + 1)
+  return a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz
+}
+/** The flower fields' colours: pink, lavender, butter yellow, white, peach, baby blue. */
+export const FIELD_COLORS = ['#f7b3d2', '#c9b6f4', '#f8e08e', '#faf3ee', '#ffc6a6', '#b8d6ff']
+const FIELD_TINTS = FIELD_COLORS.map((c) => new THREE.Color(c))
+const fieldOut = { k: 0, color: 0 }
+/**
+ * Big organic flower fields across the meadow: `k` how deep inside one (0 outside), `color` which
+ * colour it blooms in (each field has its own, large-scale). Not on paths, banks or in the water.
+ */
+export function flowerField(x, z) {
+  const v = vNoise(x * 0.045 + 3.1, z * 0.045 - 1.7) * 0.65 + vNoise(x * 0.11, z * 0.11) * 0.35
+  let k = smooth(0.55, 0.68, v)
+  if (k > 0) {
+    k *= smooth(0.8, 1.8, meadowPathDistance(x, z)) * smooth(RIVER_HALF_WIDTH + 1, RIVER_HALF_WIDTH + 3, riverAt(x, z).d)
+    k *= smooth(1.15, 1.35, Math.hypot(x - POND.x, z - POND.z) / POND.r)
+  }
+  fieldOut.k = k
+  fieldOut.color = Math.floor(vNoise(x * 0.018 + 40, z * 0.018 - 25) * FIELD_COLORS.length * 0.999)
+  return fieldOut
+}
+
 /* ───────── colour ───────── */
 
 const COL = {
@@ -270,7 +309,6 @@ const COL = {
   sand: new THREE.Color('#ecd9bf'),
   soil: new THREE.Color('#dcc29f'),
   rock: new THREE.Color('#b9aecb'),
-  far: new THREE.Color('#9fb3d6'),
 }
 
 /** Colour of the meadow at a point (written into vertex colours). */
@@ -289,12 +327,13 @@ export function meadowColor(out, x, z, h, steep) {
   out.lerp(COL.sand, (1 - smooth(1.0, 1.1, dl)) * 0.8)
   const dp = Math.hypot(x - POND.x, z - POND.z) / POND.r
   out.lerp(COL.sand, (1 - smooth(1.0, 1.22, dp)) * 0.8)
+  // flower fields: from afar the meadow is carpeted in colour
+  const field = flowerField(x, z)
+  if (field.k > 0) out.lerp(FIELD_TINTS[field.color], field.k * 0.5)
   // the footpaths, worn soft into the grass
   out.lerp(COL.soil, (1 - smooth(0.4, 0.95, meadowPathDistance(x, z))) * 0.8)
   // bare lavender stone on the steepest faces (Sky Island's bluff)
   out.lerp(COL.rock, smooth(0.9, 1.5, steep))
-  // far hills take on the blue of distance
-  out.lerp(COL.far, smooth(110, 260, Math.hypot(x - 8, z + 12)) * 0.55)
   return out
 }
 

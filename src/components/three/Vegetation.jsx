@@ -273,7 +273,7 @@ function canopy(blobs, dark, light) {
   })
 }
 
-function treeGeometry(kind) {
+export function treeGeometry(kind) {
   const parts = []
   const trunkColor = kind === 'blossom' ? '#9a6e58' : '#8a6248'
   const trunkH = kind === 'tall' ? 2.6 : 1.5
@@ -366,14 +366,15 @@ function placeTrees() {
   return out
 }
 
-export function TreeKind({ kind, items }) {
+export function TreeKind({ kind, items, shadows = true }) {
   const ref = useRef()
   const geometry = useMemo(() => treeGeometry(kind), [kind])
   const material = useMemo(() => withPaint(windMaterial({ bendFrom: kind === 'tall' ? 2.0 : 1.2, amount: 0.018, vertexColors: true, roughness: 0.8, flatShading: false }), 'foliage'), [kind])
   useInstances(ref, items, (m, t) => m.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, t.r, 0)), new THREE.Vector3(t.s, t.s, t.s)))
   useEffect(() => () => geometry.dispose(), [geometry])
   if (!items.length) return null
-  return <instancedMesh ref={ref} args={[geometry, material, items.length]} castShadow receiveShadow frustumCulled={false} />
+  // far-away trees (shadows off) are culled as a whole when out of view
+  return <instancedMesh ref={ref} args={[geometry, material, items.length]} castShadow={shadows} receiveShadow={shadows} frustumCulled={!shadows} />
 }
 
 /* ───────── rocks, ferns, bushes ───────── */

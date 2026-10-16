@@ -17,6 +17,7 @@ import FuturePortal from './FuturePortal'
 import { IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, Waterfall } from './Terrain'
 import Vegetation from './Vegetation'
 import Meadow from './Meadow'
+import MeadowExtras from './MeadowExtras'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
 import Discoveries from './Discoveries'
@@ -75,6 +76,7 @@ export default function World() {
       <PathLanterns />
       <Vegetation />
       <Meadow />
+      <MeadowExtras />
       <LoveTree />
 
       {/* the story */}

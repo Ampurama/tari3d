@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame, useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../../store'
 import { cloudTexture, glowTexture, moonTexture } from '../../lib/textures'
@@ -124,29 +124,6 @@ const DAY_SKY = {
   below: new THREE.Color(0.7, 0.64, 0.92),
 }
 
-/** The colour far away at the island's level (the fog fades distant things into it). */
-const HAZE = { day: new THREE.Color(0.74, 0.68, 0.93), sunset: new THREE.Color(1.0, 0.76, 0.72), night: new THREE.Color(0.05, 0.07, 0.2) }
-const haze = new THREE.Color()
-
-/**
- * Atmospheric depth: a very light fog in the colour of the haze, so the far islands, the clouds
- * and the cliffs below melt softly into the sky instead of being cut out against it.
- */
-function Haze() {
-  const scene = useThree((s) => s.scene)
-  useEffect(() => {
-    scene.fog = new THREE.FogExp2(HAZE.day.clone(), 0.0024)
-    return () => {
-      scene.fog = null
-    }
-  }, [scene])
-  useFrame(() => {
-    if (!scene.fog) return
-    haze.copy(HAZE.day).lerp(HAZE.sunset, atmosphere.sunset * 0.8).lerp(HAZE.night, 1 - atmosphere.day)
-    scene.fog.color.copy(haze)
-  })
-  return null
-}
 
 const lightGoal = new THREE.Vector3()
 
@@ -353,7 +330,6 @@ export default function Sky() {
   return (
     <>
       <SkyGradient />
-      <Haze />
       {stars && <StarDome count={count(2600, 1300)} />}
       <group visible={view !== 'finale' && view !== 'finalRoom'}>
         <Moon />
