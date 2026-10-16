@@ -558,6 +558,169 @@ function SkyLantern() {
   )
 }
 
+/* ───────── from Gnome Village ───────── */
+
+/** A cap: half a squashed sphere. */
+const Cap = ({ p, r, h = 0.55, c, glow }) => (
+  <mesh position={p} scale={[1, h, 1]} material={mat(c, glow)}>
+    <sphereGeometry args={[r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+  </mesh>
+)
+const spotsOn = (r, y, n = 5) => Array.from({ length: n }, (_, i) => [Math.cos(i * 2.4) * r * 0.55, y + r * 0.42, Math.sin(i * 2.4) * r * 0.55])
+
+function MushroomStool({ color = '#e8566f' }) {
+  return (
+    <group>
+      <C p={[0, 0.2, 0]} rt={0.1} rb={0.13} h={0.4} c={CREAM} />
+      <Cap p={[0, 0.38, 0]} r={0.23} h={0.42} c={color} />
+      {spotsOn(0.23, 0.38).map((p, i) => (
+        <S key={i} p={p} s={[0.035, 0.012, 0.035]} c="#ffffff" />
+      ))}
+    </group>
+  )
+}
+
+function ToadstoolTable({ color = '#e8566f' }) {
+  return (
+    <group>
+      <C p={[0, 0.03, 0]} rt={0.24} h={0.06} c={CREAM} />
+      <C p={[0, 0.36, 0]} rt={0.11} rb={0.16} h={0.66} c={CREAM} />
+      <Cap p={[0, 0.66, 0]} r={0.45} h={0.28} c={color} />
+      {spotsOn(0.45, 0.66, 7).map((p, i) => (
+        <S key={i} p={[p[0], 0.785, p[2]]} s={[0.05, 0.012, 0.05]} c="#ffffff" />
+      ))}
+    </group>
+  )
+}
+
+function MushroomLamp() {
+  return (
+    <group>
+      <C p={[0, 0.03, 0]} rt={0.12} h={0.06} c="#a5714a" />
+      <C p={[0, 0.25, 0]} rt={0.045} rb={0.06} h={0.4} c={CREAM} />
+      <Cap p={[0, 0.44, 0]} r={0.18} h={0.6} c="#ffd6ea" glow={0.9} />
+      <Glow position={[0, 0.45, 0]} color="#ffc2dd" size={1.0} opacity={0.5} />
+    </group>
+  )
+}
+
+function BreadBasket() {
+  return (
+    <group>
+      <C p={[0, 0.09, 0]} rt={0.2} rb={0.15} h={0.18} c="#c8915f" />
+      <mesh position={[0, 0.19, 0]} rotation={[0, 0, Math.PI / 2]} material={mat('#a5714a')}>
+        <torusGeometry args={[0.17, 0.012, 6, 16, Math.PI]} />
+      </mesh>
+      <S p={[-0.06, 0.2, 0]} s={[0.12, 0.05, 0.06]} c="#d9a066" />
+      <S p={[0.07, 0.21, 0.04]} s={[0.07, 0.05, 0.06]} c="#e9c98b" />
+      <S p={[0.04, 0.2, -0.07]} s={[0.06, 0.04, 0.05]} c="#f7c08a" />
+    </group>
+  )
+}
+
+function GnomeLantern() {
+  return (
+    <group>
+      <C p={[0, 0.45, 0]} rt={0.03} rb={0.045} h={0.9} c="#8a5a3c" seg={6} />
+      <C p={[0, 0.98, 0]} rt={0.08} h={0.16} c="#ffe2a8" glow={1.2} />
+      <mesh position={[0, 1.13, 0]} material={mat('#e8566f')}>
+        <coneGeometry args={[0.13, 0.16, 10]} />
+      </mesh>
+      <S p={[0, 1.22, 0]} s={0.025} c="#ffffff" />
+      <Glow position={[0, 0.98, 0]} color="#ffd9a0" size={1.1} opacity={0.5} />
+    </group>
+  )
+}
+
+function FlowerPot({ color = '#e08f6a' }) {
+  return (
+    <group>
+      <C p={[0, 0.15, 0]} rt={0.2} rb={0.14} h={0.3} c={color} />
+      <C p={[0, 0.31, 0]} rt={0.22} h={0.04} c={color} />
+      <C p={[0, 0.3, 0]} rt={0.18} h={0.02} c="#8a6a52" />
+      {[0, 1.3, 2.6, 3.9, 5.2].map((a, i) => (
+        <group key={a} position={[Math.cos(a) * 0.1, 0.3, Math.sin(a) * 0.1]}>
+          <C p={[0, 0.1, 0]} rt={0.01} h={0.2} c="#6fae5f" seg={4} />
+          <S p={[0, 0.22, 0]} s={0.05} c={['#ff8fbf', '#ffd27f', '#fff6ea', '#b9a5e8', '#ff9f8f'][i]} />
+        </group>
+      ))}
+    </group>
+  )
+}
+
+function MoonFlower() {
+  return (
+    <group>
+      <C p={[0, 0.02, 0]} rt={0.26} h={0.04} c="#8a6a52" />
+      {[0, 2.1, 4.2].map((a, i) => (
+        <group key={a} position={[Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12]}>
+          <C p={[0, 0.18, 0]} rt={0.012} h={0.36 - i * 0.05} c="#6fae5f" seg={4} />
+          <mesh position={[0, 0.38 - i * 0.05, 0]} rotation={[Math.PI, 0, 0]} material={mat('#e3ecff', 1.0)}>
+            <coneGeometry args={[0.08, 0.1, 6, 1, true]} />
+          </mesh>
+          <S p={[0, 0.36 - i * 0.05, 0]} s={0.02} c="#fff1a8" glow={1.5} />
+        </group>
+      ))}
+      <Glow position={[0, 0.35, 0]} color="#cfe0ff" size={0.9} opacity={0.45} />
+    </group>
+  )
+}
+
+function GnomeStatue() {
+  return (
+    <group>
+      <C p={[0, 0.05, 0]} rt={0.18} rb={0.2} h={0.1} c="#cfc6d6" />
+      <S p={[0, 0.25, 0]} s={[0.14, 0.15, 0.12]} c="#a8b7c8" />
+      <S p={[0, 0.42, 0]} s={0.09} c="#d9cbb8" />
+      <S p={[0, 0.41, 0.08]} s={0.03} c="#c9b8a6" />
+      <mesh position={[0, 0.36, 0.05]} scale={[1, 1.3, 0.7]} material={mat('#f1ece4')}>
+        <sphereGeometry args={[0.07, 10, 8]} />
+      </mesh>
+      <mesh position={[0, 0.58, 0]} material={mat('#e8566f')}>
+        <coneGeometry args={[0.1, 0.22, 10]} />
+      </mesh>
+    </group>
+  )
+}
+
+function CrystalShroom() {
+  return (
+    <group>
+      {[
+        [0, 0, 0.32, '#b9e8ff'],
+        [0.16, 0.1, 0.22, '#d9c6ff'],
+        [-0.14, 0.08, 0.18, '#ffc6e8'],
+      ].map(([x, z, h, c], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <C p={[0, h / 2, 0]} rt={0.025} h={h} c="#fff6ea" />
+          <Cap p={[0, h, 0]} r={0.08 + h * 0.3} h={0.6} c={c} glow={1.1} />
+        </group>
+      ))}
+      <Glow position={[0, 0.3, 0]} color="#d9c6ff" size={1.0} opacity={0.5} />
+    </group>
+  )
+}
+
+function TwinLantern() {
+  return (
+    <group>
+      <B p={[0, 0.03, 0]} s={[0.8, 0.06, 0.3]} c="#cfc6d6" />
+      {[-0.28, 0.28].map((x) => (
+        <group key={x} position={[x, 0, 0]}>
+          <C p={[0, 0.45, 0]} rt={0.025} h={0.8} c="#6d5a6e" seg={6} />
+          <C p={[0, 0.92, 0]} rt={0.075} h={0.16} c={x < 0 ? '#ffd6ea' : '#ffe2a8'} glow={1.2} />
+          <C p={[0, 1.03, 0]} rt={0.09} rb={0.03} h={0.05} c="#6d5a6e" />
+        </group>
+      ))}
+      <mesh position={[0, 0.86, 0]} rotation={[0, 0, Math.PI]} material={mat('#ffd27f', 0.3)}>
+        <torusGeometry args={[0.28, 0.01, 4, 16, Math.PI]} />
+      </mesh>
+      <S p={[0, 0.6, 0]} s={[0.05, 0.045, 0.02]} c="#ff8fbf" glow={0.8} />
+      <Glow position={[0, 0.92, 0]} color="#ffd9a0" size={1.4} opacity={0.5} />
+    </group>
+  )
+}
+
 const MODELS = {
   bed: Bed,
   sofa: Sofa,
@@ -589,6 +752,16 @@ const MODELS = {
   tv: Tv,
   wall_panel: WallPanel,
   wall_arch: WallArch,
+  mushroom_stool: MushroomStool,
+  toadstool_table: ToadstoolTable,
+  mushroom_lamp: MushroomLamp,
+  bread_basket: BreadBasket,
+  gnome_lantern: GnomeLantern,
+  flower_pot: FlowerPot,
+  moon_flower: MoonFlower,
+  gnome_statue: GnomeStatue,
+  crystal_shroom: CrystalShroom,
+  twin_lantern: TwinLantern,
 }
 
 /**

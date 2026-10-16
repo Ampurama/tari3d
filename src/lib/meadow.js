@@ -61,6 +61,121 @@ export const DISTANCE_SITE = { x: 72, y: 1.2, z: -34, spread: 9, lift: 0.75 }
 export const CAFE_SITE = { x: 14, z: 23, yaw: -0.35, r0: 6.4, r1: 8.6 }
 let cafeLevel = null
 
+/**
+ * THE WELL OF WISHES (lib/wishes.js): a wishing well east of the café, a few steps off the meadow
+ * path to the pond, on a little level pad (its front, local +z, turned toward that path).
+ */
+export const WELL_SITE = { x: 21.5, z: 25.5, yaw: Math.atan2(23.9 - 21.5, 23.2 - 25.5), r0: 3.0, r1: 4.8, level: null }
+
+/*
+ * GNOME VILLAGE (lib/village.js): a little village around a cobbled square just south-west of the
+ * café. Every building stands on its own level pad, its door turned toward the square; footpaths
+ * join each door to the square. A small stone-lined brook runs along the south, with a footbridge,
+ * a lily pond at its end and, across it, a hidden grove.
+ * Buildings: { id, x, z, yaw (door faces local +z), hw, hd (half sizes), enter (has an inside) }.
+ */
+export const VILLAGE_SQUARE = { x: 3, z: 31.5, r: 3.2 }
+const facing = (x, z) => Math.atan2(VILLAGE_SQUARE.x - x, VILLAGE_SQUARE.z - z)
+export const VILLAGE_BUILDINGS = [
+  { id: 'bakery', x: -6, z: 28, hw: 2.3, hd: 1.9, enter: true },
+  { id: 'shop', x: 1, z: 23, hw: 2.3, hd: 1.9, enter: true },
+  { id: 'elder', x: -12.5, z: 21.5, hw: 2.0, hd: 1.8, enter: false, via: [[-6.8, 23.2], [-1.6, 25.6]] },
+  { id: 'pip', x: -12, z: 33, hw: 1.5, hd: 1.35, enter: false },
+  { id: 'pim', x: -6.5, z: 39, hw: 1.55, hd: 1.4, enter: false },
+  { id: 'gilo', x: 13, z: 39, hw: 1.5, hd: 1.35, enter: false },
+].map((b) => ({ ...b, yaw: facing(b.x, b.z) }))
+/** A building-local point (x across, z toward the door) in world space. */
+export const villageToWorld = (b, x, z) => {
+  const c = Math.cos(b.yaw)
+  const sn = Math.sin(b.yaw)
+  return [b.x + x * c + z * sn, b.z - x * sn + z * c]
+}
+/** World → building-local. */
+export const villageToLocal = (b, x, z) => {
+  const dx = x - b.x
+  const dz = z - b.z
+  const c = Math.cos(b.yaw)
+  const sn = Math.sin(b.yaw)
+  return [dx * c - dz * sn, dx * sn + dz * c]
+}
+/** Just outside a building's door. */
+export const villageDoor = (b, out = 0.6) => villageToWorld(b, 0, b.hd + out)
+/** The brook (a stone-lined rill), the footbridge across it, the lily pond it ends in, and the grove. */
+export const VILLAGE_BROOK = [[-19, 41], [-13, 43.6], [-7.5, 45.0], [-2, 46.4], [3.6, 47.2]]
+export const LILY_POND = { x: 5.6, z: 47.6, r: 1.9 }
+export const VILLAGE_BRIDGE = { x: -7.5, z: 45.0, half: 1.25, width: 0.5 }
+export const HIDDEN_GROVE = { x: -12.5, z: 50.8, r: 3.0, gap: Math.PI * 0.25 }
+const VILLAGE_PADS = [
+  { x: VILLAGE_SQUARE.x, z: VILLAGE_SQUARE.z, r0: 4.2, r1: 6.2 },
+  ...VILLAGE_BUILDINGS.map((b) => ({ x: b.x, z: b.z, r0: Math.hypot(b.hw, b.hd) + (b.enter ? 0.9 : 0.6), r1: Math.hypot(b.hw, b.hd) + (b.enter ? 2.6 : 2.0) })),
+  { x: LILY_POND.x, z: LILY_POND.z, r0: LILY_POND.r + 0.7, r1: LILY_POND.r + 2.2 },
+].map((p) => ({ ...p, level: null }))
+/** How far (x, z) is from the brook's middle. */
+export function brookDistance(x, z) {
+  let best = Infinity
+  for (let i = 0; i < VILLAGE_BROOK.length - 1; i++) {
+    const [ax, az] = VILLAGE_BROOK[i]
+    const [bx, bz] = VILLAGE_BROOK[i + 1]
+    const vx = bx - ax
+    const vz = bz - az
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz)))
+    best = Math.min(best, Math.hypot(x - (ax + vx * t), z - (az + vz * t)))
+  }
+  return best
+}
+export const BROOK_HALF_WIDTH = 0.42
+/** On the village footbridge? → { t: −1…1 along it, ux, uz (its direction) } or null */
+export function villageBridgeAt(x, z) {
+  const b = VILLAGE_BRIDGE
+  // it runs straight across the brook
+  const [ax, az] = VILLAGE_BROOK[1]
+  const [bx, bz] = VILLAGE_BROOK[3]
+  const l = Math.hypot(bx - ax, bz - az)
+  const ux = -(bz - az) / l
+  const uz = (bx - ax) / l
+  const along = (x - b.x) * ux + (z - b.z) * uz
+  const across = (x - b.x) * uz - (z - b.z) * ux
+  if (Math.abs(along) > b.half || Math.abs(across) > b.width) return null
+  return { t: along / b.half, ux, uz }
+}
+/** Is (x, z) the brook's or the lily pond's water? */
+export const villageWater = (x, z) => !villageBridgeAt(x, z) && (brookDistance(x, z) < BROOK_HALF_WIDTH + 0.12 || Math.hypot(x - LILY_POND.x, z - LILY_POND.z) < LILY_POND.r + 0.1)
+/**
+ * Is (x, z) taken by the village (its buildings, square, brook, gardens, the grove)? Grass and
+ * flowers keep off it; 'room' keeps tall things further away.
+ */
+export function villageTaken(x, z, room = 0) {
+  if (Math.abs(x - VILLAGE_SQUARE.x) > 30 || Math.abs(z - VILLAGE_SQUARE.z) > 30) return false
+  if (Math.hypot(x - VILLAGE_SQUARE.x, z - VILLAGE_SQUARE.z) < VILLAGE_SQUARE.r + 0.6 + room) return true
+  for (const b of VILLAGE_BUILDINGS) if (Math.hypot(x - b.x, z - b.z) < Math.hypot(b.hw, b.hd) + (b.enter ? 1.6 : 1.0) + room) return true
+  if (brookDistance(x, z) < BROOK_HALF_WIDTH + 0.5 + room * 0.5) return true
+  if (Math.hypot(x - LILY_POND.x, z - LILY_POND.z) < LILY_POND.r + 0.6 + room) return true
+  if (Math.hypot(x - HIDDEN_GROVE.x, z - HIDDEN_GROVE.z) < HIDDEN_GROVE.r + 0.8 + room) return true
+  // the gardens south of the square
+  if (x > 2.6 - room && x < 13.0 + room && z > 36.2 - room && z < 44.0 + room) return true
+  return false
+}
+const toSquare = (x, z, edge = VILLAGE_SQUARE.r - 0.2) => {
+  const a = Math.atan2(x - VILLAGE_SQUARE.x, z - VILLAGE_SQUARE.z)
+  return [VILLAGE_SQUARE.x + Math.sin(a) * edge, VILLAGE_SQUARE.z + Math.cos(a) * edge]
+}
+const villageBuilding = (id) => VILLAGE_BUILDINGS.find((b) => b.id === id)
+/** The village's footpaths: each door to the square, the gardens, and on to the footbridge. */
+export const VILLAGE_PATHS = [
+  // the café's footpath on into the square
+  [[9.6, 29.2], toSquare(9.6, 29.2)],
+  ...VILLAGE_BUILDINGS.map((b) => {
+    const d = villageDoor(b, 0.45)
+    const via = b.via || []
+    return [d, ...via, toSquare(...(via.length ? via[via.length - 1] : d))]
+  }),
+  // down to the gardens, and to Gilo's cottage beyond them
+  [toSquare(5.4, 36), [5.6, 37.0], [7.4, 38.6], villageDoor(villageBuilding('gilo'), 0.45)],
+  // from Pim's door on to the footbridge, and a little way past it
+  [villageDoor(villageBuilding('pim'), 0.45), [-3.4, 40.2], [-5.2, 42.6], [-7.0, 43.6]],
+  [[-8.0, 46.4], [-8.6, 47.6]],
+]
+
 /** A knoll in the north-east meadow, crowned by the giant tree. */
 export const KNOLL = { x: 26, z: -30, h: 2.6, r: 8 }
 export const GIANT_TREE = { x: KNOLL.x, z: KNOLL.z }
@@ -118,6 +233,10 @@ export const MEADOW_PATHS = [
   [[9.2, -33], [15, -31.5], [21.6, -30.4]],
   // to The Little Gnome Café
   [[4.6, 15.4], [6.6, 20.6], [7.6, 26.0], [9.6, 29.2], [11.9, 29.0]],
+  // and through Gnome Village
+  ...VILLAGE_PATHS,
+  // a few steps off the path, to the wishing well
+  [[23.9, 23.2], [22.7, 24.3]],
 ]
 const segDistance = (px, pz, ax, az, bx, bz) => {
   const vx = bx - ax
@@ -204,6 +323,7 @@ const LIMIT_CENTRE = { x: 8, z: -12 }
 /** Is (x, z) water in the meadow (the river, the western lake or the pond)? Crossings aren't. */
 export function meadowWater(x, z) {
   if (crossingAt(x, z)) return false
+  if (Math.abs(x - VILLAGE_SQUARE.x) < 26 && Math.abs(z - VILLAGE_SQUARE.z) < 20 && villageWater(x, z)) return true
   if (riverAt(x, z).d < RIVER_HALF_WIDTH + 0.15) return true
   if (Math.hypot(x - SEA.x, z - SEA.z) < SEA.r * 1.01) return true
   return Math.hypot(x - POND.x, z - POND.z) < POND.r * 1.02
@@ -220,6 +340,9 @@ export function meadowStand(x, z) {
     const deck = cross.c.kind === 'bridge' ? level + 0.42 + 0.22 * (1 - cross.t * cross.t) : level + 0.18
     return Math.max(deck, meadowHeight(x, z))
   }
+  // the village footbridge
+  const vb = Math.abs(x - VILLAGE_BRIDGE.x) < 2 && Math.abs(z - VILLAGE_BRIDGE.z) < 2 ? villageBridgeAt(x, z) : null
+  if (vb) return meadowHeight(x, z) + 0.12 + 0.16 * (1 - vb.t * vb.t)
   return meadowHeight(x, z)
 }
 
@@ -250,6 +373,27 @@ export function meadowHeight(x, z) {
     }
     if (cafeLevel !== -Infinity) h += (cafeLevel - h) * (1 - smooth(CAFE_SITE.r0, CAFE_SITE.r1, dc2))
   }
+  // the wishing well's level pad
+  const dw = Math.hypot(x - WELL_SITE.x, z - WELL_SITE.z)
+  if (dw < WELL_SITE.r1) {
+    if (WELL_SITE.level === null) {
+      WELL_SITE.level = -Infinity
+      // the café's level: the two pads meet near the café, so they share one height (no dip between)
+      WELL_SITE.level = meadowHeight(CAFE_SITE.x, CAFE_SITE.z)
+    }
+    if (WELL_SITE.level !== -Infinity) h += (WELL_SITE.level - h) * (1 - smooth(WELL_SITE.r0, WELL_SITE.r1, dw))
+  }
+  // the village's level pads (each read from the meadow without itself, once)
+  if (Math.abs(x - VILLAGE_SQUARE.x) < 22 && Math.abs(z - VILLAGE_SQUARE.z) < 24)
+    for (const p of VILLAGE_PADS) {
+      const d = Math.hypot(x - p.x, z - p.z)
+      if (d >= p.r1) continue
+      if (p.level === null) {
+        p.level = -Infinity
+        p.level = meadowHeight(p.x, p.z)
+      }
+      if (p.level !== -Infinity) h += (p.level - h) * (1 - smooth(p.r0, p.r1, d))
+    }
   // Chapter 2's two hilltops and the ravine between them
   const sx = x - DISTANCE_SITE.x
   const sz = z - DISTANCE_SITE.z

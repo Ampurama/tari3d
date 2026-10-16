@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import {
   BARISTA_SPOT,
@@ -40,6 +39,8 @@ import { useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { B, C, mat, S } from './HomeFurniture'
 import { Glow, LightPools } from './Bits'
+import { Bubble, Gnome } from './Gnome'
+import { pipHasJob, talkTo } from '../../lib/village'
 
 /*
  * THE LITTLE GNOME CAFÉ — the building, its inside, and the two gnomes who run it
@@ -95,17 +96,24 @@ function Wall({ side, innerRef, glow }) {
         ))}
         {/* timber frame: corner posts and a beam */}
         {[-w.len / 2, w.len / 2].map((u) => (
-          <B key={u} p={[u, CAFE_WALL_H / 2, 0]} s={[0.14, CAFE_WALL_H, CAFE_WALL_T + 0.04]} c={WOOD_DARK} />
+          <B key={u} p={[u, (CAFE_WALL_H + 0.03) / 2, 0]} s={[0.14, CAFE_WALL_H + 0.03, CAFE_WALL_T + 0.04]} c={WOOD_DARK} />
         ))}
-        <B p={[0, CAFE_WALL_H - 0.06, 0]} s={[w.len, 0.12, CAFE_WALL_T + 0.04]} c={WOOD_DARK} />
+        <B p={[0, CAFE_WALL_H - 0.045, 0]} s={[w.len - 0.15, 0.12, CAFE_WALL_T + 0.04]} c={WOOD_DARK} />
         {/* a stone skirt along the bottom */}
         <B p={[0, 0.16, 0]} s={[w.len + 0.04, 0.32, CAFE_WALL_T + 0.08]} c={STONE} />
         {/* the windows: frames, warm glass, flower boxes on the outside */}
+        <group name="decor">
         {openings
           .filter(([, , y0]) => y0 > 0)
           .map(([u, width]) => (
             <group key={u} position={[u, (WIN_Y[0] + WIN_Y[1]) / 2, 0]}>
-              <B p={[0, 0, 0]} s={[width + 0.1, WIN_Y[1] - WIN_Y[0] + 0.1, CAFE_WALL_T + 0.05]} c="#ffffff" />
+              {/* a frame of four bars around the glass (not a solid box over it) */}
+              {[-1, 1].map((k) => (
+                <group key={k}>
+                  <B p={[0, k * ((WIN_Y[1] - WIN_Y[0]) / 2 + 0.03), 0]} s={[width + 0.12, 0.06, CAFE_WALL_T + 0.05]} c="#ffffff" />
+                  <B p={[k * (width / 2 + 0.03), 0, 0]} s={[0.06, WIN_Y[1] - WIN_Y[0], CAFE_WALL_T + 0.05]} c="#ffffff" />
+                </group>
+              ))}
               <mesh>
                 <boxGeometry args={[width, WIN_Y[1] - WIN_Y[0], 0.02]} />
                 <meshStandardMaterial color="#ffe6b8" emissive="#ffc77a" emissiveIntensity={glow} transparent opacity={0.4} roughness={0.15} />
@@ -120,6 +128,7 @@ function Wall({ side, innerRef, glow }) {
             </group>
           ))}
         {side === 'front' && <Door />}
+        </group>
       </group>
     </group>
   )
@@ -140,12 +149,12 @@ function Door() {
     <group>
       <B p={[-DOOR_W / 2 - 0.05, 0.95, 0]} s={[0.1, 1.9, CAFE_WALL_T + 0.06]} c={WOOD_DARK} />
       <B p={[DOOR_W / 2 + 0.05, 0.95, 0]} s={[0.1, 1.9, CAFE_WALL_T + 0.06]} c={WOOD_DARK} />
-      <mesh position={[0, 1.85, 0]} material={mat(WOOD_DARK)}>
+      <mesh position={[0, 1.88, 0]} scale={[1, 0.55, 1]} material={mat(WOOD_DARK)}>
         <torusGeometry args={[DOOR_W / 2 + 0.05, 0.06, 6, 16, Math.PI]} />
       </mesh>
       <group ref={leaf} position={[-DOOR_W / 2 + 0.03, 0, 0.02]}>
         <B p={[DOOR_W / 2 - 0.03, 0.92, 0]} s={[DOOR_W - 0.08, 1.82, 0.07]} c="#7fae8a" />
-        <B p={[DOOR_W / 2 - 0.03, 1.35, 0.04]} s={[0.4, 0.34, 0.02]} c="#ffe6b8" glow={0.4} />
+        <B p={[DOOR_W / 2 - 0.03, 1.35, 0.045]} s={[0.4, 0.34, 0.02]} c="#ffe6b8" glow={0.4} />
         <S p={[DOOR_W - 0.22, 0.95, 0.06]} s={0.035} c="#ffd27f" glow={0.3} />
       </group>
     </group>
@@ -243,7 +252,7 @@ function Sign() {
         <B key={x} p={[x, 0.75, 0]} s={[0.09, 1.5, 0.09]} c={WOOD_DARK} />
       ))}
       <B p={[0, 1.25, -0.03]} s={[1.42, 0.56, 0.06]} c={WOOD} />
-      <mesh position={[0, 1.25, 0.005]}>
+      <mesh position={[0, 1.25, 0.012]}>
         <planeGeometry args={[1.32, 0.495]} />
         <meshStandardMaterial map={texture} roughness={0.85} />
       </mesh>
@@ -260,11 +269,11 @@ function Sign() {
 function Terrace({ glow }) {
   return (
     <group>
-      <B p={[0, 0.03, (TERRACE.z0 + TERRACE.z1) / 2]} s={[TERRACE.hw * 2, 0.06, TERRACE.z1 - TERRACE.z0]} c="#d6a77a" />
+      <B p={[0, 0.025, (TERRACE.z0 + TERRACE.z1) / 2]} s={[TERRACE.hw * 2, 0.05, TERRACE.z1 - TERRACE.z0]} c="#d6a77a" />
       {Array.from({ length: 9 }, (_, i) => (
-        <B key={i} p={[-TERRACE.hw + 0.35 + i * ((TERRACE.hw * 2 - 0.7) / 8), 0.061, (TERRACE.z0 + TERRACE.z1) / 2]} s={[0.02, 0.004, TERRACE.z1 - TERRACE.z0]} c="#c4936a" />
+        <B key={i} p={[-TERRACE.hw + 0.35 + i * ((TERRACE.hw * 2 - 0.7) / 8), 0.052, (TERRACE.z0 + TERRACE.z1) / 2]} s={[0.02, 0.004, TERRACE.z1 - TERRACE.z0]} c="#c4936a" />
       ))}
-      <B p={[0, 0.015, TERRACE.z1 + 0.18]} s={[1.6, 0.03, 0.36]} c="#c8915f" />
+      <B p={[0, 0.012, TERRACE.z1 + 0.18]} s={[1.6, 0.024, 0.36]} c="#c8915f" />
       {[-TERRACE.hw + 0.1, TERRACE.hw - 0.1].map((x) => (
         <C key={x} p={[x, 0.95, TERRACE.z1 - 0.1]} rt={0.05} h={1.8} c={WOOD_DARK} seg={8} />
       ))}
@@ -441,7 +450,7 @@ function Table({ t }) {
     <group>
       <group position={[t.x, 0, t.z]}>
         <C p={[0, 0.36, 0]} rt={0.05} h={0.72} c={WOOD_DARK} seg={8} />
-        <C p={[0, 0.02, 0]} rt={0.22} h={0.04} c={WOOD_DARK} />
+        <C p={[0, 0.055, 0]} rt={0.22} h={0.04} c={WOOD_DARK} />
         <C p={[0, 0.73, 0]} rt={0.42} h={0.05} c={t.out ? '#fff6ea' : WOOD} seg={22} />
         {!t.out && <S p={[0, 0.8, 0]} s={[0.05, 0.06, 0.05]} c="#ff9cc6" />}
       </group>
@@ -515,158 +524,12 @@ function CupSpot({ c }) {
 
 /* ───────── the gnomes ───────── */
 
-/**
- * A little gnome: round body, apron, a big nose, rosy cheeks, a tall bendy hat, and (sometimes) a
- * beard. Animated by `pose()`: { mode: 'idle' | 'walk' | 'brew' | 'hand' | 'carry' | 'serve' | 'wave' | 'wipe', t }.
- */
-function Gnome({ look, pose, groupRef }) {
-  const body = useRef()
-  const armL = useRef()
-  const armR = useRef()
-  const legL = useRef()
-  const legR = useRef()
-  const head = useRef()
-  const tray = useRef()
-  const cupR = useRef()
-  // its own material (the shared ones from mat() must never be recoloured)
-  const drinkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#b07f58', roughness: 0.6 }), [])
-  useEffect(() => () => drinkMat.dispose(), [drinkMat])
-  useFrame(({ clock }) => {
-    const p = pose()
-    const t = clock.elapsedTime
-    const walking = p.mode === 'walk' || p.mode === 'carry'
-    const s = Math.sin(t * 9)
-    legL.current.rotation.x = walking ? s * 0.6 : 0
-    legR.current.rotation.x = walking ? -s * 0.6 : 0
-    body.current.position.y = walking ? Math.abs(Math.cos(t * 9)) * 0.03 : Math.sin(t * 2) * 0.008
-    head.current.rotation.set(0, walking ? 0 : Math.sin(t * 0.7) * 0.25, Math.sin(t * 1.1) * 0.05)
-    let l = [0.1, 0, -0.15]
-    let r = [0.1, 0, 0.15]
-    if (walking) {
-      l = [-s * 0.5, 0, -0.15]
-      r = [s * 0.5, 0, 0.15]
-    }
-    if (p.mode === 'brew') {
-      // working the machine: hands busy, a little tamp now and then
-      l = [-1.2 + Math.sin(t * 6) * 0.15, 0, -0.2]
-      r = [-1.3 + Math.cos(t * 5) * 0.2, 0, 0.25]
-    } else if (p.mode === 'wipe') {
-      r = [-1.0, 0, 0.3 + Math.sin(t * 3) * 0.35]
-    } else if (p.mode === 'hand' || p.mode === 'serve') {
-      r = [-1.35, 0, 0.1]
-    } else if (p.mode === 'carry') {
-      l = [-1.5, 0, -0.35]
-      r = [-1.5, 0, 0.35]
-    } else if (p.mode === 'wave') {
-      r = [-2.7, 0, 0.3 + Math.sin(t * 10) * 0.3]
-    } else if (p.mode === 'talk') {
-      r = [-0.8 - Math.max(0, Math.sin(t * 4)) * 0.4, 0, 0.3]
-    }
-    armL.current.rotation.set(...l)
-    armR.current.rotation.set(...r)
-    tray.current.visible = p.mode === 'carry' || p.mode === 'serve'
-    cupR.current.visible = p.mode === 'hand'
-    if (p.cupColor) drinkMat.color.set(p.cupColor)
-  })
-  return (
-    <group ref={groupRef}>
-      <group ref={body}>
-        {/* legs and boots */}
-        {[
-          [legL, -0.08],
-          [legR, 0.08],
-        ].map(([ref, x], i) => (
-          <group key={i} ref={ref} position={[x, 0.2, 0]}>
-            <C p={[0, -0.08, 0]} rt={0.045} h={0.16} c={look.pants} seg={8} />
-            <S p={[0, -0.17, 0.03]} s={[0.07, 0.045, 0.09]} c="#7a5a4a" />
-          </group>
-        ))}
-        {/* round body, apron */}
-        <mesh position={[0, 0.36, 0]} scale={[1, 1.05, 0.9]} material={mat(look.shirt)}>
-          <sphereGeometry args={[0.2, 16, 12]} />
-        </mesh>
-        <mesh position={[0, 0.33, 0.12]} scale={[0.85, 1.05, 0.5]} material={mat(look.apron)}>
-          <sphereGeometry args={[0.17, 14, 10, 0, Math.PI * 2, Math.PI * 0.25, Math.PI * 0.6]} />
-        </mesh>
-        <B p={[0, 0.25, 0.19]} s={[0.1, 0.05, 0.02]} c={look.apronDark} />
-        {/* arms */}
-        {[
-          [armL, -0.19],
-          [armR, 0.19],
-        ].map(([ref, x], i) => (
-          <group key={i} ref={ref} position={[x, 0.46, 0]}>
-            <C p={[0, -0.09, 0]} rt={0.035} rb={0.03} h={0.17} c={look.shirt} seg={8} />
-            <S p={[0, -0.19, 0]} s={0.04} c={look.skin} />
-          </group>
-        ))}
-        {/* a tray (for carrying), with a cup on it */}
-        <group ref={tray} position={[0, 0.63, 0.24]} visible={false}>
-          <C p={[0, 0, 0]} rt={0.17} h={0.015} c="#c8915f" />
-          <C p={[0.03, 0.05, 0]} rt={0.04} rb={0.035} h={0.08} c="#fffaf2" />
-          <mesh position={[0.03, 0.091, 0]} rotation={[-Math.PI / 2, 0, 0]} material={drinkMat}>
-            <circleGeometry args={[0.036, 12]} />
-          </mesh>
-        </group>
-        {/* a cup in the right hand (handing it over) */}
-        <group ref={cupR} position={[0.2, 0.5, 0.26]} visible={false}>
-          <C p={[0, 0, 0]} rt={0.04} rb={0.034} h={0.08} c="#fffaf2" />
-          <mesh position={[0, 0.041, 0]} rotation={[-Math.PI / 2, 0, 0]} material={drinkMat}>
-            <circleGeometry args={[0.036, 12]} />
-          </mesh>
-        </group>
-        {/* head: face, nose, cheeks, beard, hat */}
-        <group ref={head} position={[0, 0.68, 0]}>
-          <S p={[0, 0, 0]} s={0.15} c={look.skin} />
-          <S p={[0, -0.01, 0.14]} s={[0.05, 0.045, 0.045]} c={look.nose} />
-          {[-0.07, 0.07].map((x) => (
-            <group key={x}>
-              <S p={[x, 0.035, 0.125]} s={0.018} c="#2a1f3d" />
-              <S p={[x * 1.3, -0.02, 0.11]} s={[0.03, 0.02, 0.01]} c="#ff9cb8" />
-            </group>
-          ))}
-          {look.beard ? (
-            <mesh position={[0, -0.09, 0.07]} scale={[1, 1.25, 0.8]} material={mat(look.beard)}>
-              <sphereGeometry args={[0.11, 12, 10]} />
-            </mesh>
-          ) : (
-            [-1, 1].map((sx) => <S key={sx} p={[sx * 0.14, -0.08, -0.02]} s={[0.045, 0.1, 0.045]} c={look.hair} />)
-          )}
-          {/* the hat: a tall cone with a bend at the top */}
-          <mesh position={[0, 0.17, -0.01]} material={mat(look.hat)}>
-            <coneGeometry args={[0.16, 0.28, 14]} />
-          </mesh>
-          <mesh position={[0.03, 0.34, -0.03]} rotation={[0, 0, -0.5]} material={mat(look.hat)}>
-            <coneGeometry args={[0.07, 0.16, 10]} />
-          </mesh>
-          <mesh position={[0, 0.06, -0.01]} rotation={[Math.PI / 2, 0, 0]} material={mat(look.band)}>
-            <torusGeometry args={[0.15, 0.022, 6, 18]} />
-          </mesh>
-        </group>
-      </group>
-      {/* a soft shadow */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <circleGeometry args={[0.2, 16]} />
-        <meshBasicMaterial color="#24143a" transparent opacity={0.25} depthWrite={false} />
-      </mesh>
-    </group>
-  )
-}
-
 const BARISTA_LOOK = { skin: '#ffd7c2', nose: '#ffb3a0', shirt: '#7fae8a', apron: '#fff4e4', apronDark: '#e8798f', pants: '#6d5a6e', hat: '#e8566f', band: '#ffd27f', beard: '#fffaf6', hair: '#fffaf6' }
 const WAITER_LOOK = { skin: '#ffe0cc', nose: '#ffb8a6', shirt: '#c9b6f4', apron: '#ffe0ec', apronDark: '#9a6b4a', pants: '#7a6a8e', hat: '#5fb3a8', band: '#fff4e4', beard: null, hair: '#c8794e' }
 
 const LINES = {
   welcome: ['Selamat datang di The Little Gnome Café! ☕', 'Hai! Silakan duduk, aku bawakan menunya ♡', 'Wah, tamu kesayangan datang lagi ✦'],
   waiter: ['Latte di sini pakai latte art berbentuk hati, lho ♡', 'Kalau duduk dulu, pesanannya aku antar ke meja ☕', 'Pastry stroberinya baru keluar dari oven 🍓', 'Ngopi berdua itu paling enak, ya ✦'],
-}
-
-/** A little speech bubble over a gnome. */
-function Bubble({ text, y = 1.25 }) {
-  return text ? (
-    <Html position={[0, y, 0]} center zIndexRange={[15, 0]} className="plant-anchor">
-      <div className="gnome-bubble">{text}</div>
-    </Html>
-  ) : null
 }
 
 /** Orders being made right now: mine and the other person's (the barista makes both). */
@@ -703,6 +566,7 @@ function Barista({ onBrewing }) {
     g.position.x += step
     if (Math.abs(step) > delta * 0.3 && mode === 'wipe') mode = 'walk'
     g.position.z = BARISTA_SPOT.z
+    g.position.y = 0.35
     g.rotation.y = 0
     pose.current = { mode, cupColor: (brewing || serving) && DRINKS[(brewing || serving).drink].foam }
     onBrewing(Boolean(brewing))
@@ -769,8 +633,14 @@ function Waiter() {
     radius: 1.2,
     priority: 0.2,
     enabled: () => !player.act,
-    label: 'Ngobrol dengan Pip 💬',
+    label: () => (pipHasJob() ? 'Ngobrol dengan Pip ❗' : 'Ngobrol dengan Pip 💬'),
     onInteract: () => {
+      // a job for Gnome Village (coffee for Nenek Pim): through the village's talk card
+      if (pipHasJob()) {
+        talkTo('pip')
+        talkUntil.current = performance.now() / 1000 + 3
+        return audio.sparkle()
+      }
       const lines = LINES.waiter
       setSay(lines[Math.floor(Math.random() * lines.length)])
       talkUntil.current = performance.now() / 1000 + 3
@@ -897,6 +767,8 @@ export default function Cafe() {
       const facing = (nx * lx + nz * lz) / l > 0.2
       const g = wallRefs[side].current
       g.scale.y = THREE.MathUtils.damp(g.scale.y, facing ? 1 - cut.current * 0.88 : 1, 10, delta)
+      const decor = g.getObjectByName('decor')
+      if (decor) decor.visible = g.scale.y > 0.7
     }
     // the other person's cup on a table (seen from here)
     const pc = partner.online && partner.cup?.state === 'table' && partner.cup.seat ? `${partner.cup.seat}|${partner.cup.kind}` : null
@@ -916,14 +788,16 @@ export default function Cafe() {
   const [tseat, tdrink] = theirCup ? theirCup.split('|') : []
   return (
     <group>
-      <group position={[CAFE.x, floor - 0.03, CAFE.z]} rotation={[0, CAFE.yaw, 0]}>
+      <group position={[CAFE.x, floor, CAFE.z]} rotation={[0, CAFE.yaw, 0]}>
         {/* the stone foundation and the floor */}
-        <B p={[0, -0.12, 0]} s={[ROOM.hw * 2 + 0.5, 0.3, ROOM.hd * 2 + 0.5]} c={STONE} />
-        <B p={[0, 0.01, 0]} s={[ROOM.hw * 2, 0.04, ROOM.hd * 2]} c="#e2b98a" />
+        <B p={[0, -0.135, 0]} s={[ROOM.hw * 2 + 0.5, 0.3, ROOM.hd * 2 + 0.5]} c={STONE} />
+        <B p={[0, 0.0225, 0]} s={[ROOM.hw * 2, 0.015, ROOM.hd * 2]} c="#e2b98a" />
+        {/* the barista's step behind the counter (gnomes are small) */}
+        <B p={[(COUNTER.x0 + COUNTER.x1) / 2, 0.19, (COUNTER.z - COUNTER.d / 2 - ROOM.hd + CAFE_WALL_T / 2) / 2]} s={[COUNTER.x1 - COUNTER.x0, 0.32, COUNTER.z - COUNTER.d / 2 + ROOM.hd - CAFE_WALL_T / 2 - 0.01]} c={WOOD_DARK} />
         {Array.from({ length: 11 }, (_, i) => (
-          <B key={i} p={[-ROOM.hw + 0.27 + i * 0.55, 0.032, 0]} s={[0.015, 0.004, ROOM.hd * 2]} c="#d2a676" />
+          <B key={i} p={[-ROOM.hw + 0.27 + i * 0.55, 0.031, 0]} s={[0.015, 0.004, ROOM.hd * 2]} c="#d2a676" />
         ))}
-        <B p={[0.6, 0.035, 0.6]} s={[2.2, 0.01, 1.6]} c="#f4c6d6" />
+        <B p={[0.6, 0.036, 0.6]} s={[2.2, 0.008, 1.6]} c="#f4c6d6" />
         {Object.keys(WALLS).map((side) => (
           <Wall key={side} side={side} innerRef={wallRefs[side]} glow={glow} />
         ))}

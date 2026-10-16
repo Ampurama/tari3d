@@ -6,7 +6,7 @@ import { couple } from '../content/config'
 import { uid } from './uid'
 import { serverNow } from './clock'
 import { useStore } from '../store'
-import { applyHouseSize, CATALOG, checkPlacement, HOUSE, HOUSE_SIZES, hitsItem, hitsWall, inHouse, layerOf, OUTER, priceOf, snapPlacement, startSpot, toLocal } from './homeLayout'
+import { applyHouseSize, CATALOG, checkPlacement, HOUSE, HOUSE_SIZES, hitsItem, hitsWall, IN, inHouse, layerOf, OUTER, priceOf, snapPlacement, startSpot, toLocal } from './homeLayout'
 
 /*
  * OUR LITTLE HOME — the shared house, kept in Supabase (tables `house` and `house_items`,
@@ -384,6 +384,50 @@ export async function placeDraft() {
   if (bought) refreshHouse()
 }
 
+/** A free spot for a new item (searching out from where new things usually go), or null. */
+function freeSpot(kind) {
+  const c = CATALOG[kind]
+  const start = startSpot(kind)
+  const box = c.area === 'inside' ? { x0: IN.x0, x1: IN.x1, z0: IN.z0, z1: IN.z1 } : { x0: -7.5, x1: 7.5, z0: -6, z1: 9.5 }
+  const spots = []
+  for (let x = box.x0; x <= box.x1; x += 0.25) for (let z = box.z0; z <= box.z1; z += 0.25) spots.push([x, z, Math.hypot(x - start.x, z - start.z)])
+  spots.sort((a, b) => a[2] - b[2])
+  for (const [x, z] of spots) {
+    const p = snapPlacement(kind, x, z, 0)
+    if (checkPlacement(kind, p.x, p.z, 0, get().items).ok) return p
+  }
+  return null
+}
+
+/**
+ * From Gnome Village's shop (and its rewards): put a new thing in the house on a free spot (it can
+ * be moved later in Mode Bangun). The server charges its price, and checks a reward is unlocked.
+ * Returns { ok, error }.
+ */
+export async function deliverItem(kind) {
+  const c = CATALOG[kind]
+  const s = get()
+  if (!c || !supabase || s.status !== 'ready') return { ok: false, error: 'Rumah kalian belum termuat. Masuk dulu, ya.' }
+  if (c.area === 'inside' && s.stage < 2) return { ok: false, error: 'Bangun pondoknya dulu, ya.' }
+  if (c.area === 'garden' && s.stage < 3) return { ok: false, error: 'Taman rumah terbuka di tahap 3.' }
+  const spot = freeSpot(kind)
+  if (!spot) return { ok: false, error: c.area === 'inside' ? 'Di dalam rumah sudah tidak ada tempat kosong.' : 'Di taman sudah tidak ada tempat kosong.' }
+  const row = { id: uid(), kind, area: c.area, x: spot.x, z: spot.z, rot: spot.rot }
+  if (simsReady) row.variant = 0
+  const { data, error } = await supabase.from('house_items').insert(row).select(ITEM_COLUMNS).maybeSingle()
+  if (error) {
+    const msg = error.message || ''
+    if (msg.includes('not enough coins')) return { ok: false, error: `Koin hatinya belum cukup (butuh ${priceOf(kind)}).` }
+    if (msg.includes('not unlocked')) return { ok: false, error: 'Hadiah ini belum terbuka.' }
+    if (msg.includes('house is full')) return { ok: false, error: 'Rumahnya sudah penuh (80 barang).' }
+    if (msg.includes('house_items_kind')) return { ok: false, error: 'Dekorasi desa butuh 011_gnome_village.sql dijalankan di Supabase dulu.' }
+    return { ok: false, error: 'Belum terkirim. Coba lagi, ya.' }
+  }
+  if (data) applyItem(data)
+  if (simsReady && priceOf(kind) > 0) refreshHouse()
+  return { ok: true }
+}
+
 /** "Hapus": remove the item being moved. */
 export async function removeDraft() {
   const d = get().draft
@@ -405,7 +449,7 @@ export async function removeDraft() {
 /* ───────── coins, walls and floors, and living in the house ───────── */
 
 /** Re-read the house row (its coins change on the server when buying or earning). */
-async function refreshHouse() {
+export async function refreshHouse() {
   const { data } = await supabase.from('house').select('*').eq('id', 1).maybeSingle()
   if (data) applyHouse(data)
 }

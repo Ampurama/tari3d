@@ -77,6 +77,7 @@ function Partner() {
     motion.current.hand = mateHand()
     motion.current.act = partner.act?.kind || null
     motion.current.cup = partnerDrink()
+    motion.current.hat = Boolean(partner.hat)
     // where they're drawn, for holding hands and for the pet
     partner.shown.x = g.position.x
     partner.shown.y = g.position.y

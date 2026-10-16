@@ -22,6 +22,9 @@ export function currentHour() {
   return ((hours % 24) + 24) % 24
 }
 
+/** The hour of the day (0–24) at a moment (ms on the shared clock). */
+export const hourAt = (ms) => (((ms / 3600000 + UTC_OFFSET) % 24) + 24) % 24
+
 /** The world clock as text, e.g. "17:42 WITA". */
 export function clockText() {
   const h = currentHour()

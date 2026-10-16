@@ -110,12 +110,23 @@ export const CATALOG = {
   lantern: { label: 'Lentera taman', icon: '🏮', area: 'garden', w: 0.4, d: 0.4, cat: 'taman', price: 12 },
   garden_bench: { label: 'Bangku taman', icon: '🪵', area: 'garden', w: 1.3, d: 0.6, cat: 'taman', price: 25, colors: ['#c8915f', '#f1e4d3', '#b9a5e8', '#8fc9b3'] },
   small_tree: { label: 'Pohon bunga', icon: '🌸', area: 'garden', w: 1.0, d: 1.0, cat: 'taman', price: 30 },
+  // ── Desa Kurcaci (011_gnome_village.sql): sold by Tuan Kenop, or rewards for helping in the village
+  mushroom_stool: { label: 'Kursi jamur', icon: '🍄', area: 'inside', w: 0.45, d: 0.45, cat: 'desa', price: 15, colors: ['#e8566f', '#f7a8c4', '#b9a5e8', '#ffb347'] },
+  toadstool_table: { label: 'Meja jamur', icon: '🍄', area: 'inside', w: 0.9, d: 0.9, cat: 'desa', price: 30, colors: ['#e8566f', '#f7a8c4', '#8fc9b3', '#c8915f'] },
+  mushroom_lamp: { label: 'Lampu jamur', icon: '🪔', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Antar kopi untuk Nenek Pim di Desa Kurcaci', cat: 'desa' },
+  bread_basket: { label: 'Keranjang roti', icon: '🥐', area: 'inside', w: 0.5, d: 0.4, keepsake: true, hint: 'Bantu Bu Remah mengumpulkan bahan roti', cat: 'desa' },
+  gnome_lantern: { label: 'Lentera kurcaci', icon: '🏮', area: 'garden', w: 0.4, d: 0.4, cat: 'desa_taman', price: 18 },
+  flower_pot: { label: 'Pot bunga kurcaci', icon: '🪴', area: 'garden', w: 0.5, d: 0.5, cat: 'desa_taman', price: 10, colors: ['#e08f6a', '#f4b6cc', '#bfe3d6', '#cbbcf2'] },
+  moon_flower: { label: 'Bunga bulan', icon: '🌙', area: 'garden', w: 0.6, d: 0.6, keepsake: true, hint: 'Bantu Gilo menyiram bunga di Desa Kurcaci', cat: 'desa_taman' },
+  gnome_statue: { label: 'Patung kurcaci', icon: '🗿', area: 'garden', w: 0.5, d: 0.5, keepsake: true, hint: 'Temukan kacamata Tetua Lumut', cat: 'desa_taman' },
+  crystal_shroom: { label: 'Jamur kristal', icon: '💎', area: 'garden', w: 0.6, d: 0.6, keepsake: true, hint: 'Temukan Kebun Rahasia di Desa Kurcaci', cat: 'desa_taman' },
+  twin_lantern: { label: 'Lentera kembar', icon: '🏮', area: 'garden', w: 0.9, d: 0.4, keepsake: true, hint: 'Nyalakan lentera berdua di alun-alun Desa Kurcaci', cat: 'desa_taman' },
 }
 export const KINDS = Object.keys(CATALOG)
 
 /**
  * Prices are in heart coins (koin hati) and must match public.item_price() in
- * supabase/migrations/009_sims_home.sql (the server is the one that charges).
+ * supabase/migrations/009_sims_home.sql, 010 and 011 (the server is the one that charges).
  */
 export const priceOf = (kind) => CATALOG[kind]?.price || 0
 
@@ -128,7 +139,9 @@ export const CATEGORIES = [
   { id: 'dekor', label: 'Dekor', icon: '🪴', area: 'inside' },
   { id: 'struktur', label: 'Struktur', icon: '🧱', area: 'inside' },
   { id: 'kenangan', label: 'Kenangan', icon: '💌', area: 'inside' },
+  { id: 'desa', label: 'Desa Kurcaci', icon: '🍄', area: 'inside' },
   { id: 'taman', label: 'Taman', icon: '🌷', area: 'garden' },
+  { id: 'desa_taman', label: 'Taman Kurcaci', icon: '🍄', area: 'garden' },
 ]
 
 /** Walls and floors (15 coins for each part that changes; checked by public.house_style()). */

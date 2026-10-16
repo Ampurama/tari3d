@@ -62,6 +62,7 @@ function useMats(look) {
       bottom: m(look.bottom, { roughness: 0.86 }),
       shoes: m(look.shoes, { roughness: 0.5 }),
       accent: m(look.accent, { emissive: look.accent, emissiveIntensity: 0.25 }),
+      hatBand: m('#ffd27f', { roughness: 0.5 }),
       eye: new THREE.MeshBasicMaterial({ color: '#2a1f3d' }),
       blush: new THREE.MeshBasicMaterial({ color: '#ff9cb8', transparent: true, opacity: 0.55, depthWrite: false }),
       shine: new THREE.MeshBasicMaterial({ color: '#ffffff' }),
@@ -93,6 +94,7 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
   const spoon = useRef()
   const cup = useRef()
   const cupDrink = useRef()
+  const hat = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
   const dress = look.outfit === 'dress'
   const longHair = look.hairStyle === 'long'
@@ -284,6 +286,7 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
         body.current.rotation.x = 0
       }
     } else if (body.current.rotation.z) body.current.rotation.z = 0
+    if (hat.current) hat.current.visible = Boolean(motion.hat)
     // a cup from The Little Gnome Café: held in front of her, lifted to sip
     const holdingCup = Boolean(motion.cup)
     if (holdingCup && !act) {
@@ -481,6 +484,21 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
               <coneGeometry args={[0.04, 0.12, 8]} />
             </mesh>
           )}
+          {/* the gnome hat from Gnome Village */}
+          <group ref={hat} position={[0, 0.17, -0.01]} visible={false}>
+            <mesh position={[0, 0.2, 0]} material={mats.accent}>
+              <coneGeometry args={[0.24, 0.42, 16]} />
+            </mesh>
+            <mesh position={[0.05, 0.47, -0.04]} rotation={[0, 0, -0.55]} material={mats.accent}>
+              <coneGeometry args={[0.09, 0.22, 10]} />
+            </mesh>
+            <mesh position={[0, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]} material={mats.hatBand}>
+              <torusGeometry args={[0.235, 0.03, 8, 22]} />
+            </mesh>
+            <mesh position={[0.15, 0.08, 0.15]} material={mats.hatBand}>
+              <sphereGeometry args={[0.04, 10, 8]} />
+            </mesh>
+          </group>
           {/* face */}
           <group ref={eyes} position={[0, 0.01, 0.215]}>
             {[-0.075, 0.075].map((x) => (

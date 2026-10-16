@@ -19,6 +19,8 @@ import Vegetation from './Vegetation'
 import Meadow from './Meadow'
 import MeadowExtras from './MeadowExtras'
 import Cafe from './Cafe'
+import Village from './Village'
+import WishingWell from './WishingWell'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
 import Discoveries from './Discoveries'
@@ -79,6 +81,8 @@ export default function World() {
       <Meadow />
       <MeadowExtras />
       <Cafe />
+      <Village />
+      <WishingWell />
       <LoveTree />
 
       {/* the story */}

@@ -418,7 +418,7 @@ function EditBar() {
               })}
             </div>
           )}
-          {tab === 'taman' && stage < 3 && <p className="home-edit-note">Dekorasi taman terbuka di tahap 3.</p>}
+          {(tab === 'taman' || tab === 'desa_taman') && stage < 3 && <p className="home-edit-note">Dekorasi taman terbuka di tahap 3.</p>}
         </>
       )}
     </motion.div>
