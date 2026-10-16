@@ -43,12 +43,15 @@ export const partner = {
   act: null,
   mood: null,
   together: null,
+  /** at The Little Gnome Café (lib/cafe.js): their order { id, kind (drink), state, seat?, at } and their cup { id, kind, state: 'hand' | 'table', seat? } */
+  order: null,
+  cup: null,
   /** where their character is drawn right now (smoothed), written by the 3D scene */
   shown: { x: 0, y: 0, z: 0, yaw: 0, speed: 0, ok: false },
 }
 
 /** What I'm doing that the other person should know about (sent with my character). */
-export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null }
+export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null, order: null, cup: null }
 
 const ID = /^[\w:-]{1,80}$/
 /** Only well-formed little objects get through: { id, seat?, kind?, at } (strings and a number). */
@@ -171,6 +174,8 @@ async function joinRoom(myId, mateId) {
       partner.act = cleanAct(payload.act)
       partner.mood = cleanAct(payload.mood)
       partner.together = cleanAct(payload.together)
+      partner.order = cleanAct(payload.order)
+      partner.cup = cleanAct(payload.cup)
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
@@ -208,6 +213,8 @@ async function joinRoom(myId, mateId) {
       act: presence.act,
       mood: presence.mood,
       together: presence.together,
+      order: presence.order,
+      cup: presence.cup,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -243,6 +250,8 @@ async function leaveRoom() {
   partner.act = null
   partner.mood = null
   partner.together = null
+  partner.order = null
+  partner.cup = null
   set({ mateOnline: false })
   roomHooks.forEach((h) => h.left?.())
   const old = channels

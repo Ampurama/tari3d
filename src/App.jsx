@@ -22,6 +22,7 @@ import HomePanel from './components/ui/HomePanel'
 import DatePanel from './components/ui/DatePanel'
 import { MoodStrip } from './components/ui/LifeUI'
 import PetPanel from './components/ui/PetPanel'
+import CafeUI from './components/ui/CafeUI'
 import SkyPanel from './components/ui/SkyPanel'
 import WishLetter from './components/ui/WishLetter'
 import CutsceneOverlay from './components/ui/CutsceneOverlay'
@@ -57,6 +58,7 @@ export default function App() {
         <DatePanel />
         <MoodStrip />
         <PetPanel />
+        <CafeUI />
         <SkyPanel />
         <WishLetter />
         <CutsceneOverlay />

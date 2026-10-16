@@ -18,6 +18,7 @@ import { IslandGround, Lake, LuminousPaths, PathLanterns, PlaceNames, Waterfall 
 import Vegetation from './Vegetation'
 import Meadow from './Meadow'
 import MeadowExtras from './MeadowExtras'
+import Cafe from './Cafe'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
 import Discoveries from './Discoveries'
@@ -77,6 +78,7 @@ export default function World() {
       <Vegetation />
       <Meadow />
       <MeadowExtras />
+      <Cafe />
       <LoveTree />
 
       {/* the story */}

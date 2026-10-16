@@ -12,6 +12,7 @@ import { followBlocked, handFollow, holding, myHand, releaseHand } from '../../l
 import { respawnPoint } from '../../lib/sky'
 import { warmPaths } from '../../lib/path'
 import { tickLife } from '../../lib/life'
+import { heldDrink } from '../../lib/cafe'
 import { holdBalloon } from '../../lib/balloon'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
@@ -431,7 +432,7 @@ export function PlayerAvatar() {
   return (
     <>
       <group ref={group}>
-        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sitStyle(player.seat), emote: player.emote, hand: myHand(), act: player.act?.kind })} />
+        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sitStyle(player.seat), emote: player.emote, hand: myHand(), act: player.act?.kind, cup: heldDrink() })} />
         <EmoteFx get={() => player.emote} />
         {(carrying || hasWater) && (
           <group ref={carry} position={[0, 1.55, 0]}>

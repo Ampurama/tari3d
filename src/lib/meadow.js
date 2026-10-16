@@ -54,6 +54,13 @@ export const POND = { x: 34, z: 31, r: 6.5, level: -2.15 }
  */
 export const DISTANCE_SITE = { x: 72, y: 1.2, z: -34, spread: 9, lift: 0.75 }
 
+/**
+ * The Little Gnome Café (lib/cafe.js): on a level pad of meadow south-east of the main meadow,
+ * its door turned toward the main meadow and the camera. `r0`: fully level, `r1`: back to the meadow.
+ */
+export const CAFE_SITE = { x: 14, z: 23, yaw: -0.35, r0: 6.4, r1: 8.6 }
+let cafeLevel = null
+
 /** A knoll in the north-east meadow, crowned by the giant tree. */
 export const KNOLL = { x: 26, z: -30, h: 2.6, r: 8 }
 export const GIANT_TREE = { x: KNOLL.x, z: KNOLL.z }
@@ -109,6 +116,8 @@ export const MEADOW_PATHS = [
   [[15.5, -2.5], [21, -3], [27, -4.5], [36, -9], [46, -16], [56, -26], [60.5, -30]],
   [[-9, -12], [-10.2, -16.5], [-11.2, -20.6], [-10.5, -25], [-8.5, -29]],
   [[9.2, -33], [15, -31.5], [21.6, -30.4]],
+  // to The Little Gnome Café
+  [[4.6, 15.4], [6.6, 20.6], [7.6, 26.0], [9.6, 29.2], [11.9, 29.0]],
 ]
 const segDistance = (px, pz, ax, az, bx, bz) => {
   const vx = bx - ax
@@ -232,6 +241,15 @@ export function meadowHeight(x, z) {
   }
   // the places rise out of it
   h = Math.max(h, mainShoulder(x, z), homeShoulder(x, z), skyShoulder(x, z), lakeRim(x, z))
+  // the café's level pad
+  const dc2 = Math.hypot(x - CAFE_SITE.x, z - CAFE_SITE.z)
+  if (dc2 < CAFE_SITE.r1) {
+    if (cafeLevel === null) {
+      cafeLevel = -Infinity // (guard: the level is read from the meadow itself, without the pad)
+      cafeLevel = meadowHeight(CAFE_SITE.x, CAFE_SITE.z)
+    }
+    if (cafeLevel !== -Infinity) h += (cafeLevel - h) * (1 - smooth(CAFE_SITE.r0, CAFE_SITE.r1, dc2))
+  }
   // Chapter 2's two hilltops and the ravine between them
   const sx = x - DISTANCE_SITE.x
   const sz = z - DISTANCE_SITE.z

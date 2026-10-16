@@ -7,6 +7,7 @@ import { earnCoins, mateName } from './home'
 import { addMood, MOODS } from './mood'
 import { releaseHand } from './hand'
 import { standUp } from './actions'
+import { sipDone } from './cafe'
 import { standHeight, walkable } from './terrain'
 
 /*
@@ -34,6 +35,8 @@ export const ACTS = {
   talk: { label: 'Ngobrol', icon: '💬', seconds: 8, mood: 'bahagia', reward: 'together', done: 'Ngobrolnya seru 💬', together: true },
   dance: { label: 'Dansa', icon: '💃', seconds: 9, mood: 'romantis', reward: 'together', done: 'Dansa berdua 💃', together: true },
   cook_together: { label: 'Masak bareng', icon: '👩‍🍳', seconds: 10, mood: 'jago_masak', reward: 'together', done: 'Masak bareng jadi! 🍲', together: true, pose: 'cook' },
+  // a sip at the café (sitting or standing; lib/cafe.js counts the sips)
+  sip: { label: 'Menyeruput', icon: '☕', seconds: 2.6, keepSeat: true, quiet: true },
 }
 /** The pose an activity plays (most are named after themselves). */
 export const poseOf = (kind) => ACTS[kind]?.pose || kind
@@ -55,7 +58,7 @@ export function startAct(kind, spot, item = null) {
   const a = ACTS[kind]
   if (!a) return false
   releaseHand('sit')
-  if (player.seat && kind !== 'tv') standUp()
+  if (player.seat && kind !== 'tv' && !a.keepSeat) standUp()
   player.walkTarget = null
   player.onArrive = null
   player.speed = 0
@@ -95,6 +98,7 @@ async function finishAct() {
   presence.act = null
   useLife.setState({ act: null })
   if (a.together) finishTogether()
+  if (act.kind === 'sip') return sipDone()
   addMood(a.mood)
   const coins = await earnCoins(a.reward)
   toast(`${a.done} · ${MOODS[a.mood].icon} ${MOODS[a.mood].label}${coins ? ` · +${coins} koin` : ''}`)

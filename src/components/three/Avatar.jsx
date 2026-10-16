@@ -91,6 +91,8 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
   const book = useRef()
   const plate = useRef()
   const spoon = useRef()
+  const cup = useRef()
+  const cupDrink = useRef()
   const reducedMotion = useStore((s) => s.reducedMotion)
   const dress = look.outfit === 'dress'
   const longHair = look.hairStyle === 'long'
@@ -262,6 +264,11 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
         aL.rotation.set(-0.25 - 0.3 * (reducedMotion ? 0 : Math.max(0, Math.sin(t * 2.3 + 1))), 0, -0.15)
         eL.rotation.set(-0.6, 0, 0)
         head.current.rotation.set(reducedMotion ? 0 : 0.08 * Math.sin(t * 4), 0, 0)
+      } else if (act === 'sip') {
+        // the cup comes up to her lips
+        aR.rotation.set(-1.25, 0, 0.32)
+        eR.rotation.set(-1.75, 0, 0)
+        head.current.rotation.set(-0.12, 0, 0)
       } else if (act === 'dance') {
         // swaying, arms up, little steps
         const b = reducedMotion ? 0 : Math.sin(t * 4)
@@ -277,6 +284,20 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
         body.current.rotation.x = 0
       }
     } else if (body.current.rotation.z) body.current.rotation.z = 0
+    // a cup from The Little Gnome Café: held in front of her, lifted to sip
+    const holdingCup = Boolean(motion.cup)
+    if (holdingCup && !act) {
+      aR.rotation.set(-0.7, 0, 0.18)
+      eR.rotation.set(-0.95, 0, 0)
+    }
+    if (cup.current) {
+      cup.current.visible = holdingCup
+      if (holdingCup) {
+        if (act === 'sip') cup.current.position.set(0.07, 0.86, 0.24)
+        else cup.current.position.set(0.19, 0.55, 0.3)
+        cupDrink.current.material.color.set(motion.cup)
+      }
+    }
     if (book.current) book.current.visible = act === 'read'
     if (plate.current) plate.current.visible = act === 'eat' || act === 'snack'
     if (spoon.current) spoon.current.visible = act === 'cook'
@@ -405,6 +426,21 @@ const Avatar = forwardRef(function Avatar({ config, getMotion, castShadow = true
           <cylinderGeometry args={[0.012, 0.012, 0.3, 6]} />
           <meshStandardMaterial color="#c8915f" roughness={0.7} />
         </mesh>
+
+        <group ref={cup} visible={false}>
+          <mesh>
+            <cylinderGeometry args={[0.045, 0.038, 0.08, 14]} />
+            <meshStandardMaterial color="#fffaf2" roughness={0.35} />
+          </mesh>
+          <mesh ref={cupDrink} position={[0, 0.036, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.04, 14]} />
+            <meshStandardMaterial color="#b07f58" roughness={0.5} />
+          </mesh>
+          <mesh position={[0.05, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <torusGeometry args={[0.022, 0.007, 6, 12]} />
+            <meshStandardMaterial color="#fffaf2" roughness={0.35} />
+          </mesh>
+        </group>
 
         {/* accessory */}
         {look.accessory === 'scarf' && (

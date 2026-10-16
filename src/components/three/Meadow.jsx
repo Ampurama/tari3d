@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { buildMeadowGeometry, buildRiverGeometry, buildSkyCliffGeometry, CROSSINGS, crossingAt, DISTANCE_SITE, GIANT_TREE, KNOLL, MEADOW_PATHS, meadowHeight, meadowPathDistance, POND, RIVER_HALF_WIDTH, riverAt } from '../../lib/meadow'
+import { buildMeadowGeometry, buildRiverGeometry, buildSkyCliffGeometry, CAFE_SITE, CROSSINGS, crossingAt, DISTANCE_SITE, GIANT_TREE, KNOLL, MEADOW_PATHS, meadowHeight, meadowPathDistance, POND, RIVER_HALF_WIDTH, riverAt } from '../../lib/meadow'
 import { addCollider, edgeRadius, HOME_ISLAND, homeDistance, SEA, seeded, SKY, SKY_BRIDGE, skyDistance, standHeight, WEST_BRIDGE } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
 import { tier } from '../../lib/device'
@@ -41,6 +41,8 @@ export function openMeadow(x, z, { tall = false, water = 0.5 } = {}) {
   if (Math.hypot(x, z) - edgeRadius(x, z) < (tall ? 2 : 0)) return false
   if ((homeDistance(x, z) - 1) * HOME_ISLAND.r < (tall ? 1.5 : 0)) return false
   if (crossingAt(x, z)) return false
+  // The Little Gnome Café's level pad
+  if (Math.hypot(x - CAFE_SITE.x, z - CAFE_SITE.z) < CAFE_SITE.r0 + (tall ? 2.5 : 0.3)) return false
   // the footpaths stay clear (flowers may line them; trees keep a step back)
   if (meadowPathDistance(x, z) < (tall ? 1.8 : 0.55)) return false
   // Chapter 2's hilltops and ravine stay as they are

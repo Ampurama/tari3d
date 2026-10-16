@@ -16,6 +16,7 @@ import EmoteFx from './EmoteFx'
 import { partnerEmote, SEAT_DROP, seats, sitStyle } from '../../lib/actions'
 import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from '../../lib/hand'
 import { MOODS } from '../../lib/mood'
+import { partnerDrink } from '../../lib/cafe'
 import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
 
 /*
@@ -75,6 +76,7 @@ function Partner() {
     motion.current.emote = partnerEmote()
     motion.current.hand = mateHand()
     motion.current.act = partner.act?.kind || null
+    motion.current.cup = partnerDrink()
     // where they're drawn, for holding hands and for the pet
     partner.shown.x = g.position.x
     partner.shown.y = g.position.y

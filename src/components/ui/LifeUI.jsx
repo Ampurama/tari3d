@@ -22,7 +22,8 @@ export function ActFloat() {
     const id = setInterval(() => tick((n) => n + 1), 200)
     return () => clearInterval(id)
   }, [act])
-  const a = act && ACTS[act.kind]
+  // quiet acts (a sip at the café) have their own card
+  const a = act && !ACTS[act.kind]?.quiet && ACTS[act.kind]
   const k = act ? Math.min(1, (performance.now() / 1000 - act.t0) / act.seconds) : 0
   return (
     <AnimatePresence>

@@ -29,6 +29,7 @@ import { audio } from '../../audio/engine'
 import { dates } from '../../content/config'
 import { acceptHand, declineHand, releaseHand, useHand } from '../../lib/hand'
 import { ActFloat, TogetherButtons, TogetherFloat } from './LifeUI'
+import { CafeFloat } from './CafeUI'
 import { SkyCards } from './SkyPanel'
 import { BalloonCard } from './BalloonPanel'
 
@@ -514,6 +515,7 @@ export default function DatePanel() {
         <HandFloat />
         <ActFloat />
         <TogetherFloat />
+        <CafeFloat />
         <BalloonCard />
         <SkyCards />
       </div>

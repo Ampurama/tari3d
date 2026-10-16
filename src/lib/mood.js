@@ -17,6 +17,7 @@ export const MOODS = {
   jago_masak: { label: 'Jago masak', icon: '🍳', minutes: 120, text: 'Masakannya enak' },
   romantis: { label: 'Romantis', icon: '💞', minutes: 120, text: 'Momen manis berdua' },
   bahagia: { label: 'Bahagia', icon: '😊', minutes: 60, text: 'Hal kecil yang menyenangkan' },
+  ngopi: { label: 'Ngopi santai', icon: '☕', minutes: 90, text: 'Secangkir hangat di The Little Gnome Café' },
 }
 
 const KEY = 'our-little-universe:mood'
