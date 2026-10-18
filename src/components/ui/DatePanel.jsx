@@ -31,6 +31,7 @@ import { acceptHand, declineHand, releaseHand, useHand } from '../../lib/hand'
 import { ActFloat, TogetherButtons, TogetherFloat } from './LifeUI'
 import { CafeFloat } from './CafeUI'
 import { VillageFloat } from './VillageUI'
+import { RideFloat } from './CarnivalUI'
 import { SkyCards } from './SkyPanel'
 import { BalloonCard } from './BalloonPanel'
 
@@ -518,6 +519,7 @@ export default function DatePanel() {
         <TogetherFloat />
         <CafeFloat />
         <VillageFloat />
+        <RideFloat />
         <BalloonCard />
         <SkyCards />
       </div>

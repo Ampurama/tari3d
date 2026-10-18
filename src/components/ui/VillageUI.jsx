@@ -30,9 +30,9 @@ function TalkCard() {
     <AnimatePresence>
       {talk && (
         <motion.div key={talk.npc + talk.text} className="dialog-wrap village-talk" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}>
-          <div className="dialog-box" role="dialog" aria-label={`Ngobrol dengan ${speakerName(talk.npc)}`}>
+          <div className="dialog-box" role="dialog" aria-label={`Ngobrol dengan ${talk.name || speakerName(talk.npc)}`}>
             <span className="dialog-speaker">
-              {speakerName(talk.npc)} · {speakerRole(talk.npc)}
+              {talk.name || speakerName(talk.npc)} · {talk.role || speakerRole(talk.npc)}
             </span>
             <button type="button" className="icon-btn village-talk-close" onClick={closeTalk} aria-label="Tutup">
               <X size={16} />

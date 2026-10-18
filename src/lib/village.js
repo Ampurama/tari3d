@@ -769,6 +769,10 @@ export function answer(option) {
     case 'shop':
       useVillage.setState({ talk: null })
       return useStore.getState().setPanel('village-shop')
+    case 'run':
+      // a choice that does something (the fair's gnomes); it may answer with a new line
+      useVillage.setState({ talk: null })
+      return option.run?.()
     case 'bread':
       if (performance.now() - breadAt < 60000) return useVillage.setState({ talk: { npc: talk.npc, text: 'Satu dulu, ya. Nanti kalau sudah habis, minta lagi ♡', options: [{ label: 'Hehe, oke', kind: 'close' }] } })
       breadAt = performance.now()
@@ -784,6 +788,11 @@ export const wearHat = (on) => set({ hatOn: Boolean(on) })
 /** Who's talking (for the card). */
 export const speakerName = (id) => (id === 'pip' ? 'Pip' : NPCS[id]?.name || '')
 export const speakerRole = (id) => (id === 'pip' ? 'Pelayan kafe' : NPCS[id]?.role || '')
+/**
+ * Someone else speaks through the same card: { npc, name, role, text, options, at: [x, z] } — options
+ * are { label, kind: 'run', run } or { label, kind: 'close' }; it closes when she walks away from `at`.
+ */
+export const say = (talk) => useVillage.setState({ talk: { ...talk, options: talk.options?.length ? talk.options : [{ label: 'Oke!', kind: 'close' }] } })
 /** Pip at the café asks too (lib/cafe's waiter): his line, if he has a job for her. */
 export const pipHasJob = () => canOffer('antar') || questState('antar') === 'active'
 

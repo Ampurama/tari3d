@@ -25,6 +25,7 @@ import PetPanel from './components/ui/PetPanel'
 import CafeUI from './components/ui/CafeUI'
 import VillageUI from './components/ui/VillageUI'
 import WellUI from './components/ui/WellUI'
+import CarnivalUI from './components/ui/CarnivalUI'
 import SkyPanel from './components/ui/SkyPanel'
 import WishLetter from './components/ui/WishLetter'
 import CutsceneOverlay from './components/ui/CutsceneOverlay'
@@ -63,6 +64,7 @@ export default function App() {
         <CafeUI />
         <VillageUI />
         <WellUI />
+        <CarnivalUI />
         <SkyPanel />
         <WishLetter />
         <CutsceneOverlay />

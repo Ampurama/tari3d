@@ -295,8 +295,9 @@ function Roof({ b, look, H }) {
 }
 
 /** A house or a shop: floor, walls, roof (the roof lifts and the near walls fold when you're inside). */
-function Building({ b, children }) {
-  const look = LOOKS[b.id]
+/** (exported for the fair's office, with its own look) */
+export function Building({ b, look: ownLook, children }) {
+  const look = ownLook || LOOKS[b.id]
   const H = b.enter ? SHOP_WALL_H : 1.7
   const T = b.enter ? SHOP_WALL_T : 0.14
   const camera = useThree((s) => s.camera)

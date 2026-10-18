@@ -14,6 +14,7 @@ import { warmPaths } from '../../lib/path'
 import { tickLife } from '../../lib/life'
 import { heldDrink } from '../../lib/cafe'
 import { presence } from '../../lib/couple'
+import { driveBumper, holdRide, sittingOnRide } from '../../lib/carnival'
 import { holdBalloon } from '../../lib/balloon'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
@@ -48,8 +49,8 @@ const center = new THREE.Vector3()
 /** The diorama is whichever island she's on (blending across the bridges). Shared vector: copy it. */
 export const islandCenter = () => {
   const { x, y, z } = player.position
-  // riding the balloon: the camera stays with the basket all the way
-  if (player.balloon) return center.set(x, y - 0.6, z)
+  // riding the balloon (or a ride at the fair): the camera stays with her all the way
+  if (player.balloon || player.ride) return center.set(x, y - 0.6, z)
   if (skyDistance(x, z) < 1.6) return center.copy(SKY_CENTER)
   // the western isles: island A (and its pier), island B, and the bridges between
   if (onWalkway(HOPE_BRIDGE, x, z)) return center.lerpVectors(ISLE_A_CENTER, ISLE_B_CENTER, THREE.MathUtils.smoothstep(walkwayAt(HOPE_BRIDGE, x, z).t, 0.1, 0.9))
@@ -144,8 +145,9 @@ export function PlayerController() {
       // leaving the island for a story moment: stand up first (a cutscene lets her stay seated)
       if (player.seat && s.view === 'cutscene') holdSeat()
       else if (player.seat && s.view !== 'explore') standUp()
-      // in the balloon she rides along even with a menu open
+      // in the balloon (or on a ride at the fair) she rides along even with a menu open
       if (player.balloon) holdBalloon(delta)
+      if (player.ride) holdRide(delta)
       // a menu opened mid-jump: come down where she is (or back to safety over the clouds)
       if (player.air) {
         const g = groundAt(player.position.x, player.position.z)
@@ -183,10 +185,22 @@ export function PlayerController() {
     let dirX = 0
     let dirZ = 0
     let targetSpeed = 0
-    if (player.balloon) {
-      // in the basket: her own keys rest until she's back on the ground
+    if (player.balloon || (player.ride && player.ride.kind !== 'bumper')) {
+      // in the basket (or on a ride): her own keys rest until she's back on the ground
       player.walkTarget = null
       player.onArrive = null
+    } else if (player.ride) {
+      // a bumper car: the keys / the stick drive it (camera-relative, like walking)
+      player.walkTarget = null
+      player.onArrive = null
+      camera.getWorldDirection(tmpDir)
+      const fl = Math.hypot(tmpDir.x, tmpDir.z) || 1
+      const fx = tmpDir.x / fl
+      const fz = tmpDir.z / fl
+      let bx = fx * move.y - fz * move.x
+      let bz = fz * move.y + fx * move.x
+      const bl = Math.hypot(bx, bz) || 1
+      driveBumper(delta, bx / bl, bz / bl, move.mag > 0.05 ? Math.min(1, move.mag) : 0)
     } else if (player.act) {
       // busy (sleeping, cooking…): she stays right where the activity put her
       player.walkTarget = null
@@ -278,6 +292,7 @@ export function PlayerController() {
       player.yaw += dy * Math.min(1, delta * 8)
     }
     if (player.balloon) holdBalloon(delta)
+    else if (player.ride) holdRide(delta)
     else if (player.seat) holdSeat()
     else if (player.air) {
       player.vy -= GRAVITY * delta
@@ -322,8 +337,8 @@ export function PlayerController() {
         controls.rotatePolarTo(controls.polarAngle - delta * 1.2, false)
     }
 
-    // ── interaction prompt + the interact key/button
-    const near = nearestInteractable()
+    // ── interaction prompt + the interact key/button (on a ride: only the ride's own, to get off)
+    const near = player.ride ? (interactables.get('carnival-ride')?.enabled() ? { id: 'carnival-ride', it: interactables.get('carnival-ride') } : null) : nearestInteractable()
     const hold = near ? near.it.hold : 0
     // "hold to…" interactions fill up while the key/button is held, and reset when let go
     if (near && hold > 0 && input.interactHeld) {
@@ -347,7 +362,8 @@ export function PlayerController() {
     s.setPrompt(near ? { id: near.id, label: near.it.label, hold } : null)
     if (input.interactPresses !== lastPresses.current) {
       lastPresses.current = input.interactPresses
-      if (interactNearest()) audio.sparkle()
+      if (player.ride) near?.it.onInteract()
+      else if (interactNearest()) audio.sparkle()
     }
 
     // ── Starfall Cliff: the first time she reaches the viewpoint, the view opens up
@@ -433,7 +449,7 @@ export function PlayerAvatar() {
   return (
     <>
       <group ref={group}>
-        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sitStyle(player.seat), emote: player.emote, hand: myHand(), act: player.act?.kind, cup: heldDrink(), hat: Boolean(presence.hat) })} />
+        <Avatar config={avatar} getMotion={() => ({ speed: player.speed, cheer: player.cheer, sit: sittingOnRide() ? 'chair' : sitStyle(player.seat), emote: player.emote, hand: myHand(), act: player.act?.kind, cup: heldDrink(), hat: Boolean(presence.hat) })} />
         <EmoteFx get={() => player.emote} />
         {(carrying || hasWater) && (
           <group ref={carry} position={[0, 1.55, 0]}>

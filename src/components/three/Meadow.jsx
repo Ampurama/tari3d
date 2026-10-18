@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { buildMeadowGeometry, buildRiverGeometry, buildSkyCliffGeometry, CAFE_SITE, villageTaken, WELL_SITE, CROSSINGS, crossingAt, DISTANCE_SITE, GIANT_TREE, KNOLL, MEADOW_PATHS, meadowHeight, meadowPathDistance, POND, RIVER_HALF_WIDTH, riverAt } from '../../lib/meadow'
+import { buildMeadowGeometry, buildRiverGeometry, buildSkyCliffGeometry, CAFE_SITE, villageTaken, WELL_SITE, carnivalTaken, CROSSINGS, crossingAt, DISTANCE_SITE, GIANT_TREE, KNOLL, MEADOW_PATHS, meadowHeight, meadowPathDistance, POND, RIVER_HALF_WIDTH, riverAt } from '../../lib/meadow'
 import { addCollider, edgeRadius, HOME_ISLAND, homeDistance, SEA, seeded, SKY, SKY_BRIDGE, skyDistance, standHeight, WEST_BRIDGE } from '../../lib/terrain'
 import { player, walkTo } from '../../lib/player'
 import { tier } from '../../lib/device'
@@ -45,6 +45,8 @@ export function openMeadow(x, z, { tall = false, water = 0.5 } = {}) {
   if (Math.hypot(x - CAFE_SITE.x, z - CAFE_SITE.z) < CAFE_SITE.r0 + (tall ? 2.5 : 0.3)) return false
   // the wishing well's little clearing
   if (Math.hypot(x - WELL_SITE.x, z - WELL_SITE.z) < WELL_SITE.r0 + (tall ? 2.5 : 0.2)) return false
+  // the carnival's fairground
+  if (carnivalTaken(x, z, tall ? 3 : 0)) return false
   // Gnome Village (its buildings, square, brook, gardens and grove)
   if (villageTaken(x, z, tall ? 1.6 : 0)) return false
   // the footpaths stay clear (flowers may line them; trees keep a step back)

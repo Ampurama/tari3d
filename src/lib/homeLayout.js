@@ -121,6 +121,10 @@ export const CATALOG = {
   gnome_statue: { label: 'Patung kurcaci', icon: '🗿', area: 'garden', w: 0.5, d: 0.5, keepsake: true, hint: 'Temukan kacamata Tetua Lumut', cat: 'desa_taman' },
   crystal_shroom: { label: 'Jamur kristal', icon: '💎', area: 'garden', w: 0.6, d: 0.6, keepsake: true, hint: 'Temukan Kebun Rahasia di Desa Kurcaci', cat: 'desa_taman' },
   twin_lantern: { label: 'Lentera kembar', icon: '🏮', area: 'garden', w: 0.9, d: 0.4, keepsake: true, hint: 'Nyalakan lentera berdua di alun-alun Desa Kurcaci', cat: 'desa_taman' },
+  // ── Dreamlight Funfair (013_carnival.sql): prizes from the booth games
+  gnome_plush: { label: 'Boneka kurcaci', icon: '🧸', area: 'inside', w: 0.4, d: 0.4, keepsake: true, hint: 'Masukkan 3 gelang di Lempar Gelang, Dreamlight Funfair', cat: 'desa' },
+  carnival_lantern: { label: 'Lentera karnaval', icon: '🎪', area: 'garden', w: 0.45, d: 0.45, keepsake: true, hint: 'Robohkan keenam kaleng di Dreamlight Funfair', cat: 'desa_taman' },
+  balloon_bunch: { label: 'Balon hati', icon: '🎈', area: 'garden', w: 0.5, d: 0.5, keepsake: true, hint: 'Kumpulkan 18 poin di Tembak Sasaran, Dreamlight Funfair', cat: 'desa_taman' },
 }
 export const KINDS = Object.keys(CATALOG)
 

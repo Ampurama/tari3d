@@ -18,6 +18,7 @@ import { canAskHand, inviteHand, mateHand, releaseHand, tickHand, useHand } from
 import { MOODS } from '../../lib/mood'
 import { partnerDrink } from '../../lib/cafe'
 import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
+import { mateSeatPose, mateSitting } from '../../lib/carnival'
 
 /*
  * PLAYING TOGETHER, in the world: the other person's character walking around the island
@@ -53,7 +54,12 @@ function Partner() {
     }
     const riding = mateSeat()
     const seated = partner.seat && seats.get(partner.seat.seat)?.def
-    if (seated && !riding) {
+    const onRide = !riding && mateSeatPose()
+    if (onRide) {
+      // on a ride at the fair: in their seat, carried by the ride the same as ours (not by slower broadcasts)
+      g.position.set(onRide.x, onRide.y, onRide.z)
+      g.rotation.y = onRide.yaw
+    } else if (seated && !riding) {
       // sitting: exactly on their seat (it may be moving, like the swing), not from slower broadcasts
       g.position.set(seated.x, seated.y - SEAT_DROP, seated.z)
       g.rotation.y = seated.yaw
@@ -72,7 +78,7 @@ function Partner() {
       g.rotation.y += dy * Math.min(1, delta * 10)
     }
     motion.current.speed = damp(motion.current.speed, t.speed, 8, delta)
-    motion.current.sit = partner.seat ? sitStyle(partner.seat.seat) : false
+    motion.current.sit = mateSitting() ? 'chair' : partner.seat ? sitStyle(partner.seat.seat) : false
     motion.current.emote = partnerEmote()
     motion.current.hand = mateHand()
     motion.current.act = partner.act?.kind || null

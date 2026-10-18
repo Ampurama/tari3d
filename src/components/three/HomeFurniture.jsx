@@ -721,6 +721,74 @@ function TwinLantern() {
   )
 }
 
+/* ───────── prizes from Dreamlight Funfair ───────── */
+
+function GnomePlush() {
+  return (
+    <group>
+      <S p={[0, 0.13, 0]} s={[0.13, 0.13, 0.11]} c="#c9b6f4" />
+      <S p={[0, 0.12, 0.07]} s={[0.09, 0.09, 0.05]} c="#fff4e4" />
+      <S p={[0, 0.3, 0]} s={0.09} c="#ffd9c4" />
+      <S p={[0, 0.29, 0.085]} s={0.028} c="#ffae9c" />
+      <mesh position={[0, 0.25, 0.05]} scale={[1, 1.2, 0.7]} material={mat('#fffaf6')}>
+        <sphereGeometry args={[0.065, 10, 8]} />
+      </mesh>
+      <mesh position={[0, 0.44, -0.01]} material={mat('#e8566f')}>
+        <coneGeometry args={[0.1, 0.22, 12]} />
+      </mesh>
+      <mesh position={[0.03, 0.57, -0.02]} rotation={[0, 0, -0.6]} material={mat('#e8566f')}>
+        <coneGeometry args={[0.04, 0.1, 8]} />
+      </mesh>
+      {[-1, 1].map((k) => (
+        <S key={k} p={[k * 0.13, 0.12, 0.02]} s={[0.04, 0.06, 0.04]} c="#c9b6f4" />
+      ))}
+    </group>
+  )
+}
+
+function CarnivalLantern() {
+  return (
+    <group>
+      <C p={[0, 0.55, 0]} rt={0.03} rb={0.045} h={1.1} c="#6d5a6e" seg={6} />
+      <mesh position={[0, 1.18, 0]} scale={[1, 1.15, 1]} material={mat('#ffb3cf', 1.0)}>
+        <sphereGeometry args={[0.13, 14, 10]} />
+      </mesh>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i} position={[0, 1.18, 0]} rotation={[0, (i * Math.PI) / 4, 0]} scale={[1, 1.15, 1]} material={mat('#e8566f')}>
+          <torusGeometry args={[0.131, 0.006, 4, 20]} />
+        </mesh>
+      ))}
+      <C p={[0, 1.34, 0]} rt={0.05} h={0.04} c="#ffd27f" />
+      <C p={[0, 1.02, 0]} rt={0.05} h={0.04} c="#ffd27f" />
+      <S p={[0, 0.96, 0]} s={0.02} c="#ffd27f" />
+      <Glow position={[0, 1.18, 0]} color="#ffc2dd" size={1.2} opacity={0.5} />
+    </group>
+  )
+}
+
+function BalloonBunch() {
+  const colors = ['#ff8fbf', '#ffd27f', '#c9b6f4', '#8fe3dc', '#ff6f91']
+  return (
+    <group>
+      <C p={[0, 0.04, 0]} rt={0.08} h={0.08} c="#cfc6d6" />
+      {colors.map((c, i) => {
+        const a = (i / colors.length) * Math.PI * 2
+        const x = Math.cos(a) * 0.14
+        const z = Math.sin(a) * 0.14
+        const y = 1.15 + (i % 2) * 0.18
+        return (
+          <group key={c}>
+            <C p={[x / 2, (y - 0.08) / 2 + 0.06, z / 2]} rt={0.004} h={y - 0.12} c="#fff6ea" seg={3} r={[z * 0.6, 0, -x * 0.6]} />
+            <mesh position={[x, y, z]} scale={[1, 1.15, 1]} material={mat(c, 0.25, 0.35)}>
+              <sphereGeometry args={[0.12, 14, 10]} />
+            </mesh>
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
 const MODELS = {
   bed: Bed,
   sofa: Sofa,
@@ -762,6 +830,9 @@ const MODELS = {
   gnome_statue: GnomeStatue,
   crystal_shroom: CrystalShroom,
   twin_lantern: TwinLantern,
+  gnome_plush: GnomePlush,
+  carnival_lantern: CarnivalLantern,
+  balloon_bunch: BalloonBunch,
 }
 
 /**

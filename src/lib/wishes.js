@@ -39,7 +39,8 @@ const COLUMNS = 'id, author, category, status, open_on, created_at, answered_by,
 /** A person's name (from the role the server gave them). */
 export function nameOf(userId) {
   const { me, mate } = useCouple.getState()
-  const role = userId === me?.id ? me.role : userId === mate?.id ? mate.role : null
+  // (nobody signed in yet, or no other person: no name to give)
+  const role = !userId ? null : userId === me?.id ? me.role : userId === mate?.id ? mate.role : null
   const who = role === 'owner' ? couple.me : role === 'tari' ? couple.you : null
   return who ? who.nickname || who.name : 'Seseorang'
 }

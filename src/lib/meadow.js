@@ -67,6 +67,17 @@ let cafeLevel = null
  */
 export const WELL_SITE = { x: 21.5, z: 25.5, yaw: Math.atan2(23.9 - 21.5, 23.2 - 25.5), r0: 3.0, r1: 4.8, level: null }
 
+/**
+ * GNOME CARNIVAL — DREAMLIGHT FUNFAIR (lib/carnival.js): a fairground east of the pond, across the
+ * river's stepping stones. Its ground is one level pad (the box below, blending out over 3 m); its
+ * gate is in the middle of the west fence, facing the path from the pond.
+ */
+export const CARNIVAL_BOX = { x0: 44, x1: 74, z0: 13.5, z1: 44, blend: 3, level: null }
+export const CARNIVAL_GATE = { x: 44.3, z: 27.5, half: 1.8 }
+const boxDistance = (x, z, b) => Math.hypot(Math.max(b.x0 - x, 0, x - b.x1), Math.max(b.z0 - z, 0, z - b.z1))
+/** Is (x, z) the carnival's ground (with `room` around it)? Grass and flowers keep off it. */
+export const carnivalTaken = (x, z, room = 0) => boxDistance(x, z, CARNIVAL_BOX) < room + 0.4
+
 /*
  * GNOME VILLAGE (lib/village.js): a little village around a cobbled square just south-west of the
  * café. Every building stands on its own level pad, its door turned toward the square; footpaths
@@ -237,6 +248,9 @@ export const MEADOW_PATHS = [
   ...VILLAGE_PATHS,
   // a few steps off the path, to the wishing well
   [[23.9, 23.2], [22.7, 24.3]],
+  // over the river's stepping stones to the carnival's gate
+  [[22, 21], [26.9, 20.25]],
+  [[31.1, 18.75], [36, 20.4], [41, 24.2], [CARNIVAL_GATE.x - 0.3, CARNIVAL_GATE.z]],
 ]
 const segDistance = (px, pz, ax, az, bx, bz) => {
   const vx = bx - ax
@@ -382,6 +396,15 @@ export function meadowHeight(x, z) {
       WELL_SITE.level = meadowHeight(CAFE_SITE.x, CAFE_SITE.z)
     }
     if (WELL_SITE.level !== -Infinity) h += (WELL_SITE.level - h) * (1 - smooth(WELL_SITE.r0, WELL_SITE.r1, dw))
+  }
+  // the carnival's level ground
+  const dk = boxDistance(x, z, CARNIVAL_BOX)
+  if (dk < CARNIVAL_BOX.blend) {
+    if (CARNIVAL_BOX.level === null) {
+      CARNIVAL_BOX.level = -Infinity
+      CARNIVAL_BOX.level = meadowHeight((CARNIVAL_BOX.x0 + CARNIVAL_BOX.x1) / 2, (CARNIVAL_BOX.z0 + CARNIVAL_BOX.z1) / 2)
+    }
+    if (CARNIVAL_BOX.level !== -Infinity) h += (CARNIVAL_BOX.level - h) * (1 - smooth(0, CARNIVAL_BOX.blend, dk))
   }
   // the village's level pads (each read from the meadow without itself, once)
   if (Math.abs(x - VILLAGE_SQUARE.x) < 22 && Math.abs(z - VILLAGE_SQUARE.z) < 24)

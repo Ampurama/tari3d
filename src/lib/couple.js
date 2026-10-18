@@ -50,12 +50,16 @@ export const partner = {
   hat: null,
   /** a wish they just dropped into the wishing well (lib/wishes.js): { id, kind } — never its words */
   wish: null,
+  /** at Dreamlight Funfair (lib/carnival.js): the ride and seat they're in { id, kind, seat?, at },
+   *  and the booth game they're playing { id, kind (game), state, n (score), at } */
+  ride: null,
+  game: null,
   /** where their character is drawn right now (smoothed), written by the 3D scene */
   shown: { x: 0, y: 0, z: 0, yaw: 0, speed: 0, ok: false },
 }
 
 /** What I'm doing that the other person should know about (sent with my character). */
-export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null, order: null, cup: null, hat: null, wish: null }
+export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null, order: null, cup: null, hat: null, wish: null, ride: null, game: null }
 
 const ID = /^[\w:-]{1,80}$/
 /** Only well-formed little objects get through: { id, seat?, kind?, at } (strings and a number). */
@@ -65,6 +69,7 @@ function cleanAct(a) {
   if (typeof a.seat === 'string' && ID.test(a.seat)) out.seat = a.seat
   if (typeof a.kind === 'string' && /^[a-z_]{1,20}$/.test(a.kind)) out.kind = a.kind
   if (typeof a.state === 'string' && /^[a-z]{1,12}$/.test(a.state)) out.state = a.state
+  if (Number.isFinite(a.n)) out.n = Math.max(0, Math.min(9999, Math.round(a.n)))
   return out
 }
 
@@ -182,6 +187,8 @@ async function joinRoom(myId, mateId) {
       partner.cup = cleanAct(payload.cup)
       partner.hat = cleanAct(payload.hat)
       partner.wish = cleanAct(payload.wish)
+      partner.ride = cleanAct(payload.ride)
+      partner.game = cleanAct(payload.game)
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
@@ -223,6 +230,8 @@ async function joinRoom(myId, mateId) {
       cup: presence.cup,
       hat: presence.hat,
       wish: presence.wish,
+      ride: presence.ride,
+      game: presence.game,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -262,6 +271,8 @@ async function leaveRoom() {
   partner.cup = null
   partner.hat = null
   partner.wish = null
+  partner.ride = null
+  partner.game = null
   set({ mateOnline: false })
   roomHooks.forEach((h) => h.left?.())
   const old = channels
