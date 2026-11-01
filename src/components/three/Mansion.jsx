@@ -417,11 +417,13 @@ function Wall({ s, f, h, color, innerRef }) {
   const mz = (s[1] + s[3]) / 2
   const yaw = Math.atan2(s[2] - s[0], s[3] - s[1])
   if (s[5] === 'rail') {
+    // (Array.from's callback gets only (value, index): the count is worked out first)
+    const posts = Math.max(2, Math.round(len / 0.4))
     return (
       <group position={[mx, FL[f], mz]} rotation={[0, yaw, 0]}>
         <B p={[0, 0.9, 0]} s={[0.06, 0.06, len]} c={WOOD_DARK} />
-        {Array.from({ length: Math.max(2, Math.round(len / 0.4)) }, (_, i, a) => (
-          <B key={i} p={[0, 0.45, -len / 2 + (i * len) / (a.length - 1)]} s={[0.04, 0.9, 0.04]} c={WOOD} />
+        {Array.from({ length: posts }, (_, i) => (
+          <B key={i} p={[0, 0.45, -len / 2 + (i * len) / (posts - 1)]} s={[0.04, 0.9, 0.04]} c={WOOD} />
         ))}
       </group>
     )
