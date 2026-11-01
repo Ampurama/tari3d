@@ -3547,3 +3547,218 @@
   font-family: var(--serif);
   font-size: 1.4rem;
 }
+
+/* ───────── The Haunted Gnome Mansion (components/ui/MansionUI.jsx) ───────── */
+
+.mansion-quest {
+  position: fixed;
+  top: calc(66px + var(--safe-top));
+  left: 14px;
+  z-index: 37;
+  display: grid;
+  width: min(300px, calc(100vw - 28px));
+  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  background: rgba(22, 14, 34, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--text);
+  box-shadow: 0 10px 30px rgba(10, 4, 20, 0.35);
+}
+
+.mansion-quest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: 600 0.92rem var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mansion-quest-items span {
+  margin-left: 2px;
+  opacity: 0.28;
+  filter: grayscale(1);
+}
+
+.mansion-quest-items span.is-found {
+  opacity: 1;
+  filter: none;
+}
+
+.mansion-quest-body {
+  display: grid;
+  gap: 6px;
+  padding: 0 14px 12px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.mansion-quest-body h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.1rem;
+}
+
+.mansion-quest-body p {
+  margin: 0;
+}
+
+.mansion-quest-body ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mansion-quest-body li.is-done {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.35);
+}
+
+.mansion-room {
+  color: #c9f2e0;
+}
+
+.mansion-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.mansion-quest .couple-actions {
+  flex-wrap: wrap;
+}
+
+.btn-ghost.small {
+  padding: 0.45em 0.9em;
+  font-size: 0.8rem;
+}
+
+.mansion-settings {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.mansion-settings label {
+  display: grid;
+  gap: 4px;
+}
+
+.mansion-settings select,
+.setting-row select {
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+}
+
+.mansion-settings option,
+.setting-row option {
+  color: #2a2034;
+}
+
+.mansion-panel .mansion-paper {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f3e6cf;
+  color: #4a3528;
+  font-family: var(--serif);
+  font-size: 1.08rem;
+  line-height: 1.5;
+  white-space: pre-line;
+  box-shadow: inset 0 0 24px rgba(120, 80, 40, 0.25);
+}
+
+.mansion-page-title {
+  margin: 0 0 6px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.mansion-wheels {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.mansion-wheel {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.mansion-roman {
+  font-family: var(--serif);
+  color: var(--muted);
+}
+
+.mansion-symbol {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1px solid var(--stroke);
+  background: rgba(185, 165, 255, 0.12);
+  font-size: 1.7rem;
+}
+
+.mansion-symbol.is-lit {
+  background: rgba(159, 240, 208, 0.25);
+  box-shadow: 0 0 18px rgba(159, 240, 208, 0.6);
+}
+
+.mansion-code {
+  margin: 6px 0;
+  font: 600 2rem var(--sans);
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.mansion-code.is-wrong {
+  color: #ff8fa3;
+}
+
+.mansion-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.mansion-keypad .btn-glow {
+  grid-column: span 2;
+}
+
+.mansion-choices {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.mansion-skip {
+  justify-items: end;
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+}
+
+@media (max-width: 720px) {
+  .mansion-quest {
+    top: auto;
+    bottom: calc(150px + var(--safe-bottom));
+    width: min(260px, calc(100vw - 28px));
+  }
+}

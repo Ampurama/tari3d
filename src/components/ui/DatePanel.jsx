@@ -32,6 +32,7 @@ import { ActFloat, TogetherButtons, TogetherFloat } from './LifeUI'
 import { CafeFloat } from './CafeUI'
 import { VillageFloat } from './VillageUI'
 import { RideFloat } from './CarnivalUI'
+import { MansionFloat } from './MansionUI'
 import { SkyCards } from './SkyPanel'
 import { BalloonCard } from './BalloonPanel'
 
@@ -520,6 +521,7 @@ export default function DatePanel() {
         <CafeFloat />
         <VillageFloat />
         <RideFloat />
+        <MansionFloat />
         <BalloonCard />
         <SkyCards />
       </div>

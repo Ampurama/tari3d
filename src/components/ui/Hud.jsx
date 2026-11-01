@@ -8,6 +8,7 @@ import { useStore } from '../../store'
 import { coupleAvailable } from '../../lib/couple'
 import { useHome } from '../../lib/home'
 import { audio } from '../../audio/engine'
+import { INTENSITY, INTENSITY_LABEL, setHauntPref, useHaunt } from '../../lib/mansionGhosts'
 import { CLOCK_LABEL, clockText, currentHour, PART_LABELS, partOfDay } from '../../lib/timeOfDay'
 import { CountdownPanel, CountdownPill } from './Countdown'
 import { HeartsPanel, HeartsPill } from './HeartsPanel'
@@ -47,6 +48,29 @@ export function AudioControls() {
         <Settings size={18} />
       </button>
     </div>
+  )
+}
+
+/** The haunted mansion's own sounds and scares (lib/mansionGhosts.js). */
+function HauntSettings() {
+  const pref = useHaunt()
+  return (
+    <>
+      <label className="setting-row volume">
+        <span>👻 Suara rumah hantu</span>
+        <input type="range" min="0" max="1" step="0.05" value={pref.volume} onChange={(e) => setHauntPref({ volume: Number(e.target.value) })} aria-label="Suara rumah hantu" />
+      </label>
+      <label className="setting-row">
+        <span>👻 Kejutan rumah hantu</span>
+        <select value={pref.intensity} onChange={(e) => setHauntPref({ intensity: e.target.value })} aria-label="Kejutan rumah hantu">
+          {INTENSITY.map((k) => (
+            <option key={k} value={k}>
+              {INTENSITY_LABEL[k]}
+            </option>
+          ))}
+        </select>
+      </label>
+    </>
   )
 }
 
@@ -134,6 +158,7 @@ function SettingsPanel() {
               <span>Volume</span>
               <input type="range" min="0" max="1" step="0.05" value={state.volume} onChange={(e) => audio.setVolume(Number(e.target.value))} aria-label="Volume" />
             </label>
+            <HauntSettings />
             {phase === 'world' && (
               <button
                 type="button"

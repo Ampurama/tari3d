@@ -280,7 +280,17 @@ const WALKWAYS = [WEST_BRIDGE, HOPE_BRIDGE, PIER]
 /** Height of the ground that isn't the main island (bridges, the home island, Sky Island, clouds), or null. */
 const below = (deck, fromY) => fromY !== undefined && fromY < deck - 0.9
 
+/**
+ * Floors of buildings with more than one storey (the haunted mansion): (x, z, fromY) → height or
+ * null. Checked first; they only answer when fromY is given (which storey she's on depends on it).
+ */
+export const grounds = []
+
 function otherGround(x, z, fromY) {
+  for (const g of grounds) {
+    const h = g(x, z, fromY)
+    if (h !== null) return h
+  }
   for (const w of WALKWAYS) {
     if (!onWalkway(w, x, z)) continue
     const deck = w.height(walkwayAt(w, x, z).t)

@@ -30,6 +30,8 @@ export const player = {
   safe: { x: SPAWN.x, z: SPAWN.z },
   /** riding in the hot air balloon: her seat ('a' / 'b'), set from the server's row (lib/balloon.js) */
   balloon: null,
+  /** hiding in a wardrobe in the haunted mansion (its id, lib/mansion.js) */
+  hide: null,
 }
 
 /**

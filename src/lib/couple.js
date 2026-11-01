@@ -54,12 +54,16 @@ export const partner = {
    *  and the booth game they're playing { id, kind (game), state, n (score), at } */
   ride: null,
   game: null,
+  /** in the haunted mansion (lib/mansion.js): the wardrobe they're hiding in { id, kind: 'hide', seat },
+   *  and what the house's ghosts are doing on their screen (lib/mansionGhosts.js, see cleanHaunt) */
+  hide: null,
+  haunt: null,
   /** where their character is drawn right now (smoothed), written by the 3D scene */
   shown: { x: 0, y: 0, z: 0, yaw: 0, speed: 0, ok: false },
 }
 
 /** What I'm doing that the other person should know about (sent with my character). */
-export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null, order: null, cup: null, hat: null, wish: null, ride: null, game: null }
+export const presence = { editing: null, seat: null, emote: null, hand: null, pet: null, act: null, mood: null, together: null, order: null, cup: null, hat: null, wish: null, ride: null, game: null, hide: null, haunt: null }
 
 const ID = /^[\w:-]{1,80}$/
 /** Only well-formed little objects get through: { id, seat?, kind?, at } (strings and a number). */
@@ -70,6 +74,23 @@ function cleanAct(a) {
   if (typeof a.kind === 'string' && /^[a-z_]{1,20}$/.test(a.kind)) out.kind = a.kind
   if (typeof a.state === 'string' && /^[a-z]{1,12}$/.test(a.state)) out.state = a.state
   if (Number.isFinite(a.n)) out.n = Math.max(0, Math.min(9999, Math.round(a.n)))
+  return out
+}
+
+const num = (v) => (Number.isFinite(v) ? Math.round(v * 100) / 100 : 0)
+/**
+ * The haunted mansion's ghosts, from whoever is running them (lib/mansionGhosts.js):
+ * { g: [[numbers…] per ghost] (≤ 12 × ≤ 8), e: the latest scare { id, kind, seat?, n?, at },
+ *   b: the boss [numbers…] (≤ 8), a: their latest little actions [{ id, kind, seat?, n?, at }] (≤ 4),
+ *   p: how scary they like it (0…2), in: they're in the mansion's grounds (0/1) }
+ */
+function cleanHaunt(h) {
+  if (!h || typeof h !== 'object') return null
+  const out = { p: Math.max(0, Math.min(2, Math.round(+h.p || 0))), in: h.in ? 1 : 0 }
+  if (Array.isArray(h.g)) out.g = h.g.slice(0, 12).map((row) => (Array.isArray(row) ? row.slice(0, 8).map(num) : []))
+  if (Array.isArray(h.b)) out.b = h.b.slice(0, 8).map(num)
+  out.e = cleanAct(h.e)
+  out.a = Array.isArray(h.a) ? h.a.slice(0, 4).map(cleanAct).filter(Boolean) : []
   return out
 }
 
@@ -189,6 +210,8 @@ async function joinRoom(myId, mateId) {
       partner.wish = cleanAct(payload.wish)
       partner.ride = cleanAct(payload.ride)
       partner.game = cleanAct(payload.game)
+      partner.hide = cleanAct(payload.hide)
+      partner.haunt = cleanHaunt(payload.haunt)
       partner.lastSeen = performance.now()
     })
     theirs.subscribe()
@@ -232,6 +255,8 @@ async function joinRoom(myId, mateId) {
       wish: presence.wish,
       ride: presence.ride,
       game: presence.game,
+      hide: presence.hide,
+      haunt: presence.haunt,
       session: SESSION,
     }
     const key = JSON.stringify(pose)
@@ -273,6 +298,8 @@ async function leaveRoom() {
   partner.wish = null
   partner.ride = null
   partner.game = null
+  partner.hide = null
+  partner.haunt = null
   set({ mateOnline: false })
   roomHooks.forEach((h) => h.left?.())
   const old = channels

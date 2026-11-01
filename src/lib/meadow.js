@@ -78,6 +78,16 @@ const boxDistance = (x, z, b) => Math.hypot(Math.max(b.x0 - x, 0, x - b.x1), Mat
 /** Is (x, z) the carnival's ground (with `room` around it)? Grass and flowers keep off it. */
 export const carnivalTaken = (x, z, room = 0) => boxDistance(x, z, CARNIVAL_BOX) < room + 0.4
 
+/**
+ * THE HAUNTED GNOME MANSION (lib/mansion.js): an old house behind an iron fence south of the pond,
+ * between the village and the fair. Its grounds are one level pad (blending out over 3 m); the
+ * gate is in the west fence, where the footpath from the pond arrives.
+ */
+export const MANSION_BOX = { x0: 22, x1: 40, z0: 47, z1: 65, blend: 3, level: null }
+export const MANSION_GATE = { x: 22.3, z: 61.6, half: 1.4 }
+/** Is (x, z) the mansion's grounds (with `room` around it)? Grass and flowers keep off it. */
+export const mansionTaken = (x, z, room = 0) => boxDistance(x, z, MANSION_BOX) < room + 0.4
+
 /*
  * GNOME VILLAGE (lib/village.js): a little village around a cobbled square just south-west of the
  * café. Every building stands on its own level pad, its door turned toward the square; footpaths
@@ -251,6 +261,8 @@ export const MEADOW_PATHS = [
   // over the river's stepping stones to the carnival's gate
   [[22, 21], [26.9, 20.25]],
   [[31.1, 18.75], [36, 20.4], [41, 24.2], [CARNIVAL_GATE.x - 0.3, CARNIVAL_GATE.z]],
+  // from the pond, round its west shore and south to the haunted mansion's gate
+  [[27.5, 27], [25.6, 33.5], [23.4, 41.5], [19.8, 50.5], [19.6, 58.5], [MANSION_GATE.x - 0.3, MANSION_GATE.z]],
 ]
 const segDistance = (px, pz, ax, az, bx, bz) => {
   const vx = bx - ax
@@ -405,6 +417,15 @@ export function meadowHeight(x, z) {
       CARNIVAL_BOX.level = meadowHeight((CARNIVAL_BOX.x0 + CARNIVAL_BOX.x1) / 2, (CARNIVAL_BOX.z0 + CARNIVAL_BOX.z1) / 2)
     }
     if (CARNIVAL_BOX.level !== -Infinity) h += (CARNIVAL_BOX.level - h) * (1 - smooth(0, CARNIVAL_BOX.blend, dk))
+  }
+  // the haunted mansion's grounds
+  const dm = boxDistance(x, z, MANSION_BOX)
+  if (dm < MANSION_BOX.blend) {
+    if (MANSION_BOX.level === null) {
+      MANSION_BOX.level = -Infinity
+      MANSION_BOX.level = meadowHeight((MANSION_BOX.x0 + MANSION_BOX.x1) / 2, (MANSION_BOX.z0 + MANSION_BOX.z1) / 2)
+    }
+    if (MANSION_BOX.level !== -Infinity) h += (MANSION_BOX.level - h) * (1 - smooth(0, MANSION_BOX.blend, dm))
   }
   // the village's level pads (each read from the meadow without itself, once)
   if (Math.abs(x - VILLAGE_SQUARE.x) < 22 && Math.abs(z - VILLAGE_SQUARE.z) < 24)

@@ -22,6 +22,7 @@ import Cafe from './Cafe'
 import Village from './Village'
 import WishingWell from './WishingWell'
 import Carnival from './Carnival'
+import Mansion from './Mansion'
 import LoveTree from './LoveTree'
 import LittleThings from './LittleThings'
 import Discoveries from './Discoveries'
@@ -85,6 +86,7 @@ export default function World() {
       <Village />
       <WishingWell />
       <Carnival />
+      <Mansion />
       <LoveTree />
 
       {/* the story */}

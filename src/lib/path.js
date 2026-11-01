@@ -8,11 +8,11 @@ import { colliders, HOME_ISLAND, MAIN_RADIUS, obstacles, SEA, SKY, slope, standH
 
 const CELL = 0.3
 // the grid covers the main meadow, the home garden to the north, Sky Island to the east, the
-// western isles, and the wide meadow between them (south as far as the pond)
+// western isles, and the wide meadow between them (south past the pond, to the haunted mansion)
 const MIN_X = Math.min(-(MAIN_RADIUS + 1.2), SEA.x - SEA.r - 1)
 const MAX_X = SKY.x + SKY.r * 1.6
 const MIN_Z = HOME_ISLAND.z - HOME_ISLAND.r * 1.1 - 1
-const MAX_Z = 40
+const MAX_Z = 68
 const NX = Math.ceil((MAX_X - MIN_X) / CELL)
 const NZ = Math.ceil((MAX_Z - MIN_Z) / CELL)
 let grid = null
@@ -124,10 +124,17 @@ function nearestOpen(i, j) {
 }
 
 /**
+ * Places where she simply walks straight at what was tapped (sliding along walls on the way):
+ * inside a building with storeys the flat grid can't describe. (sx, sz, tx, tz) → true.
+ */
+export const straightZones = []
+
+/**
  * A walkable route from (sx, sz) to (tx, tz) as a list of [x, z] waypoints (excluding the start),
  * or null if there is no way there.
  */
 export function findPath(sx, sz, tx, tz) {
+  for (const zone of straightZones) if (zone(sx, sz, tx, tz)) return [[tx, tz]]
   if (clearLine(sx, sz, tx, tz)) return [[tx, tz]]
   if (!grid || builtFor !== gridKey()) {
     // a warm-up still in progress: finish it now; otherwise (or if things changed) build afresh

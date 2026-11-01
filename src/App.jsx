@@ -26,6 +26,7 @@ import CafeUI from './components/ui/CafeUI'
 import VillageUI from './components/ui/VillageUI'
 import WellUI from './components/ui/WellUI'
 import CarnivalUI from './components/ui/CarnivalUI'
+import MansionUI from './components/ui/MansionUI'
 import SkyPanel from './components/ui/SkyPanel'
 import WishLetter from './components/ui/WishLetter'
 import CutsceneOverlay from './components/ui/CutsceneOverlay'
@@ -65,6 +66,7 @@ export default function App() {
         <VillageUI />
         <WellUI />
         <CarnivalUI />
+        <MansionUI />
         <SkyPanel />
         <WishLetter />
         <CutsceneOverlay />
