@@ -18,6 +18,7 @@ export const MOODS = {
   romantis: { label: 'Romantis', icon: '💞', minutes: 120, text: 'Momen manis berdua' },
   bahagia: { label: 'Bahagia', icon: '😊', minutes: 60, text: 'Hal kecil yang menyenangkan' },
   ngopi: { label: 'Ngopi santai', icon: '☕', minutes: 90, text: 'Secangkir hangat di The Little Gnome Café' },
+  berani: { label: 'Berani', icon: '🕯️', minutes: 90, text: 'Menamatkan Rumah Kurcaci Berhantu' },
 }
 
 const KEY = 'our-little-universe:mood'

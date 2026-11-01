@@ -19,6 +19,7 @@ import { MOODS } from '../../lib/mood'
 import { partnerDrink } from '../../lib/cafe'
 import { balloonPose, mateSeat, seatPosition } from '../../lib/balloon'
 import { mateSeatPose, mateSitting } from '../../lib/carnival'
+import { aboveMe } from '../../lib/mansion'
 
 /*
  * PLAYING TOGETHER, in the world: the other person's character walking around the island
@@ -37,6 +38,7 @@ function Partner() {
   const online = useCouple((s) => s.mateOnline)
   const [avatarId, setAvatarId] = useState(null)
   const motion = useRef({ speed: 0, cheer: 0, sit: false, emote: null })
+  const [tagHidden, setTagHidden] = useState(false)
 
   useFrame((_, delta) => {
     const g = group.current
@@ -45,7 +47,10 @@ function Partner() {
     const view = useStore.getState().view
     // visible only when both of you are on the island
     const here = partner.online && ['explore', 'picnic', 'cutscene'].includes(partner.view) && ['explore', 'picnic', 'cutscene'].includes(view)
-    g.visible = here
+    // in the haunted mansion: hiding in a wardrobe, or upstairs while my floor is the one in view
+    const unseen = partner.hide?.kind === 'hide' || aboveMe(g.position.x, g.position.y, g.position.z)
+    g.visible = here && !unseen
+    if (unseen !== tagHidden) setTagHidden(unseen)
     partner.shown.ok = here
     if (!here) return
     if (g.userData.placed !== true) {
@@ -99,7 +104,7 @@ function Partner() {
     <group ref={group} visible={false}>
       <Avatar config={config} getMotion={() => motion.current} />
       <EmoteFx get={partnerEmote} />
-      {online && (
+      {online && !tagHidden && (
         <Html position={[0, 1.75, 0]} center zIndexRange={[13, 0]} className="mochi-anchor">
           <span className="partner-tag">
             ♡ {nameFor(mate.role)}

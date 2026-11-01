@@ -594,6 +594,442 @@ class AudioEngine {
     }
   }
 
+  /* ───────── THE HAUNTED MANSION: its own bus and volume, each room's ambience, its sounds ───────── */
+
+  /** the mansion's own volume (0..1), set from its settings (lib/mansionGhosts.js) */
+  hauntVolume = 0.8
+  hauntBus = null
+  hauntRoom = null
+  hauntLayers = null
+  hauntTimer = null
+  hauntMusicTimer = null
+  /** where she hears from (written every frame by the mansion): her x, z and the camera's right (rx, rz) */
+  hauntEar = { x: 0, z: 0, rx: 1, rz: 0 }
+
+  setHauntVolume(v) {
+    this.hauntVolume = Math.max(0, Math.min(1, v))
+    if (this.hauntBus) this.fade(this.hauntBus.gain, this.hauntVolume, 0.3)
+  }
+
+  hauntEnsure() {
+    if (!this.sfxOn || !this.ensure()) return null
+    if (!this.hauntBus) {
+      const ctx = this.ctx
+      this.hauntBus = ctx.createGain()
+      this.hauntBus.gain.value = this.hauntVolume
+      // a gentle limiter of its own: nothing in the house is ever too loud
+      const lim = ctx.createDynamicsCompressor()
+      lim.threshold.value = -24
+      lim.ratio.value = 6
+      this.hauntBus.connect(lim).connect(this.master)
+      this.hauntSend = ctx.createGain()
+      this.hauntSend.gain.value = 0.5
+      this.hauntBus.connect(this.hauntSend).connect(this.reverb)
+    }
+    return this.ctx
+  }
+
+  /** A looping noise source (for wind, hiss, whispers). */
+  noiseBuffer() {
+    if (this.noiseBuf) return this.noiseBuf
+    const ctx = this.ctx
+    const b = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate)
+    const d = b.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+    return (this.noiseBuf = b)
+  }
+
+  /** The continuous layers (made once): wind through the old wood, a low drone, a muffled party. */
+  hauntBuildLayers() {
+    const ctx = this.ctx
+    const mk = () => {
+      const g = ctx.createGain()
+      g.gain.value = 0
+      g.connect(this.hauntBus)
+      return g
+    }
+    const wind = mk()
+    const src = ctx.createBufferSource()
+    src.buffer = this.noiseBuffer()
+    src.loop = true
+    const band = ctx.createBiquadFilter()
+    band.type = 'bandpass'
+    band.frequency.value = 380
+    band.Q.value = 1.4
+    const lfo = ctx.createOscillator()
+    lfo.frequency.value = 0.09
+    const lfoDepth = ctx.createGain()
+    lfoDepth.gain.value = 180
+    lfo.connect(lfoDepth).connect(band.frequency)
+    const wg = ctx.createGain()
+    wg.gain.value = 0.07
+    src.connect(band).connect(wg).connect(wind)
+    src.start()
+    lfo.start()
+    const drone = mk()
+    ;[55, 82.4, 110.6].forEach((f, i) => {
+      const o = ctx.createOscillator()
+      o.type = i === 1 ? 'triangle' : 'sine'
+      o.frequency.value = f
+      o.detune.value = i * 7
+      const og = ctx.createGain()
+      og.gain.value = [0.05, 0.025, 0.012][i]
+      o.connect(og).connect(drone)
+      o.start()
+    })
+    const party = mk()
+    const pf = ctx.createBiquadFilter()
+    pf.type = 'lowpass'
+    pf.frequency.value = 260
+    pf.connect(party)
+    this.hauntLayers = { wind, drone, party, partyIn: pf }
+  }
+
+  /** Which room's ambience to play (a room id from lib/mansion.js, 'yard', or null to stop). */
+  setHaunt(room) {
+    if (room === this.hauntRoom) return
+    this.hauntRoom = room
+    if (!room) {
+      if (this.hauntLayers) for (const k of ['wind', 'drone', 'party']) this.fade(this.hauntLayers[k].gain, 0, 1.5)
+      clearInterval(this.hauntTimer)
+      this.hauntTimer = null
+      this.soften(false, 3)
+      return
+    }
+    if (!this.hauntEnsure()) return
+    if (!this.hauntLayers) this.hauntBuildLayers()
+    // the world's music steps back while she's at the house
+    this.soften(true, 3)
+    const MIX = {
+      yard: [0.8, 0, 0],
+      foyer: [0.6, 0.15, 0],
+      living: [0.4, 0, 0],
+      kitchen: [0.25, 0, 0],
+      dolls: [0.25, 0.2, 0],
+      library: [0.2, 0.1, 0],
+      corridor: [0.55, 0.35, 0],
+      boiler: [0, 0.9, 0],
+      hall: [0.1, 0.75, 0],
+      cellar: [0, 0.3, 1],
+      vault: [0, 0.65, 0],
+      attic: [0.7, 0.4, 0],
+      good: [0.1, 0, 0],
+      party: [0, 0, 1],
+    }
+    const [w, d, p] = MIX[room] || MIX.yard
+    this.fade(this.hauntLayers.wind.gain, w, 1.6)
+    this.fade(this.hauntLayers.drone.gain, d, 1.6)
+    this.fade(this.hauntLayers.party.gain, p, 1.2)
+    if (!this.hauntTimer) this.hauntTimer = setInterval(() => this.hauntTick(), 250)
+  }
+
+  /** Little sounds now and then, by room: creaks, drips, ticks, an out-of-tune music box, a party thump. */
+  hauntTick() {
+    const room = this.hauntRoom
+    if (!room || !this.ctx || document.hidden) return
+    const r = Math.random()
+    const t = this.ctx.currentTime
+    const chance = { creak: 0.012, drip: 0, tick: 0, box: 0, bubble: 0 }
+    if (['foyer', 'living', 'attic', 'corridor', 'yard'].includes(room)) chance.creak = 0.02
+    if (['kitchen', 'boiler', 'hall', 'vault'].includes(room)) chance.drip = 0.05
+    if (room === 'kitchen') chance.bubble = 0.04
+    if (room === 'dolls') chance.box = 0.035
+    if (room === 'library' || room === 'attic') chance.tick = 1
+    if (chance.tick && Math.floor(t * 4) % 4 === 0) this.hauntSfx('tick', { gain: 0.25 })
+    if (r < chance.creak) this.hauntSfx('creak', { gain: 0.35, pan: Math.random() * 2 - 1 })
+    else if (r < chance.creak + chance.drip) this.hauntSfx('drip', { gain: 0.5, pan: Math.random() * 2 - 1 })
+    else if (r < chance.creak + chance.drip + chance.bubble) this.hauntSfx('bubble', { gain: 0.4 })
+    else if (r < chance.creak + chance.drip + chance.bubble + chance.box) this.hauntSfx('musicbox', { gain: 0.4, pan: -0.4 })
+    if (room === 'cellar' || room === 'party') {
+      // the party's beat, muffled through the wall
+      const beat = 60 / 118
+      const into = t % beat
+      if (into < 0.25 && !this.partyBeat) {
+        this.partyBeat = true
+        const o = this.ctx.createOscillator()
+        const g = this.ctx.createGain()
+        o.frequency.setValueAtTime(90, t)
+        o.frequency.exponentialRampToValueAtTime(45, t + 0.15)
+        g.gain.setValueAtTime(0.12, t)
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2)
+        o.connect(g).connect(this.hauntLayers.partyIn)
+        o.start(t)
+        o.stop(t + 0.25)
+      } else if (into >= 0.25) this.partyBeat = false
+    }
+  }
+
+  /** Tense music for the boss (a low ostinato in A minor); off brings the house's quiet back. */
+  setHauntMusic(on) {
+    clearInterval(this.hauntMusicTimer)
+    this.hauntMusicTimer = null
+    if (!on || !this.hauntEnsure()) return
+    const notes = ['A2', 'C3', 'E3', 'A2', 'F2', 'A2', 'C3', 'E3', 'G2', 'B2', 'D3', 'G2', 'E2', 'G#2', 'B2', 'E3']
+    let i = 0
+    const beat = 60 / 132 / 2
+    let next = this.ctx.currentTime + 0.1
+    this.hauntMusicTimer = setInterval(() => {
+      if (!this.ctx) return
+      while (next < this.ctx.currentTime + 0.3) {
+        const f = freq(notes[i % notes.length])
+        const o = this.ctx.createOscillator()
+        const g = this.ctx.createGain()
+        o.type = 'sawtooth'
+        o.frequency.value = f
+        const lp = this.ctx.createBiquadFilter()
+        lp.type = 'lowpass'
+        lp.frequency.value = 520 + (i % 8) * 40
+        g.gain.setValueAtTime(0.0001, next)
+        g.gain.exponentialRampToValueAtTime(0.05, next + 0.02)
+        g.gain.exponentialRampToValueAtTime(0.0001, next + beat * 0.9)
+        o.connect(lp).connect(g).connect(this.hauntBus)
+        o.start(next)
+        o.stop(next + beat)
+        // a heartbeat under it every half bar
+        if (i % 4 === 0) {
+          const k = this.ctx.createOscillator()
+          const kg = this.ctx.createGain()
+          k.frequency.setValueAtTime(70, next)
+          k.frequency.exponentialRampToValueAtTime(40, next + 0.12)
+          kg.gain.setValueAtTime(0.1, next)
+          kg.gain.exponentialRampToValueAtTime(0.0001, next + 0.18)
+          k.connect(kg).connect(this.hauntBus)
+          k.start(next)
+          k.stop(next + 0.2)
+        }
+        i++
+        next += beat
+      }
+    }, 100)
+  }
+
+  /**
+   * One of the house's sounds. `at`: [x, z] in the world (it comes from that side, and fades with
+   * distance), or `pan` (−1…1) directly; `gain` scales it.
+   */
+  hauntSfx(kind, { at, pan, gain = 1 } = {}) {
+    const ctx = this.hauntEnsure()
+    if (!ctx) return
+    let p = pan ?? 0
+    let g = gain
+    if (at) {
+      const e = this.hauntEar
+      const dx = at[0] - e.x
+      const dz = at[1] - e.z
+      const d = Math.hypot(dx, dz)
+      p = d > 0.3 ? Math.max(-1, Math.min(1, ((dx * e.rx + dz * e.rz) / d) * 0.9)) : 0
+      g *= Math.max(0.12, 1 - d / 16)
+    }
+    const out = ctx.createGain()
+    out.gain.value = Math.min(1, g)
+    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null
+    if (panner) {
+      panner.pan.value = p
+      out.connect(panner).connect(this.hauntBus)
+    } else out.connect(this.hauntBus)
+    const t = ctx.currentTime + 0.01
+    const osc = (type, f0, f1, len, level, dest = out) => {
+      const o = ctx.createOscillator()
+      const og = ctx.createGain()
+      o.type = type
+      o.frequency.setValueAtTime(f0, t)
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + len)
+      og.gain.setValueAtTime(0.0001, t)
+      og.gain.exponentialRampToValueAtTime(level, t + Math.min(0.03, len * 0.2))
+      og.gain.exponentialRampToValueAtTime(0.0001, t + len)
+      o.connect(og).connect(dest)
+      o.start(t)
+      o.stop(t + len + 0.05)
+      return o
+    }
+    const noise = (len, f, q, level, type = 'bandpass', delay = 0) => {
+      const s = ctx.createBufferSource()
+      s.buffer = this.noiseBuffer()
+      const flt = ctx.createBiquadFilter()
+      flt.type = type
+      flt.frequency.value = f
+      flt.Q.value = q
+      const ng = ctx.createGain()
+      ng.gain.setValueAtTime(0.0001, t + delay)
+      ng.gain.exponentialRampToValueAtTime(level, t + delay + Math.min(0.05, len * 0.3))
+      ng.gain.exponentialRampToValueAtTime(0.0001, t + delay + len)
+      s.connect(flt).connect(ng).connect(out)
+      s.start(t + delay, Math.random())
+      s.stop(t + delay + len + 0.05)
+      return flt
+    }
+    switch (kind) {
+      case 'creak': {
+        // old wood: a slow, rough glide
+        const o = osc('sawtooth', 180 + Math.random() * 60, 120 + Math.random() * 40, 0.7, 0.02)
+        o.detune.setValueAtTime(0, t)
+        o.detune.linearRampToValueAtTime(-300, t + 0.7)
+        noise(0.6, 900, 6, 0.02)
+        break
+      }
+      case 'slam':
+        osc('sine', 120, 40, 0.35, 0.16)
+        noise(0.25, 300, 1, 0.08, 'lowpass')
+        break
+      case 'door':
+        osc('triangle', 260, 170, 0.25, 0.04)
+        noise(0.2, 1200, 3, 0.02)
+        break
+      case 'drip':
+        osc('sine', 1400 + Math.random() * 500, 700, 0.12, 0.03)
+        break
+      case 'bubble':
+        for (let k = 0; k < 3; k++) {
+          const o = ctx.createOscillator()
+          const og = ctx.createGain()
+          const s = t + k * 0.09
+          o.frequency.setValueAtTime(300 + Math.random() * 200, s)
+          o.frequency.exponentialRampToValueAtTime(700, s + 0.08)
+          og.gain.setValueAtTime(0.0001, s)
+          og.gain.exponentialRampToValueAtTime(0.02, s + 0.01)
+          og.gain.exponentialRampToValueAtTime(0.0001, s + 0.09)
+          o.connect(og).connect(out)
+          o.start(s)
+          o.stop(s + 0.1)
+        }
+        break
+      case 'tick':
+        osc('square', 2600, 0, 0.03, 0.008)
+        break
+      case 'musicbox': {
+        // the dolls' room: a few notes, slightly out of tune
+        const tune = ['E5', 'C5', 'D#5', 'B4']
+        tune.forEach((nm, k) => this.bellTo(out, freq(nm) * (1 + (Math.random() - 0.5) * 0.02), t + k * 0.42, 0.03, 1.4))
+        break
+      }
+      case 'whisper': {
+        // breathy, almost words
+        for (let k = 0; k < 5; k++) noise(0.22 + Math.random() * 0.2, 1800 + Math.random() * 1600, 8, 0.03, 'bandpass', k * 0.28)
+        break
+      }
+      case 'steps':
+        for (let k = 0; k < 5; k++) {
+          const s = t + k * 0.42
+          const o = ctx.createOscillator()
+          const og = ctx.createGain()
+          o.frequency.setValueAtTime(95, s)
+          o.frequency.exponentialRampToValueAtTime(48, s + 0.08)
+          og.gain.setValueAtTime(0.06, s)
+          og.gain.exponentialRampToValueAtTime(0.0001, s + 0.12)
+          o.connect(og).connect(out)
+          o.start(s)
+          o.stop(s + 0.14)
+        }
+        break
+      case 'whoosh':
+        noise(0.7, 500, 0.8, 0.06, 'bandpass').frequency.exponentialRampToValueAtTime(2400, t + 0.6)
+        break
+      case 'buzz':
+        osc('sawtooth', 100, 0, 0.5, 0.012)
+        break
+      case 'lightsout':
+        osc('sine', 300, 60, 0.4, 0.05)
+        noise(0.3, 2000, 1, 0.02, 'highpass')
+        break
+      case 'stinger':
+        // a soft "boo" chord, never a screech
+        ;['A3', 'D#4', 'G#4'].forEach((nm) => osc('triangle', freq(nm), freq(nm) * 0.97, 0.9, 0.035))
+        break
+      case 'boo':
+        osc('sine', 330, 160, 0.6, 0.06)
+        osc('sine', 336, 158, 0.6, 0.04)
+        break
+      case 'hum':
+        osc('sine', 220, 233, 2.4, 0.025)
+        osc('sine', 330, 311, 2.4, 0.015)
+        break
+      case 'thud':
+        osc('sine', 140, 50, 0.3, 0.12)
+        noise(0.15, 500, 1, 0.04, 'lowpass')
+        break
+      case 'roar':
+        noise(1.4, 260, 0.7, 0.09, 'lowpass')
+        osc('sawtooth', 90, 60, 1.2, 0.03)
+        break
+      case 'blow':
+        noise(0.9, 900, 0.6, 0.07, 'bandpass').frequency.exponentialRampToValueAtTime(250, t + 0.8)
+        break
+      case 'ignite':
+        noise(0.35, 3000, 1, 0.03, 'highpass')
+        this.bellTo(out, freq('E6'), t + 0.1, 0.02, 1.2)
+        break
+      case 'grumble':
+        osc('sawtooth', 110, 90, 0.5, 0.02)
+        osc('sawtooth', 130, 95, 0.5, 0.015)
+        break
+      case 'giggle':
+        for (let k = 0; k < 4; k++) {
+          const s = t + k * 0.11
+          const o = ctx.createOscillator()
+          const og = ctx.createGain()
+          o.frequency.setValueAtTime(900 - k * 60, s)
+          o.frequency.exponentialRampToValueAtTime(1300 - k * 60, s + 0.06)
+          og.gain.setValueAtTime(0.0001, s)
+          og.gain.exponentialRampToValueAtTime(0.025, s + 0.02)
+          og.gain.exponentialRampToValueAtTime(0.0001, s + 0.09)
+          o.connect(og).connect(out)
+          o.start(s)
+          o.stop(s + 0.1)
+        }
+        break
+      case 'squeal':
+        osc('sine', 900, 1500, 0.25, 0.03)
+        break
+      case 'trip':
+        // a slide whistle down, and a bump
+        osc('sine', 1400, 300, 0.6, 0.035)
+        setTimeout(() => this.hauntSfx('thud', { pan: p, gain: g * 0.6 }), 600)
+        break
+      case 'bonk':
+        osc('triangle', 500, 480, 0.15, 0.06)
+        this.bellTo(out, 1320, t + 0.05, 0.03, 0.9)
+        this.bellTo(out, 1760, t + 0.25, 0.02, 0.9)
+        break
+      case 'cluck':
+        for (let k = 0; k < 6; k++) {
+          const s = t + k * 0.13 + Math.random() * 0.05
+          const o = ctx.createOscillator()
+          const og = ctx.createGain()
+          o.type = 'square'
+          o.frequency.setValueAtTime(620 + Math.random() * 200, s)
+          o.frequency.exponentialRampToValueAtTime(380, s + 0.07)
+          og.gain.setValueAtTime(0.0001, s)
+          og.gain.exponentialRampToValueAtTime(0.014, s + 0.01)
+          og.gain.exponentialRampToValueAtTime(0.0001, s + 0.08)
+          o.connect(og).connect(out)
+          o.start(s)
+          o.stop(s + 0.09)
+        }
+        break
+      case 'horn':
+        // a party horn (the funny ending, and the party in the cellar)
+        osc('sawtooth', 520, 620, 0.5, 0.03)
+        break
+      case 'lever':
+        osc('square', 160, 90, 0.18, 0.03)
+        noise(0.15, 2500, 4, 0.02)
+        break
+      case 'unlock':
+        this.bellTo(out, freq('A5'), t, 0.04, 1.2)
+        this.bellTo(out, freq('E6'), t + 0.12, 0.035, 1.6)
+        break
+      case 'gramophone': {
+        // a scratchy little tune
+        noise(6, 4000, 0.5, 0.008, 'highpass')
+        const tune = ['C5', 'E5', 'G5', 'E5', 'F5', 'A5', 'G5', 'E5', 'C5', 'D5', 'E5', 'C5']
+        tune.forEach((nm, k) => this.bellTo(out, freq(nm), t + k * 0.33, 0.03, 0.9))
+        break
+      }
+      default:
+        break
+    }
+  }
+
   /** Short interaction sounds. They follow the "sound effects" setting, not the music toggle. */
   sfx(kind, n = 0) {
     if (!this.sfxOn || !this.ensure()) return

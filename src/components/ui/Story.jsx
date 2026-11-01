@@ -20,8 +20,9 @@ import { useChapterUnlocked, useStore } from '../../store'
 import { audio } from '../../audio/engine'
 import { cutsceneMusic } from '../../lib/cutscene'
 
+// (anyone else, like the haunted mansion's ghosts, is named in the line itself)
 const speakerName = (speaker) =>
-  speaker === 'me' ? couple.me.name : speaker === 'you' ? couple.you.name : speaker === 'pet' ? companion.name : story.narrator
+  speaker === 'me' ? couple.me.name : speaker === 'you' ? couple.you.name : speaker === 'pet' ? companion.name : !speaker || speaker === 'narrator' ? story.narrator : speaker
 
 /** Visual-novel dialog box. Tap / Enter / Space continues; it never blocks the rest of the page. */
 export function DialogBox() {

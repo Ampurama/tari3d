@@ -1,3 +1,5 @@
+import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Glow, HeartMesh } from './Bits'
 import { CATALOG, WALL_STYLES } from '../../lib/homeLayout'
@@ -789,6 +791,71 @@ function BalloonBunch() {
   )
 }
 
+/* ───────── from The Haunted Gnome Mansion ───────── */
+
+function MansionClock() {
+  const pend = useRef()
+  useFrame(({ clock }) => {
+    if (pend.current) pend.current.rotation.z = Math.sin(clock.elapsedTime * 2.2) * 0.35
+  })
+  return (
+    <group>
+      <B p={[0, 0.7, 0]} s={[0.42, 1.4, 0.28]} c="#7a4f3a" />
+      <mesh position={[0, 1.55, 0]} rotation={[0, 0, Math.PI / 4]} scale={[1, 1, 0.28 / 0.4]} material={mat('#7a4f3a')}>
+        <boxGeometry args={[0.36, 0.36, 0.4]} />
+      </mesh>
+      <C p={[0, 1.2, 0.15]} rt={0.15} h={0.02} c="#fff4e4" r={[Math.PI / 2, 0, 0]} />
+      <B p={[0, 1.24, 0.165]} s={[0.012, 0.1, 0.01]} c="#3a2a3e" />
+      <B p={[0.03, 1.2, 0.165]} s={[0.07, 0.012, 0.01]} c="#3a2a3e" />
+      <B p={[0, 1.55, 0.15]} s={[0.1, 0.1, 0.02]} c="#3a2a3e" />
+      <S p={[0, 1.56, 0.17]} s={0.04} c="#ffd27f" />
+      <B p={[0, 0.62, 0.142]} s={[0.26, 0.62, 0.01]} c="#5a3a2c" />
+      <group ref={pend} position={[0, 0.9, 0.15]}>
+        <C p={[0, -0.2, 0]} rt={0.006} h={0.4} c="#ffd27f" />
+        <S p={[0, -0.42, 0]} s={0.05} c="#ffd27f" glow={0.3} />
+      </group>
+    </group>
+  )
+}
+
+function GhostDisco() {
+  const ball = useRef()
+  useFrame(({ clock }) => {
+    if (ball.current) ball.current.rotation.y = clock.elapsedTime * 0.8
+  })
+  const tiles = useMemo(() => {
+    const out = []
+    for (let i = 0; i < 40; i++) {
+      const y = 1 - (i + 0.5) / 20
+      const r = Math.sqrt(Math.max(0, 1 - y * y))
+      const a = i * 2.4
+      out.push([Math.cos(a) * r, y, Math.sin(a) * r, i])
+    }
+    return out
+  }, [])
+  return (
+    <group>
+      <C p={[0, 0.35, 0]} rt={0.03} rb={0.06} h={0.7} c="#5a4a6e" seg={8} />
+      <C p={[0, 0.02, 0]} rt={0.16} h={0.04} c="#5a4a6e" />
+      <group ref={ball} position={[0, 0.92, 0]}>
+        <mesh material={mat('#d8d4ec', 0.15, 0.2)}>
+          <sphereGeometry args={[0.2, 18, 14]} />
+        </mesh>
+        {tiles.map(([x, y, z, i]) => (
+          <mesh key={i} position={[x * 0.205, y * 0.205, z * 0.205]} material={mat(['#ff8fd0', '#9fd0ff', '#ffe08a', '#b9a5ff'][i % 4], 0.9)}>
+            <boxGeometry args={[0.035, 0.035, 0.01]} />
+          </mesh>
+        ))}
+        {/* a tiny ghost hugging it */}
+        <mesh position={[0.17, 0.12, 0.12]} material={mat('#f4f0ff', 0.3)}>
+          <sphereGeometry args={[0.07, 12, 10]} />
+        </mesh>
+      </group>
+      <Glow position={[0, 0.92, 0]} color="#d6b8ff" size={1.0} opacity={0.4} />
+    </group>
+  )
+}
+
 const MODELS = {
   bed: Bed,
   sofa: Sofa,
@@ -833,6 +900,8 @@ const MODELS = {
   gnome_plush: GnomePlush,
   carnival_lantern: CarnivalLantern,
   balloon_bunch: BalloonBunch,
+  mansion_clock: MansionClock,
+  ghost_disco: GhostDisco,
 }
 
 /**

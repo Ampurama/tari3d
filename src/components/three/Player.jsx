@@ -16,6 +16,7 @@ import { heldDrink } from '../../lib/cafe'
 import { presence } from '../../lib/couple'
 import { driveBumper, holdRide, sittingOnRide } from '../../lib/carnival'
 import { holdBalloon } from '../../lib/balloon'
+import { leaveHide } from '../../lib/mansion'
 import { viewpoint } from '../../content/config'
 import { audio } from '../../audio/engine'
 import Avatar from './Avatar'
@@ -201,6 +202,9 @@ export function PlayerController() {
       let bz = fz * move.y + fx * move.x
       const bl = Math.hypot(bx, bz) || 1
       driveBumper(delta, bx / bl, bz / bl, move.mag > 0.05 ? Math.min(1, move.mag) : 0)
+    } else if (player.hide) {
+      // hiding in a wardrobe (the haunted mansion): any move, or a tap somewhere, gets her out
+      if (move.mag > 0.05 || player.walkTarget) leaveHide()
     } else if (player.act) {
       // busy (sleeping, cooking…): she stays right where the activity put her
       player.walkTarget = null
@@ -411,6 +415,9 @@ export function PlayerAvatar() {
     if (!g) return // not mounted until she's in the world
     g.position.copy(player.position)
     g.rotation.y = player.yaw
+    // hiding in a wardrobe: out of sight
+    g.visible = !player.hide
+    ghost.current.visible = !player.hide
     const t = clock.elapsedTime
     ghost.current.position.copy(player.position)
     GHOST.opacity = reducedMotion ? 0.5 : 0.42 + Math.sin(t * 3) * 0.08
@@ -421,7 +428,7 @@ export function PlayerAvatar() {
     f.visible = Boolean(it)
     if (it) {
       const p = it.position
-      f.position.set(p.x, standHeight(p.x, p.z) + 0.04, p.z)
+      f.position.set(p.x, (it.useY ? p.y : standHeight(p.x, p.z)) + 0.04, p.z)
       const pulse = reducedMotion ? 1 : 1 + Math.sin(t * 3.2) * 0.08
       f.children[0].scale.setScalar(THREE.MathUtils.damp(f.children[0].scale.x, pulse, 8, delta))
       f.children[1].position.y = 1.9 + (reducedMotion ? 0 : Math.sin(t * 2.4) * 0.08)

@@ -12,7 +12,8 @@ export const interactables = new Map()
 
 /**
  * Register an interactable while the component is mounted.
- * `def`: { position: Vector3 (world), radius, label, enabled?: () => bool, onInteract: () => void, priority? }
+ * `def`: { position: Vector3 (world), radius, label, enabled?: () => bool, onInteract: () => void, priority?,
+ *   useY? (a building with storeys: only within reach on the same floor, and its ring drawn at position.y) }
  * The latest def is always used (no stale closures).
  */
 export function useInteractable(id, def) {
@@ -31,6 +32,9 @@ export function useInteractable(id, def) {
       },
       get priority() {
         return ref.current.priority ?? 0
+      },
+      get useY() {
+        return Boolean(ref.current.useY)
       },
       /** seconds the interact button must be held (0 = a simple press) */
       get hold() {
@@ -55,6 +59,8 @@ export function nearestInteractable() {
     const pos = it.position
     const d = Math.hypot(pos.x - p.x, pos.z - p.z)
     if (d > it.radius) continue
+    // on another floor of the same house: out of reach
+    if (it.useY && Math.abs(pos.y - p.y) > 1.5) continue
     const score = d - it.priority
     if (score < bestScore) {
       bestScore = score
